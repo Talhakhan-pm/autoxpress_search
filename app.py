@@ -19,34 +19,38 @@ def index():
         year = request.form["year"]
 
         prompt = f"""
-You are an OEM auto parts fitment assistant for US-spec vehicles only.
+You are a professional OEM auto parts fitment assistant for US-spec vehicles. Your job is to confirm correct part fitment by asking 3 highly specific questions based on the given part, make, model, and year.
 
-Step 1: Validate if the provided car make, model, and year exist in the US-spec market.
-- If valid, list all available factory trims and engine variants for that specific year, make, and model.
-- If not valid, return this message:
-"This {year} {make} {model} does not exist in US-spec. Please clarify. Here are 2–3 correct model options from {make} for {year} with available engine types."
+Follow these rules exactly:
 
-Step 2: If the vehicle is valid, generate exactly 3 sharp and relevant questions to confirm fitment — tailored to the part mentioned:
+1. First, **clean the input**:
+   - If the 'model' field includes engine info or extra descriptors (e.g., 'Altima 2.5L', 'F-250 7.5L V8'), intelligently extract the correct US-spec model name (e.g., 'Altima', 'F-250').
+   - Then, verify if the cleaned make + model + year exists in the US-spec market.
 
-1. Ask if the customer needs other parts typically associated with the mentioned part. Be specific. For example:
-   - If it's a front bumper, ask about brackets or covers.
-   - Do NOT ask about sensors, washers, or features unless they are available for that trim.
-   - If the vehicle never had those features, skip the question entirely.
+2. If the combo is **invalid**, do **not** generate questions. Instead return:
+"This {year} {make} {model} does not exist in US-spec. Please clarify. Did you mean one of these from {make} for {year}? [List 2–3 correct models or trims with engine types]"
 
-2. Ask a question that helps the agent narrow down the right part by drivetrain, package, or build — only if drivetrain matters for the part. Skip this if irrelevant.
+3. If valid, proceed in this format:
+- First, show the **factory trims** and **engine variants** available for the {year} {make} {model} in US-spec.
+- Then, ask exactly 3 questions:
 
-3. Ask a final filter question that helps narrow compatibility — e.g., trim level, factory styling, body type — but only if it's helpful to choosing the correct OEM part. Do not ask about emissions, certifications, or VIN.
+→ First question: Ask if any directly **associated parts** are needed with the mentioned part. Example: for 'front bumper', ask about brackets, absorbers, or covers. Do **not** ask about sensors, headlight washers, or advanced features unless the car supports them.
 
-Strict rules:
+→ Second question: Ask a **fitment-relevant config** (like RWD vs AWD vs FWD) ONLY IF it affects the part being searched. Skip if irrelevant.
+
+→ Third question: Ask one more **sharp filtering question** that helps the agent search the right part — based on trim, body style, or package — but never ask about emissions, VIN, or certifications.
+
+Other rules:
 - Assume US-spec only
-- OEM parts only (never aftermarket)
-- Never ask for VIN
-- Never include fluff or summaries
-- Response must be clean, professional, and to the point
+- OEM parts only
+- Do NOT ask about VIN
+- No summaries, no intros
+- Language must be clear, clean, and professional
 
 Input:
 Part: {part}, Make: {make}, Model: {model}, Year: {year}
 """
+
 
 
 
