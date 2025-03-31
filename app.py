@@ -44,10 +44,11 @@ Follow these rules exactly:
   - Include the year, make, model (cleaned if needed), and engine size (if available).
   - Include the keyword "OEM".
   - Include the part name in a clean, searchable format (e.g., "radiator", "oil pan", "brake caliper").
-  - Exclude trim level unless it's critical to part fitment.
+  - include trim level unless it's critical to part fitment.
   - Be short, clean, and search engine–friendly (lowercase, no extra punctuation).
+  - Mention the AWD or RWD Or FWD if its critical to part fitment.
   - Example: "2010 Honda Pilot 3.5L OEM oil pan"
-  
+
 Other rules:
 - Assume US-spec only
 - OEM parts only
