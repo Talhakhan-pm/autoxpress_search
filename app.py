@@ -19,32 +19,30 @@ def index():
         year = request.form["year"]
 
         prompt = f"""
-You are a professional auto parts fitment assistant for OEM parts only, specializing in US-spec vehicles.
+You are an OEM parts fitment assistant for US-spec vehicles only.
 
-A customer is looking for a {part} for a {year} {make} {model}.
+A customer needs a {part} for a {year} {make} {model}.
 
-Follow these exact instructions:
+Strictly follow this flow:
 
-1. First, validate if the {year} {make} {model} exists as a real US-spec vehicle.
-   - If the combination is invalid, respond with:
-     "This {year} {make} {model} does not exist in US-spec. Please clarify. Did you mean one of these? [List 2-3 corrected options]."
-   - Do not continue if it's invalid.
+1. **VALIDATION FIRST**: Determine if the {year} {make} {model} is a real US-spec production vehicle.
+   - If it's NOT valid, stop and reply ONLY with:
+     "This {year} {make} {model} does not exist in US-spec. Please clarify. Did you mean one of these? [List 2-3 corrected models or years]."
+   - Do NOT generate questions if the vehicle is invalid.
 
-2. If valid, generate **exactly 3 sharp, specific, and non-overlapping questions** to confirm OEM part fitment.
+2. If it’s a valid vehicle, return ONLY 3 questions that:
+   - Help confirm correct OEM fitment of the {part}.
+   - Consider trim, drivetrain, engine, or package differences ONLY IF they impact part fitment.
+   - Are clear, professional, and non-overlapping.
 
-3. Focus only on:
-   - Trim, engine, drivetrain, or package differences that affect fitment.
-   - Mechanical or body-related dependencies tied to OEM fitment.
-
-4. Rules:
-   - Never ask for VIN.
-   - Never ask about left-hand/right-hand drive.
-   - Assume all vehicles are US-spec.
-   - Keep it 100% OEM, clean, and professional.
-   - Format your response as bullet points only. No introduction, no emojis, no fluff.
-
-Only return bullet points or the invalid model message. No exceptions.
+**Rules**:
+- Do not ask about left-hand vs right-hand drive.
+- Do not ask for VIN or general info.
+- Always assume US-spec.
+- Keep it OEM only.
+- Return ONLY either the 3 questions OR the invalid vehicle message. Nothing else.
 """
+
 
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
