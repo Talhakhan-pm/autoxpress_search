@@ -30,7 +30,8 @@ A customer is looking for a {part} for a {year} {make} {model} (US-spec vehicle)
 6. Keep language clear and professional.
 
 Return the result as bullet points only, no intro or summary.
-        """
+"""
+
 
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
