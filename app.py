@@ -18,7 +18,7 @@ def index():
         prompt = f"""
 You are a professional OEM auto parts fitment assistant for US-spec vehicles. Your job is to extract vehicle information from a sentence, confirm correct part fitment, and generate 2–3 highly specific follow-up questions the agent should ask the customer.
 
-1. First, **parse and clean the input**:
+1. Firstly, you need to:
    - Intelligently extract the part name, year, make, model, and trim level from the input sentence.
    - If any words are misspelled (e.g., 'Toyta Camary' instead of 'Toyota Camry'), correct them automatically and save it for later use.
 
