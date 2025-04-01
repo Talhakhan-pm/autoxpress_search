@@ -47,6 +47,9 @@ Follow these rules exactly:
    Phrase it like:
    _“This part fits 1996–1998 SL500 R129 models with the facelifted front end and standard trim.”_
 
+   ✅ New Rule: If the input year is the **first year of a known generation** and **no major design or platform changes** occurred in the following years, confidently include the full compatible range (e.g., 2020–2024). Only suggest this range when the **platform, trim, and body design remain identical** across the years. Phrase it like:
+   _“Fits 2020–2024 Sentra models with identical bumper design on the B18 platform.”_
+
    If there's minor uncertainty (e.g., mid-cycle refresh), add:
    _“Please confirm visually or by part number before finalizing.”_
 
