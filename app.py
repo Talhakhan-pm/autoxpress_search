@@ -2,7 +2,7 @@ from flask import Flask, render_template, request
 import openai
 import os
 
-app = Flask(__name__)
+app.config['WTF_CSRF_ENABLED'] = False
 
 openai.api_key = os.getenv("OPENAI_API_KEY")  # Set this securely in your env
 
