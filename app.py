@@ -13,7 +13,7 @@ app = Flask(__name__)
 def index():
     questions = None
     if request.method == "POST":
-        query = request.form["prompt"]
+        query = request.form.get("prompt", "").strip()
 
         prompt = f"""
 You are a professional OEM auto parts fitment assistant for US-spec vehicles. Your job is to extract vehicle information from a sentence, confirm correct part fitment, and generate 2–3 highly specific follow-up questions the agent should ask the customer.
