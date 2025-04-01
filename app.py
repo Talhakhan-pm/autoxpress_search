@@ -32,27 +32,34 @@ Follow these rules exactly:
 
 3. If valid, proceed in this format:
 - First, show the **factory trims** and **engine variants** available for the {year} {make} {model} in US-spec.
-- Then, ask exactly 3 questions:
+- Then, ask exactly 3 questions — but **skip any question that doesn't apply**. Don't mention it's skipped, just leave it out.
 
-→ First question: Ask if any directly **associated parts** are needed with the mentioned part. Example: for 'front bumper', ask about brackets, absorbers, or covers. Do **not** ask about sensors, headlight washers, or advanced features unless the car supports them.
+→ First question: Ask if any directly **associated parts** are needed with the mentioned part. Example: for 'front bumper', ask about brackets, absorbers, or covers. Do **not** ask about sensors, headlight washers, or advanced features unless the car supports them. Mention trim-level differences if relevant.
 
-→ Second question: Ask a **fitment-relevant config** (like RWD vs AWD vs FWD) ONLY IF it affects the part being searched. Something that helps the agent search the right part — based on trim, body style, or package — but never ask about emissions, VIN, or certifications. Skip if irrelevant. 
+→ Second question: Ask a **fitment-relevant config** (like RWD vs AWD vs FWD) ONLY IF it affects the part being searched. Something that helps the agent search the right part — based on drivetrain, trim, body style, or package — but never ask about emissions, VIN, or certifications. **Skip entirely if there's nothing relevant.**
 
-→ Third suggestion: If the part is likely compatible across multiple years due to shared platform, engine, or design, clearly state the body style and trim involved.
+→ Third suggestion: If the part appears to be compatible across multiple years, **give a confident, technically-backed recommendation** based on shared body, platform, or design. Clearly state:
+   - Which **years**
+   - What **body style** (sedan, coupe, roadster, etc.)
+   - What **trims** (e.g., EX, Limited, Sport) are included
+   - Mention **platform or facelift status** if relevant
 
-Example:
-“This bumper fits 2011–2014 Honda Accord sedan models with EX and EX-L trims, all built on the CP2 platform.”
+   Phrase it like:
+   _“This part fits 1996–1998 SL500 R129 models with the facelifted front end and standard trim.”_
 
-Do not use vague terms like “same body” — always say which body and trim. If the vehicle came in sedan/coupe/hatchback or LX/EX/Limited trims, mention the relevant ones.
+   If there's minor uncertainty (e.g., mid-cycle refresh), add:
+   _“Please confirm visually or by part number before finalizing.”_
+
+   Only make this suggestion when there’s strong technical reasoning — don’t guess loosely.
 
 - Finally, generate a suggested search string the agent can use to look up the correct part. The search string must:
-  - Include the year, make, model (cleaned if needed), and engine size (if available).
-  - Include the keyword "OEM".
-  - Include the part name in a clean, searchable format (e.g., "radiator", "oil pan", "brake caliper").
-  - include trim level unless it's critical to part fitment.
-  - Be short, clean, and search engine–friendly (lowercase, no extra punctuation).
-  - Mention the AWD or RWD Or FWD if its critical to part fitment.
-  - Example: "2010 Honda Pilot 3.5L OEM oil pan"
+  - Include the **year range** if the part fits multiple model years
+  - Include **make, model**, and **engine size** if available
+  - Include the keyword **"OEM"**
+  - Include the part name in a clean, searchable format (e.g., "radiator", "oil pan", "brake caliper")
+  - Include **platform**, trim level, or drivetrain **only if critically relevant to fitment**
+  - Be short, lowercase, and search engine–friendly (no punctuation)
+  - ✅ Example: "1996–1998 mercedes sl500 r129 oem front bumper"
 
 Other rules:
 - Assume US-spec only
@@ -64,8 +71,6 @@ Other rules:
 Input:
 Part: {part}, Make: {make}, Model: {model}, Year: {year}
 """
-
-
 
 
         response = client.chat.completions.create(
