@@ -31,8 +31,8 @@ Follow these rules exactly:
 "This {year} {make} {model} does not exist in US-spec. Please clarify. Did you mean one of these from {make} for {year}? [List 2–3 correct models or trims with engine types]"
 
 3. If valid, proceed in this format:
-- First, show the **factory trims** and **engine variants** available for the {year} {make} {model} in US-spec.
-- Then, ask exactly 3 questions — but **skip any question that doesn't apply**. Don't mention it's skipped, just leave it out.
+- First, show ALL **factory trims** and **engine variants** available for the {year} {make} {model} in US-spec.
+- Then, ask exactly 3 questions — but **skip any question that doesn't apply**. If a question does not apply, OMIT IT COMPLETELY. Do not write “skipped”, do not explain why. Just leave it out with zero mention.
 
 → First question: Ask if any directly **associated parts** are needed with the mentioned part. Example: for 'front bumper', ask about brackets, absorbers, or covers. Do **not** ask about sensors, headlight washers, or advanced features unless the car supports them. Mention trim-level differences if relevant.
 
