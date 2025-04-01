@@ -1,17 +1,19 @@
 from flask import Flask, render_template, request
-import openai
 import os
+from dotenv import load_dotenv
+from openai import OpenAI
 
-app.config['WTF_CSRF_ENABLED'] = False
+load_dotenv()
+api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=api_key)
 
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Set this securely in your env
+app = Flask(__name__)
 
 @app.route("/", methods=["GET", "POST"])
 def index():
     questions = None
-
     if request.method == "POST":
-        query = request.form.get("query", "").strip()
+        query = request.form["prompt"]
 
         prompt = f"""
 You are a professional OEM auto parts fitment assistant for US-spec vehicles. Your job is to extract vehicle information from a sentence, confirm correct part fitment, and generate 2–3 highly specific follow-up questions the agent should ask the customer.
@@ -62,15 +64,16 @@ Input:
 \"\"\"{query}\"\"\"
 """
 
-        response = openai.ChatCompletion.create(
-            model="gpt-4-0125-preview",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.3
+        response = client.chat.completions.create(
+            model="gpt-4-1106-preview",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4
         )
 
-        questions = response["choices"][0]["message"]["content"]
+        questions = response.choices[0].message.content.strip()
 
     return render_template("index.html", questions=questions)
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
