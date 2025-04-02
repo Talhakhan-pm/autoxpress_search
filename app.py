@@ -9,6 +9,25 @@ client = OpenAI(api_key=api_key)
 
 app = Flask(__name__)
 
+def decode_vin(vin):
+    """
+    Calls the NHTSA VIN decoding API and returns vehicle info as a dictionary.
+    Returns an empty dict if invalid or fails.
+    """
+    if not vin:
+        return {}
+    try:
+        url = f'https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvaluesextended/{vin}?format=json'
+        response = requests.get(url)
+        data = response.json()
+        if data and data['Results']:
+            result = data['Results'][0]
+            if result.get('Make') and result.get('ModelYear'):
+                return result
+    except Exception as e:
+        print(f"VIN decode error: {e}")
+    return {}
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     questions = None
