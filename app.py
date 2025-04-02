@@ -107,7 +107,7 @@ Input:
 
         questions = response.choices[0].message.content.strip()
 
-    return render_template("index.html", questions=questions)
+    return render_template("index.html", questions=questions, vin_result=None)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
