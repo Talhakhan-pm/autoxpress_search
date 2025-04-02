@@ -1,74 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Auto Parts Smart Assistant</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>Auto Parts Smart Assistant</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      color: #212529;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .card {
+      border-radius: 2rem;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+    }
+    .btn-primary {
+      background-color: #d62828;
+      border: none;
+    }
+    .btn-primary:hover {
+      background-color: #bb1e1e;
+    }
+    .btn-secondary {
+      background-color: #6c757d;
+    }
+    .section-title {
+      font-weight: bold;
+      color: #d62828;
+    }
+    .fade-in {
+      animation: fadeIn 0.7s ease-in;
+    }
+    @keyframes fadeIn {
+      0% {opacity: 0; transform: translateY(10px);}
+      100% {opacity: 1; transform: translateY(0);}
+    }
+  </style>
 </head>
-<body class="bg-light text-dark">
-
-    <div class="container py-5">
-        <div class="row justify-content-center">
-            <div class="col-md-8 col-lg-6">
-                <div class="card shadow-lg border-0">
-                    <div class="card-body">
-                        <h3 class="card-title mb-4 text-center">🔧 Auto Parts Smart Assistant</h3>
-                        <form method="POST">
-                            <div class="mb-3">
-                                <label class="form-label">Describe the part and vehicle</label>
-                                <input type="text" class="form-control" name="prompt" required value="{{ request.form.prompt }}" placeholder="e.g., Front bumper for 2020 Honda Accord LX">
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-primary">Generate Questions</button>
-                            </div>
-                        </form>
-
-                        {% if questions %}
-                            <hr class="my-4">
-                            <h5 class="mb-3">🧠 Ask the customer:</h5>
-                            <div class="bg-light p-3 border rounded">
-                                {% for line in questions.split('\n') if line.strip() %}
-                                    <p class="mb-2">👉 {{ line }}</p>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- VIN Decoder Section -->
-                <hr class="my-5">
-                <h5 class="text-center mb-3">🚗 Manual VIN Decoder</h5>
-                <form method="POST" action="/vin-decode">
-                    <div class="mb-3">
-                        <label class="form-label">Enter VIN</label>
-                        <input type="text" class="form-control" name="vin" placeholder="e.g., 1HGCV1F14LA123456" required>
-                    </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-secondary">Decode VIN</button>
-                    </div>
-                </form>
-
-                {% if vin_result %}
-                    <div class="card shadow mt-4">
-                        <div class="card-body">
-                            <h5 class="card-title">🔍 Decoded VIN Information</h5>
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item"><strong>Make:</strong> {{ vin_result.Make }}</li>
-                                <li class="list-group-item"><strong>Model:</strong> {{ vin_result.Model }}</li>
-                                <li class="list-group-item"><strong>Year:</strong> {{ vin_result.ModelYear }}</li>
-                                <li class="list-group-item"><strong>Trim:</strong> {{ vin_result.Trim }}</li>
-                                <li class="list-group-item"><strong>Engine:</strong> {{ vin_result.EngineModel }} ({{ vin_result.EngineCylinders }} cylinders)</li>
-                                <li class="list-group-item"><strong>Drivetrain:</strong> {{ vin_result.DriveType }}</li>
-                            </ul>
-                        </div>
-                    </div>
-                {% endif %}
-
-                <div class="text-center mt-3">
-                    <a href="/" class="btn btn-secondary">🔄 Reset Form</a>
-                </div>
+<body>
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-10 col-lg-8">
+        <div class="card p-4 fade-in">
+          <h3 class="text-center section-title mb-4">🔧 AutoXpress Smart Assistant</h3>
+          <form method="POST">
+            <div class="mb-3">
+              <label class="form-label">Describe the part and vehicle</label>
+              <input type="text" class="form-control" name="prompt" required value="{{ request.form.prompt }}" placeholder="e.g., Front bumper for 2020 Honda Accord LX">
             </div>
-        </div>
-    </div>
+            <div class="mb-3">
+              <label class="form-label">Optional: Enter VIN</label>
+              <input type="text" class="form-control" name="vin" value="{{ request.form.vin }}" placeholder="e.g., 1HGCV1F14LA123456">
+            </div>
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary">Generate Questions</button>
+            </div>
+          </form>
 
+          {% if questions %}
+            <hr class="my-4">
+            <h5 class="mb-3 section-title">🧠 Ask the customer:</h5>
+            <div class="bg-light p-3 border rounded fade-in">
+              {% for line in questions.split('\n') if line.strip() %}
+                <p class="mb-2">👉 {{ line }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <hr class="my-5">
+          <h5 class="text-center section-title">🚗 AutoXpress VIN Decoder</h5>
+          <form method="POST" action="/vin-decode">
+            <div class="mb-3">
+              <label class="form-label">Enter VIN</label>
+              <input type="text" class="form-control" name="vin" placeholder="e.g., 1HGCV1F14LA123456" required>
+            </div>
+            <div class="d-grid">
+              <button type="submit" class="btn btn-secondary">Decode VIN</button>
+            </div>
+          </form>
+
+          {% if vin_result %}
+            <div class="card shadow mt-4 fade-in">
+              <div class="card-body">
+                <h5 class="card-title">🔍 Decoded VIN Information</h5>
+                <ul class="list-group list-group-flush">
+                  <li class="list-group-item"><strong>Make:</strong> {{ vin_result.Make }}</li>
+                  <li class="list-group-item"><strong>Model:</strong> {{ vin_result.Model }}</li>
+                  <li class="list-group-item"><strong>Year:</strong> {{ vin_result.ModelYear }}</li>
+                  <li class="list-group-item"><strong>Trim:</strong> {{ vin_result.Trim }}</li>
+                  <li class="list-group-item"><strong>Engine:</strong> {{ vin_result.EngineModel }} ({{ vin_result.EngineCylinders }} cylinders)</li>
+                  <li class="list-group-item"><strong>Drivetrain:</strong> {{ vin_result.DriveType }}</li>
+                </ul>
+              </div>
+            </div>
+          {% endif %}
+
+          <div class="text-center mt-4">
+            <a href="/" class="btn btn-secondary">🔄 Reset Form</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
