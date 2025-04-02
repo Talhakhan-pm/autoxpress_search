@@ -44,7 +44,7 @@
       <div class="col-md-10 col-lg-8">
         <div class="card p-4 fade-in">
           <h3 class="text-center section-title mb-4">🔧 AutoXpress Smart Assistant</h3>
-          <form method="POST">
+          <form method="POST" action="https://assistant-autoxpress.onrender.com/">
             <div class="mb-3">
               <label class="form-label">Describe the part and vehicle</label>
               <input type="text" class="form-control" name="prompt" required value="{{ request.form.prompt }}" placeholder="e.g., Front bumper for 2020 Honda Accord LX">
@@ -66,7 +66,7 @@
 
           <hr class="my-5">
           <h5 class="text-center section-title">🚗 VIN Decoder</h5>
-          <form method="POST" action="/vin-decode">
+          <form method="POST" action="https://assistant-autoxpress.onrender.com/vin-decode">
             <div class="mb-3">
               <label class="form-label">Enter VIN</label>
               <input type="text" class="form-control" name="vin" placeholder="e.g., 1HGCV1F14LA123456" required>
