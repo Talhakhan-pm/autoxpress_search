@@ -17,7 +17,6 @@
                             <div class="mb-3">
                                 <label class="form-label">Describe the part and vehicle</label>
                                 <input type="text" class="form-control" name="prompt" required value="{{ request.form.prompt }}" placeholder="e.g., Front bumper for 2020 Honda Accord LX">
-                            </div>
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-primary">Generate Questions</button>
                             </div>
@@ -34,9 +33,39 @@
                         {% endif %}
                     </div>
                 </div>
-            </div>
-            <div class="text-center mt-3">
-                <a href="/" class="btn btn-secondary">🔄 Reset Form</a>
+
+                <!-- VIN Decoder Section -->
+                <hr class="my-5">
+                <h5 class="text-center mb-3">🚗 Manual VIN Decoder</h5>
+                <form method="POST" action="/vin-decode">
+                    <div class="mb-3">
+                        <label class="form-label">Enter VIN</label>
+                        <input type="text" class="form-control" name="vin" placeholder="e.g., 1HGCV1F14LA123456" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-secondary">Decode VIN</button>
+                    </div>
+                </form>
+
+                {% if vin_result %}
+                    <div class="card shadow mt-4">
+                        <div class="card-body">
+                            <h5 class="card-title">🔍 Decoded VIN Information</h5>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item"><strong>Make:</strong> {{ vin_result.Make }}</li>
+                                <li class="list-group-item"><strong>Model:</strong> {{ vin_result.Model }}</li>
+                                <li class="list-group-item"><strong>Year:</strong> {{ vin_result.ModelYear }}</li>
+                                <li class="list-group-item"><strong>Trim:</strong> {{ vin_result.Trim }}</li>
+                                <li class="list-group-item"><strong>Engine:</strong> {{ vin_result.EngineModel }} ({{ vin_result.EngineCylinders }} cylinders)</li>
+                                <li class="list-group-item"><strong>Drivetrain:</strong> {{ vin_result.DriveType }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="text-center mt-3">
+                    <a href="/" class="btn btn-secondary">🔄 Reset Form</a>
+                </div>
             </div>
         </div>
     </div>

@@ -1,3 +1,5 @@
+import requests  # ✅ Needed for VIN API calls
+
 from flask import Flask, render_template, request
 import os
 from dotenv import load_dotenv
@@ -9,6 +11,27 @@ client = OpenAI(api_key=api_key)
 
 app = Flask(__name__)
 
+# ✅ VIN decoder helper function
+def decode_vin(vin):
+    """
+    Calls the NHTSA VIN decoding API and returns vehicle info as a dictionary.
+    Returns an empty dict if invalid or fails.
+    """
+    if not vin:
+        return {}
+    try:
+        url = f'https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvaluesextended/{vin}?format=json'
+        response = requests.get(url)
+        data = response.json()
+        if data and data['Results']:
+            result = data['Results'][0]
+            if result.get('Make') and result.get('ModelYear'):
+                return result
+    except Exception as e:
+        print(f"VIN decode error: {e}")
+    return {}
+
+# ✅ Main GPT Assistant route
 @app.route("/", methods=["GET", "POST"])
 def index():
     questions = None
@@ -49,7 +72,7 @@ Your job is to:
 
 5. Finish with a bolded search-optimized lookup phrase, (add a emoji of world right before the phrase):
    - Format: lowercase string including [year or range] + make + model + trim (if needed) + engine (if relevant) + oem + part name
-   - Example:  **“🔎  2020–2022 honda civic ex oem front bumper”**
+   - Example:  **“🔎 2020–2022 honda civic ex oem front bumper”**
 
 6. Add one cool fact about the vehicle, starting with:
 🔥 “Do you know that...”
@@ -79,7 +102,6 @@ Input:
 \"\"\"{query}\"\"\"
 """
 
-
         response = client.chat.completions.create(
             model="gpt-4-1106-preview",
             messages=[{"role": "user", "content": prompt}],
@@ -88,8 +110,16 @@ Input:
 
         questions = response.choices[0].message.content.strip()
 
-    return render_template("index.html", questions=questions)
+    return render_template("index.html", questions=questions, vin_result=None)
 
+# ✅ Manual VIN Decode route (for second form)
+@app.route("/vin-decode", methods=["POST"])
+def vin_decode():
+    vin = request.form.get("vin", "").strip()
+    vin_info = decode_vin(vin)
+    return render_template("index.html", questions=None, vin_result=vin_info)
+
+# ✅ Flask entry point
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
