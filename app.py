@@ -1,3 +1,5 @@
+import requests  # ✅ Needed for VIN API calls
+
 from flask import Flask, render_template, request
 import os
 from dotenv import load_dotenv
@@ -9,6 +11,7 @@ client = OpenAI(api_key=api_key)
 
 app = Flask(__name__)
 
+# ✅ VIN decoder helper function
 def decode_vin(vin):
     """
     Calls the NHTSA VIN decoding API and returns vehicle info as a dictionary.
@@ -28,6 +31,7 @@ def decode_vin(vin):
         print(f"VIN decode error: {e}")
     return {}
 
+# ✅ Main GPT Assistant route
 @app.route("/", methods=["GET", "POST"])
 def index():
     questions = None
@@ -98,7 +102,6 @@ Input:
 \"\"\"{query}\"\"\"
 """
 
-
         response = client.chat.completions.create(
             model="gpt-4-1106-preview",
             messages=[{"role": "user", "content": prompt}],
@@ -109,6 +112,14 @@ Input:
 
     return render_template("index.html", questions=questions, vin_result=None)
 
+# ✅ Manual VIN Decode route (for second form)
+@app.route("/vin-decode", methods=["POST"])
+def vin_decode():
+    vin = request.form.get("vin", "").strip()
+    vin_info = decode_vin(vin)
+    return render_template("index.html", questions=None, vin_result=vin_info)
+
+# ✅ Flask entry point
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
