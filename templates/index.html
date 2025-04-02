@@ -49,10 +49,6 @@
               <label class="form-label">Describe the part and vehicle</label>
               <input type="text" class="form-control" name="prompt" required value="{{ request.form.prompt }}" placeholder="e.g., Front bumper for 2020 Honda Accord LX">
             </div>
-            <div class="mb-3">
-              <label class="form-label">Optional: Enter VIN</label>
-              <input type="text" class="form-control" name="vin" value="{{ request.form.vin }}" placeholder="e.g., 1HGCV1F14LA123456">
-            </div>
             <div class="d-grid">
               <button type="submit" class="btn btn-primary">Generate Questions</button>
             </div>
