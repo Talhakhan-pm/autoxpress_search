@@ -53,7 +53,7 @@ Your job is to:
    - If valid, do NOT confirm it in a sentence. Just move on.
 
 3. If valid:
-   - List factory trims (comma-separated) with engine options (displacement + type, comma-separated). One line.
+   - List factory trims with engine options (displacement + type, comma-separated). One line.
    - DO NOT repeat parsed info in sentence form
 
 4. Ask follow-up questions, max 3:
