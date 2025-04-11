@@ -65,7 +65,7 @@ Your job is to:
 
 5. Finish with a bolded search-optimized lookup phrase, (add a emoji of world right before the phrase):
    - Format: lowercase string including [year or range] + make + model + trim (if needed) + engine (if relevant) + oem + part name
-   - Think of it as a search term for a customer to find the part. Use the most relevant keywords. Give two or three examples of search terms for the same part.
+   - Think of it as a search term for a customer to find the part. Use the most relevant keywords. Give two search terms for the same part with another name.
    - Example 1:  “🔎 2020–2022 honda civic ex oem front bumper”
    - Example 2: “🔎 2020 – 2022 honda civic ex oem bumper cover”
 
