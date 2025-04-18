@@ -1,14 +1,14 @@
-import requests  # ✅ Needed for VIN API calls
-
-from flask import Flask, render_template, request
 import os
+from flask import Flask, render_template, request
 from dotenv import load_dotenv
+import requests
 from openai import OpenAI
 
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 serpapi_key = os.getenv("SERPAPI_KEY")
 client = OpenAI(api_key=api_key)
+
 
 app = Flask(__name__)
 
@@ -54,6 +54,7 @@ def get_ebay_serpapi_results(query):
 
         return top_results
     except Exception as e:
+        print("SerpAPI error:", e)
         return [{"title": "Error fetching listings", "price": "N/A", "link": str(e)}]
 
 # ✅ Main GPT Assistant route
