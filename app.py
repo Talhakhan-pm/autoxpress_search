@@ -1,7 +1,7 @@
 import os
+import requests
 from flask import Flask, render_template, request
 from dotenv import load_dotenv
-import requests
 from openai import OpenAI
 
 load_dotenv()
@@ -9,15 +9,10 @@ api_key = os.getenv("OPENAI_API_KEY")
 serpapi_key = os.getenv("SERPAPI_KEY")
 client = OpenAI(api_key=api_key)
 
-
 app = Flask(__name__)
 
-# ✅ VIN decoder helper function
+# VIN decoder helper function
 def decode_vin(vin):
-    """
-    Calls the NHTSA VIN decoding API and returns vehicle info as a dictionary.
-    Returns an empty dict if invalid or fails.
-    """
     if not vin:
         return {}
     try:
@@ -32,7 +27,7 @@ def decode_vin(vin):
         print(f"VIN decode error: {e}")
     return {}
 
-# ✅ eBay SerpAPI listing fetcher
+# eBay SerpAPI listing fetcher
 def get_ebay_serpapi_results(query):
     url = "https://serpapi.com/search"
     params = {
@@ -43,8 +38,9 @@ def get_ebay_serpapi_results(query):
     try:
         response = requests.get(url, params=params)
         results = response.json()
-        top_results = []
+        print("🔎 SerpAPI response:", results)  # Debug log
 
+        top_results = []
         for item in results.get("search_results", [])[:3]:
             top_results.append({
                 "title": item.get("title"),
@@ -55,15 +51,16 @@ def get_ebay_serpapi_results(query):
         return top_results
     except Exception as e:
         print("SerpAPI error:", e)
-        return [{"title": "Error fetching listings", "price": "N/A", "link": str(e)}]
+        return []
 
-# ✅ Main GPT Assistant route
+# Main GPT + Search Route
 @app.route("/", methods=["GET", "POST"])
 def index():
     questions = None
     listings = None
+
     if request.method == "POST":
-        query = request.form.get("prompt", "").strip()
+        user_input = request.form.get("prompt", "").strip()
 
         prompt = f"""
 You are an auto parts fitment expert working for a US-based parts sourcing company. The goal is to help human agents quickly identify the correct OEM part for a customer's vehicle.
@@ -104,18 +101,30 @@ Your job is to:
         )
 
         questions = response.choices[0].message.content.strip()
-        listings = get_ebay_serpapi_results(query)
 
-    return render_template("index.html", questions=questions, listings=listings, vin_result=None)
+        # Extract 🔎 search line from GPT output
+        search_term = None
+        for line in questions.split("\n"):
+            if "🔎" in line:
+                search_term = line.replace("🔎", "").strip()
+                break
 
-# ✅ Manual VIN Decode route (for second form)
+        # If search term found, call SerpAPI
+        if search_term:
+            listings = get_ebay_serpapi_results(search_term)
+
+        return render_template("index.html", questions=questions, listings=listings, vin_result=None)
+
+    return render_template("index.html", questions=None, listings=None, vin_result=None)
+
+# VIN Decoder route
 @app.route("/vin-decode", methods=["POST"])
 def vin_decode():
     vin = request.form.get("vin", "").strip()
     vin_info = decode_vin(vin)
-    return render_template("index.html", questions=None, vin_result=vin_info)
+    return render_template("index.html", questions=None, listings=None, vin_result=vin_info)
 
-# ✅ Flask entry point
+# Run app
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
