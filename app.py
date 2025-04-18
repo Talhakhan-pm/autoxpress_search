@@ -7,6 +7,7 @@ from openai import OpenAI
 
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
+serpapi_key = os.getenv("SERPAPI_KEY")
 client = OpenAI(api_key=api_key)
 
 app = Flask(__name__)
@@ -31,10 +32,35 @@ def decode_vin(vin):
         print(f"VIN decode error: {e}")
     return {}
 
+# ✅ eBay SerpAPI listing fetcher
+def get_ebay_serpapi_results(query):
+    url = "https://serpapi.com/search"
+    params = {
+        "engine": "ebay",
+        "q": query,
+        "api_key": serpapi_key
+    }
+    try:
+        response = requests.get(url, params=params)
+        results = response.json()
+        top_results = []
+
+        for item in results.get("search_results", [])[:3]:
+            top_results.append({
+                "title": item.get("title"),
+                "price": item.get("price"),
+                "link": item.get("link")
+            })
+
+        return top_results
+    except Exception as e:
+        return [{"title": "Error fetching listings", "price": "N/A", "link": str(e)}]
+
 # ✅ Main GPT Assistant route
 @app.route("/", methods=["GET", "POST"])
 def index():
     questions = None
+    listings = None
     if request.method == "POST":
         query = request.form.get("prompt", "").strip()
 
@@ -68,18 +94,6 @@ Your job is to:
    - Think of it as a search term for a customer to find the part. Use the most relevant keywords. Give two search terms for the same part with another name.
    - Example 1:  “🔎 2020–2022 honda civic ex oem front bumper”
    - Example 2: “🔎 2020 – 2022 honda civic ex oem bumper cover”
-
-
-Hard rules:
-- US-spec vehicles ONLY
-- OEM parts ONLY
-- NO mention of VIN, emissions, certifications
-- NO summaries like “The Civic is a valid US model”
-- NO extra commentary, only raw output
-- Format matters — bullet points, clean, efficient
-
-Input:
-\"\"\"{query}\"\"\"
 """
 
         response = client.chat.completions.create(
@@ -89,8 +103,9 @@ Input:
         )
 
         questions = response.choices[0].message.content.strip()
+        listings = get_ebay_serpapi_results(query)
 
-    return render_template("index.html", questions=questions, vin_result=None)
+    return render_template("index.html", questions=questions, listings=listings, vin_result=None)
 
 # ✅ Manual VIN Decode route (for second form)
 @app.route("/vin-decode", methods=["POST"])

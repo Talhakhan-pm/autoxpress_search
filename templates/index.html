@@ -36,6 +36,10 @@
       0% {opacity: 0; transform: translateY(10px);}
       100% {opacity: 1; transform: translateY(0);}
     }
+    .btn-outline-secondary {
+      font-size: 0.8rem;
+      padding: 4px 8px;
+    }
   </style>
 </head>
 <body>
@@ -44,7 +48,7 @@
       <div class="col-md-10 col-lg-8">
         <div class="card p-4 fade-in">
           <h3 class="text-center section-title mb-4">🔧 AutoXpress Smart Assistant</h3>
-          <form method="POST" action="https://assistant-autoxpress.onrender.com/">
+          <form method="POST" action="/">
             <div class="mb-3">
               <label class="form-label">Describe the part and vehicle</label>
               <input type="text" class="form-control" name="prompt" required value="{{ request.form.prompt }}" placeholder="e.g., Front bumper for 2020 Honda Accord LX">
@@ -64,9 +68,34 @@
             </div>
           {% endif %}
 
+          {% if listings %}
+            <hr class="my-4">
+            <h5 class="mb-3 section-title">💰 eBay Listings:</h5>
+
+            {% set prices = listings | map(attribute='price') | select('string') | map('replace', '$', '') | list %}
+            {% set prices_float = prices | map('float') | list %}
+            {% set min_price = prices_float | min %}
+            {% set max_price = prices_float | max %}
+
+            <p><strong>💲 Price Range:</strong> ${{ '%.2f' % min_price }} – ${{ '%.2f' % max_price }}</p>
+
+            <ul class="list-group">
+              {% for item in listings %}
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                  <div class="me-auto">
+                    <strong>{{ item.title }}</strong><br>
+                    <span>{{ item.price }}</span><br>
+                    <a href="{{ item.link }}" target="_blank">🔗 View on eBay</a>
+                  </div>
+                  <button class="btn btn-sm btn-outline-secondary ms-2" onclick="navigator.clipboard.writeText('{{ item.link }}')">📋 Copy Link</button>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+
           <hr class="my-5">
           <h5 class="text-center section-title">🚗 VIN Decoder</h5>
-          <form method="POST" action="https://assistant-autoxpress.onrender.com/vin-decode">
+          <form method="POST" action="/vin-decode">
             <div class="mb-3">
               <label class="form-label">Enter VIN</label>
               <input type="text" class="form-control" name="vin" placeholder="e.g., 1HGCV1F14LA123456" required>
