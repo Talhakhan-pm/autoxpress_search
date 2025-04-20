@@ -29,6 +29,8 @@ def decode_vin(vin):
 
 # eBay SerpAPI listing fetcher
 def get_ebay_serpapi_results(query):
+    print("🔥 SerpAPI called with:", query)
+
     url = "https://serpapi.com/search"
     params = {
         "engine": "ebay",
@@ -38,7 +40,7 @@ def get_ebay_serpapi_results(query):
     try:
         response = requests.get(url, params=params)
         results = response.json()
-        print("🔎 SerpAPI response:", results)  # Debug log
+        print("🔍 SerpAPI response:", results)
 
         top_results = []
         for item in results.get("search_results", [])[:3]:
@@ -53,14 +55,13 @@ def get_ebay_serpapi_results(query):
         print("SerpAPI error:", e)
         return []
 
-# Main GPT + Search Route
+# Main GPT Assistant route
 @app.route("/", methods=["GET", "POST"])
 def index():
     questions = None
     listings = None
-
     if request.method == "POST":
-        user_input = request.form.get("prompt", "").strip()
+        query = request.form.get("prompt", "").strip()
 
         prompt = f"""
 You are an auto parts fitment expert working for a US-based parts sourcing company. The goal is to help human agents quickly identify the correct OEM part for a customer's vehicle.
@@ -102,22 +103,15 @@ Your job is to:
 
         questions = response.choices[0].message.content.strip()
 
-        # Extract 🔎 search line from GPT output
-        search_term = None
-        for line in questions.split("\n"):
-            if "🔎" in line:
-                search_term = line.replace("🔎", "").strip()
-                break
-
-        # If search term found, call SerpAPI
-        if search_term:
-            listings = get_ebay_serpapi_results(search_term)
+        # ✅ Clean search term for SerpAPI
+        search_term = query.lower().replace("for", "").replace("  ", " ").strip()
+        listings = get_ebay_serpapi_results(search_term)
 
         return render_template("index.html", questions=questions, listings=listings, vin_result=None)
 
     return render_template("index.html", questions=None, listings=None, vin_result=None)
 
-# VIN Decoder route
+# VIN Decode route
 @app.route("/vin-decode", methods=["POST"])
 def vin_decode():
     vin = request.form.get("vin", "").strip()
