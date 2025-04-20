@@ -5,11 +5,13 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 load_dotenv()
+
 api_key = os.getenv("OPENAI_API_KEY")
 serpapi_key = os.getenv("SERPAPI_KEY")
 client = OpenAI(api_key=api_key)
 
 app = Flask(__name__)
+print("🧪 SERPAPI_KEY loaded:", serpapi_key)
 
 # VIN decoder helper function
 def decode_vin(vin):
@@ -33,21 +35,22 @@ def get_ebay_serpapi_results(query):
 
     url = "https://serpapi.com/search"
     params = {
-        "engine": "ebay",
+        "engine": "google_shopping",
         "q": query,
         "api_key": serpapi_key
     }
+    print("📦 Final request params:", params)
     try:
         response = requests.get(url, params=params)
         results = response.json()
         print("🔍 SerpAPI response:", results)
 
         top_results = []
-        for item in results.get("search_results", [])[:3]:
+        for item in results.get("shopping_results", [])[:3]:
             top_results.append({
                 "title": item.get("title"),
                 "price": item.get("price"),
-                "link": item.get("link")
+                "link": item.get("product_link")
             })
 
         return top_results
@@ -120,5 +123,5 @@ def vin_decode():
 
 # Run app
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5040))
     app.run(host="0.0.0.0", port=port)
