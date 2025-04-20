@@ -87,7 +87,6 @@
                     <span>{{ item.price }}</span><br>
                     <a href="{{ item.link }}" target="_blank">🔗 Vendor Listing</a>
                   </div>
-                  <button class="btn btn-sm btn-outline-secondary ms-2" onclick="navigator.clipboard.writeText('{{ item.product_link }}')">📋 Copy Link</button>
                 </li>
               {% endfor %}
             </ul>
