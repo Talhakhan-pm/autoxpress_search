@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 from flask import Flask, render_template, request
 from dotenv import load_dotenv
@@ -12,6 +13,26 @@ client = OpenAI(api_key=api_key)
 
 app = Flask(__name__)
 print("🧪 SERPAPI_KEY loaded:", serpapi_key)
+
+# 🔧 Smart query cleaner for better search match
+def clean_query(text):
+    # Normalize dashes
+    text = re.sub(r"[–—]", "-", text)
+
+    # Remove weak filler words
+    text = re.sub(r"\bfor\b", "", text, flags=re.IGNORECASE)
+
+    # Replace vague phrases with stronger keywords
+    text = text.lower()
+    text = text.replace("oem timing kit", "timing belt kit with water pump")
+    text = text.replace("timing kit", "timing belt kit with water pump")
+    text = text.replace("assembly", "complete assembly")
+    text = text.replace("radiator assembly", "radiator with fan and shroud")
+
+    # Trim and clean spaces
+    text = re.sub(r"\s+", " ", text).strip()
+
+    return text
 
 # VIN decoder helper function
 def decode_vin(vin):
@@ -46,12 +67,17 @@ def get_ebay_serpapi_results(query):
         print("🔍 SerpAPI response:", results)
 
         top_results = []
-        for item in results.get("shopping_results", [])[:3]:
-            top_results.append({
-                "title": item.get("title"),
-                "price": item.get("price"),
-                "link": item.get("product_link")
-            })
+        keywords = query.lower().split()
+        for item in results.get("shopping_results", []):
+            title = item.get("title", "").lower()
+            if any(kw in title for kw in keywords):
+                top_results.append({
+                    "title": item.get("title"),
+                    "price": item.get("price"),
+                    "link": item.get("product_link")
+                })
+            if len(top_results) >= 5:
+                break
 
         return top_results
     except Exception as e:
@@ -68,6 +94,8 @@ def index():
 
         prompt = f"""
 You are an auto parts fitment expert working for a US-based parts sourcing company. The goal is to help human agents quickly identify the correct OEM part for a customer's vehicle.
+
+The customer just said: "{query}"
 
 Do not provide explanations, summaries, or filler text. Format everything in direct, clean bullet points.
 
@@ -106,8 +134,11 @@ Your job is to:
 
         questions = response.choices[0].message.content.strip()
 
-        # ✅ Clean search term for SerpAPI
-        search_term = query.lower().replace("for", "").replace("  ", " ").strip()
+        # Use GPT-generated search term if available, else fallback to cleaned query
+        search_lines = [line for line in questions.split("\n") if "🔎" in line]
+        search_term = clean_query(search_lines[0].replace("🔎", "").strip()) if search_lines else clean_query(query)
+        print("🧼 Final search term used:", search_term)
+
         listings = get_ebay_serpapi_results(search_term)
 
         return render_template("index.html", questions=questions, listings=listings, vin_result=None)
