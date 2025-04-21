@@ -58,8 +58,9 @@ def get_ebay_serpapi_results(query):
 
     url = "https://serpapi.com/search"
     params = {
-        "engine": "google_shopping",
-        "q": query,
+        "engine": "ebay",          # Change from "google_shopping" to "ebay"
+        "ebay_domain": "ebay.com", # Specify eBay domain
+        "_nkw": query,
         "api_key": serpapi_key
     }
     print("📦 Final request params:", params)
@@ -70,13 +71,14 @@ def get_ebay_serpapi_results(query):
 
         top_results = []
         keywords = query.lower().split()
-        for item in results.get("shopping_results", []):
+        # Adjust the parsing based on eBay response structure
+        for item in results.get("organic_results", []):
             title = item.get("title", "").lower()
             if any(kw in title for kw in keywords):
                 top_results.append({
                     "title": item.get("title"),
-                    "price": item.get("price"),
-                    "link": item.get("product_link")
+                    "price": item.get("price", {}).get("raw"),
+                    "link": item.get("link")
                 })
             if len(top_results) >= 5:
                 break
