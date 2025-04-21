@@ -1,10 +1,10 @@
 import os
 import re
 import requests
-from flask import Flask, render_template, request, flash
+from flask import Flask, render_template, request
 from dotenv import load_dotenv
 from openai import OpenAI
-from vehicle_validation import has_vehicle_info, get_missing_info_message  # Import the new functions
+from vehicle_validation import has_vehicle_info, get_missing_info_message
 
 load_dotenv()
 
@@ -12,8 +12,9 @@ api_key = os.getenv("OPENAI_API_KEY")
 serpapi_key = os.getenv("SERPAPI_KEY")
 client = OpenAI(api_key=api_key)
 
+# Create Flask app
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "auto-parts-assistant-key")  # Add a secret key for flash messages
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "auto-parts-assistant-key")
 print("🧪 SERPAPI_KEY loaded:", serpapi_key)
 
 # 🔧 Smart query cleaner for better search match

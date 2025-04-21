@@ -43,6 +43,67 @@
       border-radius: 0.5rem;
       margin-top: 1rem;
     }
+    
+    /* Enhanced autocomplete styles */
+    .search-container {
+      position: relative;
+    }
+    
+    .autocomplete-suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background-color: white;
+      border-radius: 0.5rem;
+      border: 1px solid #dee2e6;
+      max-height: 300px;
+      overflow-y: auto;
+      display: none;
+      margin-top: 5px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      animation: fadeInSuggestions 0.15s ease-out;
+    }
+    
+    @keyframes fadeInSuggestions {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .autocomplete-item {
+      padding: 10px 15px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background-color 0.2s;
+    }
+    
+    .autocomplete-item:hover, 
+    .autocomplete-item.selected {
+      background-color: #f8f9fa;
+      color: #d62828;
+    }
+    
+    .autocomplete-item:last-child {
+      border-bottom: none;
+    }
+    
+    /* New category headers */
+    .autocomplete-category {
+      background-color: #f0f0f0;
+      padding: 5px 15px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    /* Highlighted text in suggestions */
+    .autocomplete-item strong {
+      color: #d62828;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -51,10 +112,11 @@
       <div class="col-md-10 col-lg-8">
         <div class="card shadow-lg p-4 rounded-4 fade-in">
           <h3 class="text-center section-title mb-4">🔧 AutoXpress Smart Assistant</h3>
-          <form method="POST" action="/">
-            <div class="mb-3">
+          <form method="POST" action="/" class="search-form">
+            <div class="mb-3 search-container">
               <label class="form-label">Describe the part and vehicle</label>
-              <input type="text" class="form-control" name="prompt" required value="{{ request.form.prompt }}" placeholder="e.g., Front bumper for 2020 Honda Accord LX">
+              <input type="text" class="form-control" id="search-input" name="prompt" required value="{{ request.form.prompt }}" placeholder="e.g., Front bumper for 2020 Honda Accord LX">
+              <div id="autocomplete-suggestions" class="autocomplete-suggestions"></div>
             </div>
             <div class="d-grid">
               <button type="submit" class="btn btn-danger w-100 fw-bold shadow-sm">
@@ -108,9 +170,10 @@
           {% endif %}
         </div>
 
-          <hr class="my-5">
+        <hr class="my-5">
+        <div class="card shadow-lg p-4 rounded-4">
           <h5 class="text-center section-title">🚗 VIN Decoder</h5>
-          <form method="POST" action="/vin-decode">
+          <form method="POST" action="/vin-decode" class="vin-form">
             <div class="mb-3">
               <label class="form-label">Enter VIN</label>
               <input type="text" class="form-control" name="vin" placeholder="e.g., 1HGCV1F14LA123456" required>
@@ -143,14 +206,344 @@
       </div>
     </div>
   </div>
-<script>
-    const form = document.querySelector("form");
-    const submitBtn = form.querySelector("button[type='submit']");
 
-    form.addEventListener("submit", () => {
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Thinking...';
-      submitBtn.classList.add("opacity-75");
+  <script>
+    // Vehicle makes and models data
+    const vehicleData = {
+      "Acura": ["ILX", "MDX", "RDX", "TLX", "NSX", "RLX", "TSX"],
+      "Audi": ["A3", "A4", "A5", "A6", "A7", "A8", "Q3", "Q5", "Q7", "Q8", "e-tron", "TT", "R8"],
+      "BMW": ["3-Series", "5-Series", "7-Series", "X1", "X3", "X5", "X7", "M3", "M5", "Z4", "i4", "i7"],
+      "Buick": ["Enclave", "Encore", "Envision", "LaCrosse", "Regal"],
+      "Cadillac": ["CT4", "CT5", "CTS", "Escalade", "XT4", "XT5", "XT6", "XTS"],
+      "Chevrolet": ["Silverado", "Equinox", "Tahoe", "Malibu", "Traverse", "Colorado", "Camaro", "Suburban", "Impala", "Blazer", "Corvette", "Trax", "Spark", "Bolt", "Cruze"],
+      "Chrysler": ["300", "Pacifica", "Town & Country", "200"],
+      "Dodge": ["Challenger", "Charger", "Durango", "Journey", "Grand Caravan", "Ram", "Dart"],
+      "Ford": ["F-150", "Mustang", "Explorer", "Escape", "Edge", "Ranger", "Bronco", "Expedition", "Focus", "Fusion", "Taurus", "EcoSport", "Maverick", "F-250", "F-350", "Fiesta"],
+      "GMC": ["Sierra", "Terrain", "Yukon", "Acadia", "Canyon", "Savana"],
+      "Honda": ["Accord", "Civic", "CR-V", "Pilot", "Odyssey", "HR-V", "Ridgeline", "Fit", "Clarity", "Insight", "Passport"],
+      "Hyundai": ["Elantra", "Sonata", "Tucson", "Santa Fe", "Kona", "Palisade", "Veloster", "Venue", "Ioniq", "Santa Cruz", "Accent"],
+      "Infiniti": ["Q50", "Q60", "QX50", "QX60", "QX80", "G37", "FX35"],
+      "Jaguar": ["F-Pace", "E-Pace", "XE", "XF", "F-Type", "I-Pace", "XJ"],
+      "Jeep": ["Grand Cherokee", "Cherokee", "Wrangler", "Compass", "Renegade", "Gladiator", "Patriot", "Liberty", "Wagoneer"],
+      "Kia": ["Forte", "Optima", "Sorento", "Sportage", "Telluride", "Soul", "K5", "Stinger", "Carnival", "Rio", "Seltos", "Niro"],
+      "Lexus": ["ES", "IS", "RX", "NX", "GX", "LX", "RC", "UX", "LS", "LC"],
+      "Lincoln": ["Navigator", "Aviator", "Corsair", "Nautilus", "MKZ", "Continental", "MKC", "MKX"],
+      "Mazda": ["Mazda3", "Mazda6", "CX-5", "CX-9", "CX-30", "MX-5 Miata", "CX-3", "CX-50"],
+      "Mercedes-Benz": ["C-Class", "E-Class", "S-Class", "GLC", "GLE", "GLS", "A-Class", "CLA", "GLB", "G-Class"],
+      "Nissan": ["Altima", "Rogue", "Sentra", "Pathfinder", "Frontier", "Murano", "Versa", "Maxima", "Kicks", "Armada", "Titan", "Juke"],
+      "Porsche": ["911", "Cayenne", "Macan", "Panamera", "Taycan", "Boxster", "Cayman"],
+      "Ram": ["1500", "2500", "3500", "ProMaster", "ProMaster City"],
+      "Subaru": ["Outback", "Forester", "Crosstrek", "Impreza", "Legacy", "Ascent", "WRX", "BRZ"],
+      "Tesla": ["Model 3", "Model S", "Model X", "Model Y", "Cybertruck"],
+      "Toyota": ["Camry", "Corolla", "RAV4", "Tacoma", "Highlander", "4Runner", "Prius", "Tundra", "Sienna", "Avalon", "Land Cruiser", "Sequoia", "Venza", "C-HR", "86", "GR86", "Supra"],
+      "Volkswagen": ["Jetta", "Passat", "Tiguan", "Atlas", "Golf", "ID.4", "Taos", "Arteon", "GTI"],
+      "Volvo": ["XC90", "XC60", "XC40", "S60", "S90", "V60", "V90"]
+    };
+    
+    // Years for autocomplete
+    const years = [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
+    
+    // Initialize autocomplete when the DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      const searchInput = document.getElementById('search-input');
+      const suggestionsContainer = document.getElementById('autocomplete-suggestions');
+      
+      if (!searchInput || !suggestionsContainer) return;
+      
+      // State variables
+      let selectedIndex = -1;
+      let suggestions = [];
+      
+      // Listen for input changes
+      searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        
+        if (query.length < 2) {
+          hideSuggestions();
+          return;
+        }
+        
+        // Generate suggestions
+        generateSuggestions(query);
+      });
+      
+      // Handle keyboard navigation
+      searchInput.addEventListener('keydown', function(e) {
+        if (!suggestions.length) return;
+        
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
+          updateSelectedSuggestion();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          selectedIndex = Math.max(selectedIndex - 1, -1);
+          updateSelectedSuggestion();
+        } else if (e.key === 'Enter' && selectedIndex >= 0) {
+          e.preventDefault();
+          selectSuggestion(suggestions[selectedIndex]);
+        } else if (e.key === 'Escape') {
+          hideSuggestions();
+        }
+      });
+      
+      // Close suggestions when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!suggestionsContainer.contains(e.target) && e.target !== searchInput) {
+          hideSuggestions();
+        }
+      });
+      
+      // Improved generateSuggestions function
+      function generateSuggestions(query) {
+        suggestions = [];
+        
+        // Split the query into words and get the last word
+        const queryWords = query.split(/\s+/);
+        const lastWord = queryWords[queryWords.length - 1].toLowerCase();
+        
+        // Check if the last word in the query matches a make name
+        let lastWordMakeMatch = null;
+        for (const make in vehicleData) {
+          if (make.toLowerCase() === lastWord) {
+            lastWordMakeMatch = make;
+            break;
+          }
+        }
+        
+        // If the last word is a complete make name, show models for that make
+        if (lastWordMakeMatch) {
+          // Add all models for this make
+          const models = vehicleData[lastWordMakeMatch];
+          for (const model of models) {
+            suggestions.push(`${lastWordMakeMatch} ${model}`);
+          }
+        } 
+        // Otherwise, perform normal matching
+        else {
+          // Add matching makes
+          for (const make in vehicleData) {
+            if (make.toLowerCase().includes(lastWord)) {
+              suggestions.push(make);
+            }
+          }
+          
+          // Add matching models with their makes
+          for (const make in vehicleData) {
+            const models = vehicleData[make];
+            for (const model of models) {
+              if (model.toLowerCase().includes(lastWord)) {
+                suggestions.push(`${make} ${model}`);
+              }
+            }
+          }
+          
+          // Check for year patterns
+          if (lastWord.match(/^(19|20)\d{0,2}$/)) {
+            for (const year of years) {
+              if (year.toString().startsWith(lastWord)) {
+                suggestions.push(year.toString());
+              }
+            }
+          }
+        }
+        
+        // Add fuzzy matching for typos
+        if (suggestions.length === 0 && lastWord.length >= 3) {
+          for (let i = 0; i < lastWord.length; i++) {
+            const fuzzyWord = lastWord.slice(0, i) + lastWord.slice(i + 1);
+            
+            for (const make in vehicleData) {
+              if (make.toLowerCase().includes(fuzzyWord)) {
+                suggestions.push(make);
+              }
+            }
+            
+            if (suggestions.length > 0) break;
+          }
+        }
+        
+        // Limit and display suggestions
+        suggestions = Array.from(new Set(suggestions)).slice(0, 15);
+        
+        if (suggestions.length > 0) {
+          displaySuggestions();
+        } else {
+          hideSuggestions();
+        }
+      }
+      
+      // Enhanced display function with category labels
+      function displaySuggestions() {
+        suggestionsContainer.innerHTML = '';
+        suggestionsContainer.style.display = 'block';
+        
+        // Group suggestions by type
+        const makes = [];
+        const models = [];
+        const years = [];
+        
+        suggestions.forEach(suggestion => {
+          if (/^\d{4}$/.test(suggestion)) {
+            years.push(suggestion);
+          } else if (Object.keys(vehicleData).includes(suggestion)) {
+            makes.push(suggestion);
+          } else {
+            models.push(suggestion);
+          }
+        });
+        
+        // Add makes with a header if there are any
+        if (makes.length > 0) {
+          const makeHeader = document.createElement('div');
+          makeHeader.className = 'autocomplete-category';
+          makeHeader.textContent = 'MAKES';
+          suggestionsContainer.appendChild(makeHeader);
+          
+          makes.forEach((suggestion, index) => {
+            addSuggestionItem(suggestion, index);
+          });
+        }
+        
+        // Add models with a header if there are any
+        if (models.length > 0) {
+          const modelHeader = document.createElement('div');
+          modelHeader.className = 'autocomplete-category';
+          modelHeader.textContent = 'MODELS';
+          suggestionsContainer.appendChild(modelHeader);
+          
+          models.forEach((suggestion, index) => {
+            addSuggestionItem(suggestion, makes.length + index);
+          });
+        }
+        
+        // Add years with a header if there are any
+        if (years.length > 0) {
+          const yearHeader = document.createElement('div');
+          yearHeader.className = 'autocomplete-category';
+          yearHeader.textContent = 'YEARS';
+          suggestionsContainer.appendChild(yearHeader);
+          
+          years.forEach((suggestion, index) => {
+            addSuggestionItem(suggestion, makes.length + models.length + index);
+          });
+        }
+        
+        function addSuggestionItem(suggestion, index) {
+          const item = document.createElement('div');
+          item.className = 'autocomplete-item';
+          
+          // Highlight the matched part
+          const query = searchInput.value.toLowerCase();
+          const lastWord = query.split(/\s+/).pop();
+          
+          if (lastWord && suggestion.toLowerCase().includes(lastWord.toLowerCase())) {
+            const highlightIndex = suggestion.toLowerCase().indexOf(lastWord.toLowerCase());
+            const beforeMatch = suggestion.substring(0, highlightIndex);
+            const match = suggestion.substring(highlightIndex, highlightIndex + lastWord.length);
+            const afterMatch = suggestion.substring(highlightIndex + lastWord.length);
+            
+            item.innerHTML = `${beforeMatch}<strong>${match}</strong>${afterMatch}`;
+          } else {
+            item.textContent = suggestion;
+          }
+          
+          item.addEventListener('click', () => {
+            selectSuggestion(suggestion);
+          });
+          
+          item.addEventListener('mouseover', () => {
+            selectedIndex = index;
+            updateSelectedSuggestion();
+          });
+          
+          suggestionsContainer.appendChild(item);
+        }
+      }
+      
+      // Enhanced selectSuggestion function
+      function selectSuggestion(suggestion) {
+        // Check if it's exactly a make name
+        const isMake = Object.keys(vehicleData).includes(suggestion);
+        
+        // Append suggestion to input unless it already contains it
+        if (!searchInput.value.includes(suggestion)) {
+          if (searchInput.value && !searchInput.value.endsWith(' ')) {
+            // Replace the last word
+            const words = searchInput.value.split(' ');
+            words.pop(); // Remove last word
+            
+            if (words.length > 0) {
+              searchInput.value = words.join(' ') + ' ' + suggestion;
+            } else {
+              searchInput.value = suggestion;
+            }
+          } else {
+            // Either empty or ends with space, just append
+            searchInput.value = searchInput.value + suggestion;
+          }
+        }
+        
+        // Add a space after the suggestion for continued typing
+        if (!searchInput.value.endsWith(' ')) {
+          searchInput.value += ' ';
+        }
+        
+        // If it's a make, immediately show new suggestions for models
+        if (isMake) {
+          setTimeout(() => {
+            generateSuggestions(searchInput.value);
+          }, 50);
+        } else {
+          hideSuggestions();
+        }
+        
+        searchInput.focus();
+      }
+      
+      // Update the selected suggestion in UI
+      function updateSelectedSuggestion() {
+        const items = suggestionsContainer.querySelectorAll('.autocomplete-item');
+        items.forEach((item, index) => {
+          if (index === selectedIndex) {
+            item.classList.add('selected');
+          } else {
+            item.classList.remove('selected');
+          }
+        });
+      }
+      
+      // Hide suggestions
+      function hideSuggestions() {
+        suggestionsContainer.style.display = 'none';
+        suggestionsContainer.innerHTML = '';
+        selectedIndex = -1;
+      }
+    });
+    
+    // Form submission handlers
+    document.addEventListener('DOMContentLoaded', function() {
+      const searchForm = document.querySelector(".search-form");
+      if (!searchForm) return;
+      
+      const searchBtn = searchForm.querySelector("button[type='submit']");
+  
+      searchForm.addEventListener("submit", () => {
+        searchBtn.disabled = true;
+        searchBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Thinking...';
+        searchBtn.classList.add("opacity-75");
+      });
+  
+      const vinForm = document.querySelector(".vin-form");
+      if (!vinForm) return;
+      
+      const vinBtn = vinForm.querySelector("button[type='submit']");
+  
+      vinForm.addEventListener("submit", () => {
+        vinBtn.disabled = true;
+        vinBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Decoding...';
+        vinBtn.classList.add("opacity-75");
+      });
     });
   </script>
 </body>
