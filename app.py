@@ -1,7 +1,7 @@
 import os
 import re
 import requests
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 from openai import OpenAI
 from vehicle_validation import has_vehicle_info, get_missing_info_message
@@ -12,7 +12,6 @@ api_key = os.getenv("OPENAI_API_KEY")
 serpapi_key = os.getenv("SERPAPI_KEY")
 client = OpenAI(api_key=api_key)
 
-# Create Flask app
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "auto-parts-assistant-key")
 print("🧪 SERPAPI_KEY loaded:", serpapi_key)
@@ -87,26 +86,28 @@ def get_ebay_serpapi_results(query):
         print("SerpAPI error:", e)
         return []
 
-# Main GPT Assistant route
+# Main GPT Assistant route - original version for regular form submission
 @app.route("/", methods=["GET", "POST"])
 def index():
-    questions = None
-    listings = None
-    validation_error = None
-    
     if request.method == "POST":
-        query = request.form.get("prompt", "").strip()
-        
-        # Check if query has sufficient vehicle information
-        if not has_vehicle_info(query):
-            validation_error = get_missing_info_message(query)
-            return render_template("index.html", 
-                                  questions=None, 
-                                  listings=None, 
-                                  vin_result=None,
-                                  validation_error=validation_error)
+        # Regular form submission just renders the template
+        return render_template("index.html")
+    return render_template("index.html")
 
-        prompt = f"""
+# AJAX endpoint for GPT Assistant
+@app.route("/api/search", methods=["POST"])
+def search_api():
+    query = request.form.get("prompt", "").strip()
+    
+    # Check if query has sufficient vehicle information
+    if not has_vehicle_info(query):
+        validation_error = get_missing_info_message(query)
+        return jsonify({
+            "success": False,
+            "validation_error": validation_error
+        })
+
+    prompt = f"""
 You are an auto parts fitment expert working for a US-based parts sourcing company. The goal is to help human agents quickly identify the correct OEM part for a customer's vehicle.
 
 The customer just said: "{query}"
@@ -140,6 +141,7 @@ Your job is to:
    - Example 2: "🔎 2020 – 2022 honda civic ex oem bumper cover"
 """
 
+    try:
         response = client.chat.completions.create(
             model="gpt-4-1106-preview",
             messages=[{"role": "user", "content": prompt}],
@@ -155,24 +157,42 @@ Your job is to:
 
         listings = get_ebay_serpapi_results(search_term)
 
-        return render_template("index.html", 
-                              questions=questions, 
-                              listings=listings, 
-                              vin_result=None,
-                              validation_error=None)
+        return jsonify({
+            "success": True,
+            "questions": questions,
+            "listings": listings
+        })
+    except Exception as e:
+        print(f"API error: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        })
 
-    return render_template("index.html", 
-                          questions=None, 
-                          listings=None, 
-                          vin_result=None,
-                          validation_error=None)
+# AJAX endpoint for VIN decoding
+@app.route("/api/vin-decode", methods=["POST"])
+def vin_decode_api():
+    vin = request.form.get("vin", "").strip()
+    
+    if not vin:
+        return jsonify({"error": "No VIN provided"})
+    
+    try:
+        vin_info = decode_vin(vin)
+        
+        if not vin_info or not vin_info.get('Make'):
+            return jsonify({"error": "Could not decode VIN. Please check the VIN and try again."})
+        
+        # Return the VIN information as JSON
+        return jsonify(vin_info)
+    except Exception as e:
+        print(f"VIN decode error: {e}")
+        return jsonify({"error": f"An error occurred: {str(e)}"})
 
-# VIN Decode route
+# For backward compatibility - redirect old routes to the API endpoints
 @app.route("/vin-decode", methods=["POST"])
 def vin_decode():
-    vin = request.form.get("vin", "").strip()
-    vin_info = decode_vin(vin)
-    return render_template("index.html", questions=None, listings=None, vin_result=vin_info, validation_error=None)
+    return vin_decode_api()
 
 # Run app
 if __name__ == "__main__":
