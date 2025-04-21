@@ -52,42 +52,87 @@ def decode_vin(vin):
         print(f"VIN decode error: {e}")
     return {}
 
-# eBay SerpAPI listing fetcher
 def get_ebay_serpapi_results(query):
     print("🔥 SerpAPI called with:", query)
 
-    url = "https://serpapi.com/search"
-    params = {
-        "engine": "ebay",          # Change from "google_shopping" to "ebay"
-        "ebay_domain": "ebay.com", # Specify eBay domain
+    # First, get new items
+    new_params = {
+        "engine": "ebay",
+        "ebay_domain": "ebay.com",
         "_nkw": query,
+        "LH_ItemCondition": "1000",  # New items
+        "LH_BIN": "1",               # Buy It Now only
         "api_key": serpapi_key
     }
-    print("📦 Final request params:", params)
+    
+    # Then, get used items
+    used_params = {
+        "engine": "ebay",
+        "ebay_domain": "ebay.com",
+        "_nkw": query,
+        "LH_ItemCondition": "3000",  # Used items
+        "LH_BIN": "1",               # Buy It Now only
+        "api_key": serpapi_key
+    }
+    
     try:
-        response = requests.get(url, params=params)
-        results = response.json()
-        print("🔍 SerpAPI response:", results)
-
-        top_results = []
-        keywords = query.lower().split()
-        # Adjust the parsing based on eBay response structure
-        for item in results.get("organic_results", []):
-            title = item.get("title", "").lower()
-            if any(kw in title for kw in keywords):
-                top_results.append({
-                    "title": item.get("title"),
-                    "price": item.get("price", {}).get("raw"),
-                    "link": item.get("link")
-                })
-            if len(top_results) >= 5:
-                break
-
-        return top_results
+        # Get new items
+        new_response = requests.get("https://serpapi.com/search", params=new_params)
+        new_results = new_response.json()
+        
+        # Get used items
+        used_response = requests.get("https://serpapi.com/search", params=used_params)
+        used_results = used_response.json()
+        
+        # Process both sets of results
+        new_items = process_ebay_results(new_results, query, max_items=3)
+        used_items = process_ebay_results(used_results, query, max_items=3)
+        
+        # Combine the results
+        all_items = new_items + used_items
+        return all_items
+        
     except Exception as e:
         print("SerpAPI error:", e)
         return []
 
+def process_ebay_results(results, query, max_items=3):
+    """Helper function to process eBay results"""
+    processed_items = []
+    keywords = query.lower().split()
+    
+    for item in results.get("organic_results", []):
+        if len(processed_items) >= max_items:
+            break
+            
+        title = item.get("title", "").lower()
+        if any(kw in title for kw in keywords):
+            # Extract price
+            price = "Price not available"
+            if isinstance(item.get("price"), dict):
+                price = item.get("price", {}).get("raw", "Price not available")
+            else:
+                price = item.get("price", "Price not available")
+                
+            # Extract shipping
+            shipping = "Shipping not specified"
+            if isinstance(item.get("shipping"), dict):
+                shipping = item.get("shipping", {}).get("raw", "Shipping not specified")
+            else:
+                shipping = item.get("shipping", "Shipping not specified")
+                
+            # Extract condition
+            condition = item.get("condition", "Not specified")
+                
+            processed_items.append({
+                "title": item.get("title"),
+                "price": price,
+                "shipping": shipping,
+                "condition": condition,
+                "link": item.get("link")
+            })
+    
+    return processed_items
 # Main GPT Assistant route - original version for regular form submission
 @app.route("/", methods=["GET", "POST"])
 def index():

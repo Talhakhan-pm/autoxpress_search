@@ -757,70 +757,61 @@
               }, 100);
             }
             
-            // Build the content for listings
-            if (data.listings && data.listings.length > 0) {
-              // Calculate price range
-              const prices = data.listings
-                .map(item => item.price)
-                .filter(price => price)
-                .map(price => parseFloat(price.replace('$', '').replace(',', '')))
-                .filter(price => !isNaN(price));
-              
-              let minPrice = 0;
-              let maxPrice = 0;
-              
-              if (prices.length > 0) {
-                minPrice = Math.min(...prices);
-                maxPrice = Math.max(...prices);
-              }
-              
-              let listingsHtml = `
-                <hr class="my-4">
-                <h5 class="mb-3 section-title">💰 Product Listings:</h5>
-              `;
-              
-              if (prices.length > 0) {
-                listingsHtml += `
-                  <p class="price-box"><strong>💲 Price Range:</strong> $${minPrice.toFixed(2)} – $${maxPrice.toFixed(2)}</p>
+                 // Build the content for listings
+                 if (data.listings && data.listings.length > 0) {
+                // Calculate price range
+                const prices = data.listings
+                  .map(item => item.price)
+                  .filter(price => price)
+                  .map(price => parseFloat(price.replace('$', '').replace(',', '')))
+                  .filter(price => !isNaN(price));
+                
+                let minPrice = 0;
+                let maxPrice = 0;
+                
+                if (prices.length > 0) {
+                  minPrice = Math.min(...prices);
+                  maxPrice = Math.max(...prices);
+                }
+                
+                let listingsHtml = `
+                  <hr class="my-4">
+                  <h5 class="mb-3 section-title">💰 Product Listings:</h5>
+                `;
+                
+                if (prices.length > 0) {
+                  listingsHtml += `
+                    <p class="price-box"><strong>💲 Price Range:</strong> $${minPrice.toFixed(2)} – $${maxPrice.toFixed(2)}</p>
+                  `;
+                }
+                
+                listingsHtml += `<ul class="list-group">`;
+
+                for (const item of data.listings) {
+                  listingsHtml += `
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                      <div class="me-auto">
+                        <strong>${item.title}</strong><br>
+                        <div class="d-flex align-items-center mb-1">
+                          <span class="price-box">${item.price}</span>
+                          <span class="badge bg-secondary ms-2 shipping-tag">${item.shipping || 'Shipping not specified'}</span>
+                        </div>
+                        <span class="badge ${item.condition && item.condition.toLowerCase().includes('new') ? 'bg-success' : 'bg-warning text-dark'} mb-2">${item.condition || 'Condition not specified'}</span><br>
+                        <a href="${item.link}" target="_blank" class="btn btn-sm btn-outline-primary mt-1">🔗 View on eBay</a>
+                      </div>
+                    </li>
+                  `;
+                }
+
+                listingsHtml += `</ul>`;
+                
+                listingsHtml += `</ul>`;
+                resultsContainer.innerHTML += listingsHtml;
+              } else if (data.success) {
+                resultsContainer.innerHTML += `
+                  <div class="text-danger mt-3"><strong>⚠️ No listings returned.</strong></div>
                 `;
               }
-              
-              listingsHtml += `<ul class="list-group">`;
-              
-              for (const item of data.listings) {
-                listingsHtml += `
-                  <li class="list-group-item d-flex justify-content-between align-items-start">
-                    <div class="me-auto">
-                      <strong>${item.title}</strong><br>
-                      <span class="price-box">${item.price}</span><br>
-                      <a href="${item.link}" target="_blank">🔗 Vendor Listing</a>
-                    </div>
-                  </li>
-                `;
-              }
-              
-              listingsHtml += `</ul>`;
-              resultsContainer.innerHTML += listingsHtml;
-            } else if (data.success) {
-              resultsContainer.innerHTML += `
-                <div class="text-danger mt-3"><strong>⚠️ No listings returned.</strong></div>
-              `;
-            }
-          })
-          .catch(error => {
-            console.error('Error:', error);
-            
-            // Reset button state
-            searchButton.disabled = false;
-            searchButton.innerHTML = '🔍 Search';
-            searchButton.classList.remove('opacity-75');
-            
-            // Show error message
-            validationErrorContainer.innerHTML = `
-              <div class="error-box mt-3 fade-in">
-                <p class="mb-0"><strong>⚠️ Error:</strong> Failed to search. Please try again.</p>
-              </div>
-            `;
           });
         });
       }
