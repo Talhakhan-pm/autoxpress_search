@@ -197,6 +197,57 @@
     // Years for autocomplete
     const years = [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
     
+    // New function to extract vehicle information from a search query
+    function extractVehicleInfo(searchText) {
+      // Initialize result object
+      const result = {
+        year: null,
+        make: null,
+        model: null,
+        product: null
+      };
+      
+      // Convert to lowercase for easier matching
+      const searchLower = searchText.toLowerCase();
+      
+      // Extract year (2-digit or 4-digit)
+      const yearMatch = searchLower.match(/\b(19|20)\d{2}\b|\b\d{2}\b/);
+      if (yearMatch) {
+        result.year = yearMatch[0];
+      }
+      
+      // Extract make and model
+      for (const make in vehicleData) {
+        const makeLower = make.toLowerCase();
+        if (searchLower.includes(makeLower)) {
+          result.make = make;
+          
+          // Try to find model
+          const models = vehicleData[make];
+          for (const model of models) {
+            const modelLower = model.toLowerCase();
+            if (searchLower.includes(modelLower)) {
+              result.model = model;
+              break;
+            }
+          }
+          
+          break;
+        }
+      }
+      
+      // Extract product by removing year, make, and model
+      let product = searchText;
+      if (result.year) product = product.replace(result.year, '');
+      if (result.make) product = product.replace(new RegExp(result.make, 'i'), '');
+      if (result.model) product = product.replace(new RegExp(result.model, 'i'), '');
+      
+      // Clean up the product text
+      result.product = product.replace(/\s+/g, ' ').trim();
+      
+      return result;
+    }
+    
     // Initialize autocomplete when the DOM is fully loaded
     document.addEventListener('DOMContentLoaded', function() {
       // Elements for autocomplete
@@ -625,8 +676,79 @@
                 }
               }
               
-              questionsHtml += `</div>`;
+              // Add the Schedule Callback button
+              questionsHtml += `
+                </div>
+                <button id="schedule-callback" class="btn-callback fade-in">
+                  <i>📅</i> Schedule Callback
+                </button>
+              `;
+              
               resultsContainer.innerHTML += questionsHtml;
+              
+              setTimeout(function() {
+                const callbackButton = document.getElementById('schedule-callback');
+                if (callbackButton) {
+                  callbackButton.addEventListener('click', function() {
+                    const searchQuery = document.getElementById('search-input').value;
+                    
+                    // Extract vehicle info using the existing vehicleData object
+                    const searchLower = searchQuery.toLowerCase();
+                    let vehicleInfo = '';
+                    let year = '';
+                    
+                    // Extract year
+                    const yearMatch = searchQuery.match(/\b(19|20)\d{2}\b/);
+                    if (yearMatch) {
+                      year = yearMatch[0];
+                    }
+                    
+                    // Extract make and model
+                    for (const make in vehicleData) {
+                      if (searchLower.includes(make.toLowerCase())) {
+                        vehicleInfo = make;
+                        
+                        // Try to find model
+                        const models = vehicleData[make];
+                        for (const model of models) {
+                          if (searchLower.includes(model.toLowerCase())) {
+                            vehicleInfo += ' ' + model;
+                            break;
+                          }
+                        }
+                        break;
+                      }
+                    }
+                    
+                    // Extract product by removing year and vehicle info
+                    let product = searchQuery;
+                    if (year) product = product.replace(year, '');
+                    if (vehicleInfo) product = product.replace(vehicleInfo, '');
+                    product = product.trim();
+                    
+                    // Redirect with query parameters
+                    window.location.href = `https://autoxpress.us/callbacks/?vehicle=${encodeURIComponent(vehicleInfo)}&year=${encodeURIComponent(year)}&product=${encodeURIComponent(product)}`;
+                  });
+                }
+              }, 100);
+                            
+              // Add event listener to the Schedule Callback button
+              document.getElementById('schedule-callback').addEventListener('click', function() {
+                // Extract vehicle and product information from the search query
+                const searchQuery = document.getElementById('search-input').value;
+                const vehicleInfo = extractVehicleInfo(searchQuery);
+                
+                // Store the data in localStorage
+                localStorage.setItem('callbackData', JSON.stringify({
+                  vehicleInfo: vehicleInfo.make + (vehicleInfo.model ? ' ' + vehicleInfo.model : ''),
+                  year: vehicleInfo.year,
+                  product: vehicleInfo.product,
+                  timestamp: new Date().getTime()
+                }));
+                
+                // Redirect to the callbacks page
+                window.location.href = 'https://autoxpress.us/callbacks';
+              });
             }
             
             // Build the content for listings
