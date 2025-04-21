@@ -465,42 +465,55 @@
       function selectSuggestion(suggestion) {
         // Check if it's exactly a make name
         const isMake = Object.keys(vehicleData).includes(suggestion);
+        // Check if it's a model (contains a space with make at the beginning)
+        const isModel = suggestion.includes(' ') && Object.keys(vehicleData).some(make => 
+          suggestion.startsWith(make + ' ')
+        );
         
-        // Append suggestion to input unless it already contains it
-        if (!searchInput.value.includes(suggestion)) {
-          if (searchInput.value && !searchInput.value.endsWith(' ')) {
-            // Replace the last word
-            const words = searchInput.value.split(' ');
-            words.pop(); // Remove last word
-            
-            if (words.length > 0) {
-              searchInput.value = words.join(' ') + ' ' + suggestion;
-            } else {
-              searchInput.value = suggestion;
-            }
-          } else {
-            // Either empty or ends with space, just append
-            searchInput.value = searchInput.value + suggestion;
-          }
-        }
-        
-        // Add a space after the suggestion for continued typing
-        if (!searchInput.value.endsWith(' ')) {
-          searchInput.value += ' ';
-        }
-        
-        // If it's a make, immediately show new suggestions for models
+        // Handle different selection types differently
         if (isMake) {
+          // Just replace the input with the make, no space
+          searchInput.value = suggestion;
+          
+          // Immediately show model suggestions
           setTimeout(() => {
-            generateSuggestions(searchInput.value);
+            generateSuggestions(suggestion);
           }, 50);
-        } else {
+        } 
+        else if (isModel) {
+          // For models, replace the entire input and add a space
+          searchInput.value = suggestion + ' ';
+          hideSuggestions();
+        }
+        else {
+          // For other suggestions (years, parts, etc.)
+          if (!searchInput.value.includes(suggestion)) {
+            if (searchInput.value && !searchInput.value.endsWith(' ')) {
+              // Replace the last word
+              const words = searchInput.value.split(' ');
+              words.pop(); // Remove last word
+              
+              if (words.length > 0) {
+                searchInput.value = words.join(' ') + ' ' + suggestion;
+              } else {
+                searchInput.value = suggestion;
+              }
+            } else {
+              // Either empty or ends with space, just append
+              searchInput.value = searchInput.value + suggestion;
+            }
+          }
+          
+          // Add a space after the suggestion for continued typing
+          if (!searchInput.value.endsWith(' ')) {
+            searchInput.value += ' ';
+          }
+          
           hideSuggestions();
         }
         
         searchInput.focus();
-      }
-      
+      }      
       // Update the selected suggestion in UI
       function updateSelectedSuggestion() {
         const items = suggestionsContainer.querySelectorAll('.autocomplete-item');
