@@ -36,6 +36,13 @@
       font-weight: 500;
       color: #28a745;
     }
+    .error-box {
+      background-color: #f8d7da;
+      border-left: 4px solid #dc3545;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin-top: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -55,6 +62,12 @@
               </button>
             </div>
           </form>
+
+          {% if validation_error %}
+            <div class="error-box mt-3 fade-in">
+              <p class="mb-0"><strong>⚠️ Missing vehicle information:</strong> {{ validation_error }}</p>
+            </div>
+          {% endif %}
 
           {% if questions %}
             <hr class="my-4">
@@ -89,7 +102,9 @@
               {% endfor %}
             </ul>
           {% else %}
-            <div class="text-danger mt-3"><strong>⚠️ No listings returned.</strong></div>
+            {% if not validation_error and request.method == "POST" %}
+              <div class="text-danger mt-3"><strong>⚠️ No listings returned.</strong></div>
+            {% endif %}
           {% endif %}
         </div>
 

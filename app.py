@@ -1,9 +1,10 @@
 import os
 import re
 import requests
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, flash
 from dotenv import load_dotenv
 from openai import OpenAI
+from vehicle_validation import has_vehicle_info, get_missing_info_message  # Import the new functions
 
 load_dotenv()
 
@@ -12,6 +13,7 @@ serpapi_key = os.getenv("SERPAPI_KEY")
 client = OpenAI(api_key=api_key)
 
 app = Flask(__name__)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "auto-parts-assistant-key")  # Add a secret key for flash messages
 print("🧪 SERPAPI_KEY loaded:", serpapi_key)
 
 # 🔧 Smart query cleaner for better search match
@@ -89,8 +91,19 @@ def get_ebay_serpapi_results(query):
 def index():
     questions = None
     listings = None
+    validation_error = None
+    
     if request.method == "POST":
         query = request.form.get("prompt", "").strip()
+        
+        # Check if query has sufficient vehicle information
+        if not has_vehicle_info(query):
+            validation_error = get_missing_info_message(query)
+            return render_template("index.html", 
+                                  questions=None, 
+                                  listings=None, 
+                                  vin_result=None,
+                                  validation_error=validation_error)
 
         prompt = f"""
 You are an auto parts fitment expert working for a US-based parts sourcing company. The goal is to help human agents quickly identify the correct OEM part for a customer's vehicle.
@@ -122,8 +135,8 @@ Your job is to:
 5. Finish with a bolded search-optimized lookup phrase, (add a emoji of world right before the phrase):
    - Format: lowercase string including [year or range] + make + model + trim (if needed) + engine (if relevant) + oem + part name
    - Think of it as a search term for a customer to find the part. Use the most relevant keywords. Give two search terms for the same part with another name.
-   - Example 1:  “🔎 2020–2022 honda civic ex oem front bumper”
-   - Example 2: “🔎 2020 – 2022 honda civic ex oem bumper cover”
+   - Example 1:  "🔎 2020–2022 honda civic ex oem front bumper"
+   - Example 2: "🔎 2020 – 2022 honda civic ex oem bumper cover"
 """
 
         response = client.chat.completions.create(
@@ -141,16 +154,24 @@ Your job is to:
 
         listings = get_ebay_serpapi_results(search_term)
 
-        return render_template("index.html", questions=questions, listings=listings, vin_result=None)
+        return render_template("index.html", 
+                              questions=questions, 
+                              listings=listings, 
+                              vin_result=None,
+                              validation_error=None)
 
-    return render_template("index.html", questions=None, listings=None, vin_result=None)
+    return render_template("index.html", 
+                          questions=None, 
+                          listings=None, 
+                          vin_result=None,
+                          validation_error=None)
 
 # VIN Decode route
 @app.route("/vin-decode", methods=["POST"])
 def vin_decode():
     vin = request.form.get("vin", "").strip()
     vin_info = decode_vin(vin)
-    return render_template("index.html", questions=None, listings=None, vin_result=vin_info)
+    return render_template("index.html", questions=None, listings=None, vin_result=vin_info, validation_error=None)
 
 # Run app
 if __name__ == "__main__":
