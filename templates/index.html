@@ -461,60 +461,113 @@
         }
       }
       
-      // Enhanced selectSuggestion function
+      // Context-aware selectSuggestion function
       function selectSuggestion(suggestion) {
         // Check if it's exactly a make name
         const isMake = Object.keys(vehicleData).includes(suggestion);
+        
         // Check if it's a model (contains a space with make at the beginning)
         const isModel = suggestion.includes(' ') && Object.keys(vehicleData).some(make => 
           suggestion.startsWith(make + ' ')
         );
         
-        // Handle different selection types differently
+        // Get the current input value
+        const currentValue = searchInput.value;
+        
+        // Find what we're trying to replace (the last word or the make name)
+        const words = currentValue.split(/\s+/);
+        const lastWord = words[words.length - 1].toLowerCase();
+        
+        // Check if the last word is a car make or part of a car make
+        let makeToReplace = null;
+        for (const make in vehicleData) {
+          if (lastWord === make.toLowerCase()) {
+            makeToReplace = make;
+            break;
+          }
+        }
+        
+        // Handle different selection types
         if (isMake) {
-          // Just replace the input with the make, no space
-          searchInput.value = suggestion;
+          // If the lastWord is part of a search phrase, replace just that word
+          if (words.length > 1) {
+            words[words.length - 1] = suggestion;
+            searchInput.value = words.join(' ');
+          } else {
+            // Otherwise just set the value to the make
+            searchInput.value = suggestion;
+          }
           
           // Immediately show model suggestions
           setTimeout(() => {
-            generateSuggestions(suggestion);
+            generateSuggestions(searchInput.value);
           }, 50);
         } 
         else if (isModel) {
-          // For models, replace the entire input and add a space
-          searchInput.value = suggestion + ' ';
+          // Extract the make from the model suggestion
+          const makeInModel = Object.keys(vehicleData).find(make => 
+            suggestion.startsWith(make + ' ')
+          );
+          
+          if (makeInModel && makeToReplace) {
+            // If the last word is a make name, replace it with the full model
+            words[words.length - 1] = suggestion;
+            searchInput.value = words.join(' ') + ' ';
+          } 
+          else if (words.length > 1) {
+            // Try to find the make in the input to replace it and its related word
+            const makeLowerCase = makeInModel.toLowerCase();
+            let makeIndex = -1;
+            
+            for (let i = 0; i < words.length; i++) {
+              if (words[i].toLowerCase() === makeLowerCase) {
+                makeIndex = i;
+                break;
+              }
+            }
+            
+            if (makeIndex >= 0) {
+              // Replace the make and the word after it (if it exists)
+              const beforeMake = words.slice(0, makeIndex).join(' ');
+              const afterModel = words.slice(makeIndex + 2).join(' ');
+              
+              if (beforeMake && afterModel) {
+                searchInput.value = beforeMake + ' ' + suggestion + ' ' + afterModel;
+              } else if (beforeMake) {
+                searchInput.value = beforeMake + ' ' + suggestion + ' ';
+              } else if (afterModel) {
+                searchInput.value = suggestion + ' ' + afterModel;
+              } else {
+                searchInput.value = suggestion + ' ';
+              }
+            } else {
+              // If we can't find the make, just replace the last word
+              words[words.length - 1] = suggestion;
+              searchInput.value = words.join(' ') + ' ';
+            }
+          } else {
+            // Simple case - just replace the entire input
+            searchInput.value = suggestion + ' ';
+          }
+          
           hideSuggestions();
         }
         else {
           // For other suggestions (years, parts, etc.)
-          if (!searchInput.value.includes(suggestion)) {
-            if (searchInput.value && !searchInput.value.endsWith(' ')) {
-              // Replace the last word
-              const words = searchInput.value.split(' ');
-              words.pop(); // Remove last word
-              
-              if (words.length > 0) {
-                searchInput.value = words.join(' ') + ' ' + suggestion;
-              } else {
-                searchInput.value = suggestion;
-              }
-            } else {
-              // Either empty or ends with space, just append
-              searchInput.value = searchInput.value + suggestion;
-            }
-          }
-          
-          // Add a space after the suggestion for continued typing
-          if (!searchInput.value.endsWith(' ')) {
-            searchInput.value += ' ';
+          if (words.length > 1) {
+            // Replace the last word
+            words[words.length - 1] = suggestion;
+            searchInput.value = words.join(' ') + ' ';
+          } else {
+            // Just set the value and add a space
+            searchInput.value = suggestion + ' ';
           }
           
           hideSuggestions();
         }
         
         searchInput.focus();
-      }      
-      // Update the selected suggestion in UI
+      }      // Update the selected suggestion in UI
       function updateSelectedSuggestion() {
         const items = suggestionsContainer.querySelectorAll('.autocomplete-item');
         items.forEach((item, index) => {
