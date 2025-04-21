@@ -83,6 +83,24 @@
       background-color: #f8f9fa;
       color: #d62828;
     }
+   .btn-callback {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .btn-callback:hover {
+      background-color: #0069d9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
     
     .autocomplete-item:last-child {
       border-bottom: none;
@@ -731,24 +749,6 @@
                   });
                 }
               }, 100);
-                            
-              // Add event listener to the Schedule Callback button
-              document.getElementById('schedule-callback').addEventListener('click', function() {
-                // Extract vehicle and product information from the search query
-                const searchQuery = document.getElementById('search-input').value;
-                const vehicleInfo = extractVehicleInfo(searchQuery);
-                
-                // Store the data in localStorage
-                localStorage.setItem('callbackData', JSON.stringify({
-                  vehicleInfo: vehicleInfo.make + (vehicleInfo.model ? ' ' + vehicleInfo.model : ''),
-                  year: vehicleInfo.year,
-                  product: vehicleInfo.product,
-                  timestamp: new Date().getTime()
-                }));
-                
-                // Redirect to the callbacks page
-                window.location.href = 'https://autoxpress.us/callbacks';
-              });
             }
             
             // Build the content for listings
