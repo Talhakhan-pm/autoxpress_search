@@ -1,0 +1,59 @@
+name: Obfuscate JavaScript
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          
+      - name: Install dependencies
+        run: npm install javascript-obfuscator
+        
+      - name: Obfuscate JavaScript
+        run: |
+          node -e "
+          const fs = require('fs');
+          const JavaScriptObfuscator = require('javascript-obfuscator');
+          
+          const html = fs.readFileSync('index.html', 'utf8');
+          const scriptRegex = /<script>([\s\S]*?)<\/script>/;
+          const match = html.match(scriptRegex);
+          const jsCode = match ? match[1] : '';
+          
+          if (!jsCode) {
+            console.error('No JavaScript found in index.html');
+            process.exit(1);
+          }
+          
+          const obfuscatedCode = JavaScriptObfuscator.obfuscate(jsCode, {
+            compact: true,
+            controlFlowFlattening: true,
+            stringArrayEncoding: ['base64'],
+            stringArrayThreshold: 0.8
+          }).getObfuscatedCode();
+          
+          const obfuscatedHtml = html.replace(
+            scriptRegex,
+            '<script>' + obfuscatedCode + '</script>'
+          );
+          
+          fs.writeFileSync('index.html', obfuscatedHtml);
+          console.log('Obfuscation complete!');
+          "
+      
+      - name: Commit obfuscated files
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add index.html
+          git commit -m "Obfuscate JavaScript" || echo "No changes to commit"
+          git push
