@@ -2,7 +2,9 @@ name: Obfuscate JavaScript
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
+permissions:
+  contents: write
 
 jobs:
   build:
