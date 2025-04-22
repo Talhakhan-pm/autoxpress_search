@@ -5,6 +5,8 @@ from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 from openai import OpenAI
 from vehicle_validation import has_vehicle_info, get_missing_info_message
+static_folder = os.path.abspath('static')
+app = Flask(__name__, static_folder=static_folder, static_url_path='/static')
 
 load_dotenv()
 
