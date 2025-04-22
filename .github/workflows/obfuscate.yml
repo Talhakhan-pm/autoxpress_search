@@ -3,15 +3,20 @@ name: Obfuscate JavaScript
 on:
   push:
     branches: [ master ]
+    paths:
+      - 'static/autoxpress.js'
+
+# Make sure the action can create commits
 permissions:
   contents: write
 
 jobs:
-  build:
+  obfuscate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -26,36 +31,57 @@ jobs:
           const fs = require('fs');
           const JavaScriptObfuscator = require('javascript-obfuscator');
           
-          const html = fs.readFileSync('index.html', 'utf8');
-          const scriptRegex = /<script>([\s\S]*?)<\/script>/;
-          const match = html.match(scriptRegex);
-          const jsCode = match ? match[1] : '';
+          // Path to your JavaScript file
+          const jsPath = './static/autoxpress.js';
           
-          if (!jsCode) {
-            console.error('No JavaScript found in index.html');
-            process.exit(1);
+          // Read the JavaScript file
+          const jsContent = fs.readFileSync(jsPath, 'utf8');
+          
+          // Copyright notice to prepend
+          const copyright = '/*\\n * Copyright (c) 2025 AutoXpress. All rights reserved.\\n * Unauthorized reproduction or distribution of this code is strictly prohibited.\\n * This software is proprietary and confidential.\\n */\\n\\n';
+          
+          // Only obfuscate if content doesn't already contain obfuscated markers
+          if (!jsContent.includes('_0x')) {
+            // Obfuscate the code with effective settings
+            const obfuscatedCode = JavaScriptObfuscator.obfuscate(jsContent, {
+              compact: true,
+              controlFlowFlattening: true,
+              controlFlowFlatteningThreshold: 0.5,
+              deadCodeInjection: true,
+              deadCodeInjectionThreshold: 0.3,
+              debugProtection: true,
+              debugProtectionInterval: 2000,
+              disableConsoleOutput: false,
+              identifierNamesGenerator: 'hexadecimal',
+              log: false,
+              renameGlobals: false,
+              rotateStringArray: true,
+              selfDefending: true,
+              stringArray: true,
+              stringArrayEncoding: ['base64'],
+              stringArrayThreshold: 0.8,
+              transformObjectKeys: true,
+              unicodeEscapeSequence: false
+            }).getObfuscatedCode();
+            
+            // Write the obfuscated code back to the file with copyright
+            fs.writeFileSync(jsPath, copyright + obfuscatedCode);
+            console.log('JavaScript obfuscation complete!');
+          } else {
+            console.log('File appears to be already obfuscated, skipping...');
           }
-          
-          const obfuscatedCode = JavaScriptObfuscator.obfuscate(jsCode, {
-            compact: true,
-            controlFlowFlattening: true,
-            stringArrayEncoding: ['base64'],
-            stringArrayThreshold: 0.8
-          }).getObfuscatedCode();
-          
-          const obfuscatedHtml = html.replace(
-            scriptRegex,
-            '<script>' + obfuscatedCode + '</script>'
-          );
-          
-          fs.writeFileSync('index.html', obfuscatedHtml);
-          console.log('Obfuscation complete!');
           "
       
-      - name: Commit obfuscated files
+      - name: Check for changes
+        id: check_changes
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add index.html
-          git commit -m "Obfuscate JavaScript" || echo "No changes to commit"
+          git diff --exit-code static/autoxpress.js || echo "changes=true" >> $GITHUB_OUTPUT
+          
+      - name: Commit obfuscated files
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add static/autoxpress.js
+          git commit -m "Obfuscate JavaScript [automated]"
           git push
