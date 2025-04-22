@@ -6,7 +6,6 @@ on:
     paths:
       - 'static/autoxpress.js'
 
-# Make sure the action can create commits
 permissions:
   contents: write
 
@@ -25,6 +24,18 @@ jobs:
       - name: Install dependencies
         run: npm install javascript-obfuscator
         
+      - name: Verify file exists
+        run: |
+          ls -la
+          ls -la static/
+          echo "Checking if file exists..."
+          if [ -f "static/autoxpress.js" ]; then
+            echo "✅ File exists!"
+          else
+            echo "❌ File not found!"
+            exit 1
+          fi
+        
       - name: Obfuscate JavaScript
         run: |
           node -e "
@@ -34,14 +45,17 @@ jobs:
           // Path to your JavaScript file
           const jsPath = './static/autoxpress.js';
           
+          console.log('Reading file:', jsPath);
           // Read the JavaScript file
           const jsContent = fs.readFileSync(jsPath, 'utf8');
+          console.log('File content length:', jsContent.length);
           
           // Copyright notice to prepend
           const copyright = '/*\\n * Copyright (c) 2025 AutoXpress. All rights reserved.\\n * Unauthorized reproduction or distribution of this code is strictly prohibited.\\n * This software is proprietary and confidential.\\n */\\n\\n';
           
           // Only obfuscate if content doesn't already contain obfuscated markers
           if (!jsContent.includes('_0x')) {
+            console.log('Obfuscating JavaScript...');
             // Obfuscate the code with effective settings
             const obfuscatedCode = JavaScriptObfuscator.obfuscate(jsContent, {
               compact: true,
@@ -49,8 +63,7 @@ jobs:
               controlFlowFlatteningThreshold: 0.5,
               deadCodeInjection: true,
               deadCodeInjectionThreshold: 0.3,
-              debugProtection: true,
-              debugProtectionInterval: 2000,
+              debugProtection: false,
               disableConsoleOutput: false,
               identifierNamesGenerator: 'hexadecimal',
               log: false,
