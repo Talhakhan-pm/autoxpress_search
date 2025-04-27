@@ -593,41 +593,41 @@ def analyze_query():
         processed_result = query_processor.process_query(query)
     
     # Check if we have enough confidence to skip GPT-4
-    if processed_result["confidence"] >= 80:
-        # We have high confidence in our parsed data, so use it directly
-        search_terms = processed_result["search_terms"]
+#     if processed_result["confidence"] >= 80:
+#         # We have high confidence in our parsed data, so use it directly
+#         search_terms = processed_result["search_terms"]
         
-        # Create a GPT-like response format
-        part = processed_result["vehicle_info"]["part"] or "part"
-        make = processed_result["vehicle_info"]["make"] or "vehicle"
-        model_text = ""
-        if processed_result["vehicle_info"]["model"]:
-            model = processed_result["vehicle_info"]["model"]
-            # Format model if it's a Ford F-series
-            if model.lower() in ["f-150", "f150", "f-250", "f250", "f-350", "f350"]:
-                model_text = f" {model.upper()}"
-            else:
-                model_text = f" {model.capitalize()}"
+#         # Create a GPT-like response format
+#         part = processed_result["vehicle_info"]["part"] or "part"
+#         make = processed_result["vehicle_info"]["make"] or "vehicle"
+#         model_text = ""
+#         if processed_result["vehicle_info"]["model"]:
+#             model = processed_result["vehicle_info"]["model"]
+#             # Format model if it's a Ford F-series
+#             if model.lower() in ["f-150", "f150", "f-250", "f250", "f-350", "f350"]:
+#                 model_text = f" {model.upper()}"
+#             else:
+#                 model_text = f" {model.capitalize()}"
                 
-        year = processed_result["vehicle_info"]["year"] or "recent"
+#         year = processed_result["vehicle_info"]["year"] or "recent"
         
-        # Simple template response that includes properly formatted model information
-        questions = f"""
-- {year} {make.capitalize()}{model_text} with {part}
+#         # Simple template response that includes properly formatted model information
+#         questions = f"""
+# - {year} {make.capitalize()}{model_text} with {part}
         
-Question 1: Do you need any associated hardware or accessories with this {part}?
+# Question 1: Do you need any associated hardware or accessories with this {part}?
 
-🔎 {search_terms[0]}
-"""
-        if len(search_terms) > 1:
-            questions += f"\n🔎 {search_terms[1]}"
+# 🔎 {search_terms[0]}
+# """
+#         if len(search_terms) > 1:
+#             questions += f"\n🔎 {search_terms[1]}"
             
-        return jsonify({
-            "success": True,
-            "questions": questions,
-            "search_terms": search_terms,
-            "processed_locally": True
-        })
+#         return jsonify({
+#             "success": True,
+#             "questions": questions,
+#             "search_terms": search_terms,
+#             "processed_locally": True
+#         })
     
     # Otherwise proceed with GPT-4 for more complex understanding
     # Check if query has sufficient vehicle information
