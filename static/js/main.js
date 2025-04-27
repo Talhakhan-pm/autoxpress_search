@@ -971,8 +971,8 @@ document.addEventListener('DOMContentLoaded', function() {
   
                         // Set default sort mode based on what we have
                         sortMode = 'relevance';
-                        sortLabel.textContent = 'Relevance';
-                        toggleSortBtn.innerHTML = '<i class="fas fa-sort-amount-down-alt"></i> Relevance';
+                        if (sortLabel) sortLabel.textContent = 'Relevance';
+                        if (toggleSortBtn) toggleSortBtn.innerHTML = '<i class="fas fa-sort-amount-down-alt"></i> Relevance';
                         
                 
                     }
