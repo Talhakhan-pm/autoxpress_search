@@ -282,9 +282,29 @@ class EnhancedFieldAutocomplete {
         this.hideSuggestions();
         break;
         
-      case 'Tab':
-        this.hideSuggestions();
-        break;
+        case 'Tab':
+          if (this.visible) {
+            // If there's a selected item, select it 
+            if (this.selectedIndex >= 0) {
+              e.preventDefault();
+              const allItems = this.suggestionsContainer.querySelectorAll('.autocomplete-item');
+              if (allItems && allItems[this.selectedIndex]) {
+                this.selectSuggestion(this.getSelectedSuggestion());
+              }
+            } 
+            // If no item is selected but there are suggestions, select the first one
+            else {
+              const firstItem = this.suggestionsContainer.querySelector('.autocomplete-item');
+              if (firstItem) {
+                e.preventDefault();
+                const suggestion = firstItem.dataset.value;
+                this.selectSuggestion(suggestion);
+              } else {
+                this.hideSuggestions();
+              }
+            }
+          }
+          break;
     }
   }
   
