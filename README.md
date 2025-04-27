@@ -1,55 +1,93 @@
-# AutoXpress Smart Assistant
+AutoXpress Smart Assistant
+A smart auto parts finder application that helps users search for the correct parts for their vehicles.
+Overview
+AutoXpress Smart Assistant is an intelligent search system designed to help users find the right auto parts for their vehicles. The system uses advanced query processing to understand natural language requests and structured form data to accurately identify vehicle make, model, year, and part information.
+The core of the system is the EnhancedQueryProcessor which analyzes user queries, extracts vehicle and part information, and generates optimized search terms to find the right parts in the inventory.
+Key Features
 
-A web application for auto parts search and VIN decoding using AI.
+Natural Language Processing: Understand queries like "2015 Ford F-150 headlight assembly"
+Structured Data Handling: Process form data with separate fields for make, model, year, and part
+Vehicle Information Extraction: Identify make, model, year, and engine specifications
+Part Terminology Mapping: Map common part names to standard terminology
+Search Term Generation: Create optimized search terms for finding parts
+Multi-field Autocomplete: Provide suggestions for vehicle makes, models, and years
 
-## Recent Improvements
+Components
+1. Query Processor (query_processor.py)
+The core of the system that processes queries and extracts structured information:
 
-### Security Improvements
-- Removed hardcoded Flask secret key, now uses environment variable or secure random value
-- Added input sanitization for all user inputs
-- Removed sensitive API key debug print statements
-- Added VIN format validation before processing
-- Added proper error handling without exposing error details to users
-- Added timeouts to all external API requests
+Extracts vehicle information (make, model, year, engine specs)
+Identifies part names and positions (front, rear, driver side, etc.)
+Maps common terms to standardized part descriptions
+Categorizes parts into systems (engine, transmission, brakes, etc.)
+Generates optimized search terms for the inventory
 
-### Performance Improvements
-- Implemented concurrent requests using ThreadPoolExecutor
-- Added caching with lru_cache for API responses (both VIN decoder and SerpAPI)
-- Separated SerpAPI requests to handle failures independently
-- Added request timeouts to prevent hanging operations
+2. Field Autocomplete (field-autocomplete.js)
+Provides an enhanced autocomplete experience for the multi-field search form:
 
-### UI Improvements
-- Added visual progress indicators with animation for both search and VIN decoding
-- Added timeout messages for slow requests to keep users informed
-- Improved error messaging with clearer instructions
-- Enhanced mobile responsiveness with better styling for small screens
-- Added client-side VIN format validation
+Make, model, year, and part field suggestions
+Dependency handling between fields (model depends on make)
+Category-based suggestion display
+Fuzzy matching for typo tolerance
 
-### Code Organization
-- Fixed duplicate Flask app instance
-- Improved error handling with specific exception types
-- Added validation for required API keys at startup
-- Enhanced logging for easier debugging
-- Used consistent coding patterns throughout the application
+Recent Enhancements
+Vehicle Data Expansion
 
-## Future Improvements
-- Add database for storing vehicle data instead of hardcoded JS
-- Implement rate limiting for API protection
-- Add session management for user history
-- Add pagination for results
-- Create config file for better environment separation
-- Split app.py into multiple modules (routes, services, utils)
-- Add unit and integration tests
-- Add CSRF protection
+Added complete US market vehicle makes and models
+Enhanced make-model relationships and synonym mapping
+Added support for legacy and discontinued models
 
-## Setup
-1. Clone the repository
-2. Install dependencies: `pip install -r requirements.txt`
-3. Create `.env` file with the following variables:
-   ```
-   OPENAI_API_KEY=your_openai_api_key
-   SERPAPI_KEY=your_serpapi_key
-   FLASK_SECRET_KEY=random_secret_key
-   ```
-4. Run the application: `python app.py`
-5. Visit http://localhost:5040 in your browser# autoxpress_google
+Part Data Expansion
+
+Added over 80 new part terms for better part recognition
+Enhanced existing part categories with more comprehensive terms
+Added new part categories including:
+
+Chassis/Frame components
+HVAC systems
+Lighting components
+Trim/appearance items
+Belt/pulley systems
+
+
+
+Query Processing Improvements
+
+Enhanced year range recognition for better compatibility matching
+Improved confidence scoring for extracted information
+Better handling of multi-word part names
+
+Implementation
+Requirements
+
+Modern web browser with JavaScript support
+Server with Python for backend processing
+
+Setup
+
+Include query_processor.py in your backend code
+Include field-autocomplete.js in your frontend code
+Create the necessary HTML elements for the search interface
+
+Basic Usage
+python# Backend
+from query_processor import EnhancedQueryProcessor
+
+# Create processor instance
+processor = EnhancedQueryProcessor()
+
+# Process a natural language query
+result = processor.process_query("2019 Toyota Camry brake pads")
+
+# Or process structured form data
+form_data = {
+    "year": "2019",
+    "make": "Toyota",
+    "model": "Camry",
+    "part": "brake pads"
+}
+result = processor.process_structured_data(form_data)
+
+# Get the structured information and search terms
+vehicle_info = result["vehicle_info"]
+search_terms = result["search_terms"]
