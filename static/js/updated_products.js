@@ -5,8 +5,15 @@
 
 // Creates a unique ID for a product
 function generateProductId(product) {
+  // Create a unique ID based on title and price, handling non-ASCII characters
+  try {
     return btoa(product.title.substring(0, 30) + product.price).replace(/[^a-zA-Z0-9]/g, '');
+  } catch (e) {
+    // Handle non-ASCII characters by using encodeURIComponent
+    const safeString = encodeURIComponent(product.title.substring(0, 30) + product.price);
+    return btoa(safeString).replace(/[^a-zA-Z0-9]/g, '');
   }
+}
   
   // Load favorites from localStorage
   function loadFavorites() {
