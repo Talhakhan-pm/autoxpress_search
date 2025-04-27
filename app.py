@@ -249,7 +249,7 @@ def fetch_ebay_results(query_type, query, timestamp, part_type=None):
         params["category_id"] = category_id
     
     results = get_serpapi_cached("ebay", query, query_type, timestamp, **params)
-    return process_ebay_results(results, query, max_items=12)  # Increased max items
+    return process_ebay_results(results, query, max_items=20)  # Increased max items
 
 def get_ebay_category_id(part_type):
     """Get the appropriate eBay category ID for auto parts"""
@@ -329,7 +329,7 @@ def extract_year_make_model_from_query(query):
         "part": vehicle_info.get("part")
     }
 
-def process_ebay_results(results, query, max_items=15):
+def process_ebay_results(results, query, max_items=20):
     """
     Helper function to process eBay results with improved filtering.
     Increased max_items from 3 to 5.
@@ -441,9 +441,9 @@ def get_google_shopping_results(query, part_type=None):
         if "link" in first_result:
             print(f"Link type: {type(first_result['link'])}, Value: {first_result['link']}")
     
-    return process_google_shopping_results(results, query, max_items=5)  # Increased max items
+    return process_google_shopping_results(results, query, max_items=20)  # Increased max items
 
-def process_google_shopping_results(results, query, max_items=12):
+def process_google_shopping_results(results, query, max_items=20):
     """Process Google Shopping results with improved filtering"""
     processed_items = []
     
