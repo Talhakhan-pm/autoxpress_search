@@ -90,4 +90,4 @@ result = processor.process_structured_data(form_data)
 
 # Get the structured information and search terms
 vehicle_info = result["vehicle_info"]
-search_terms = result["search_terms"]
+search_terms = result["search_terms"]# autoxpress_search

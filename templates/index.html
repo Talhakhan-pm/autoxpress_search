@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoXpress Smart Assistant | Your Auto Parts Search AI</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <!-- Add the autocomplete CSS file -->
-    <link rel="stylesheet" href="/static/css/styles.css">
-</head>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>AutoXpress Smart Assistant | Your Auto Parts Search AI</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+        <!-- Add the autocomplete CSS file -->
+        <link rel="stylesheet" href="/static/css/styles.css">
+        <!-- No inline styles here anymore - all styles are in the CSS file -->
+    </head>
 <body>
     <div class="content-wrapper">
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -46,7 +47,7 @@
                         <p class="lead">Our AI-powered assistant helps you find OEM and aftermarket parts with perfect fitment for your vehicle.</p>
                     </div>
                     <div class="col-md-4 text-end d-none d-md-block">
-                        <i class="fas fa-car fa-5x text-white-50"></i>
+                        <i class="fas fa-car fa-4x text-white-50 opacity-50"></i>
                     </div>
                 </div>
             </div>
@@ -101,12 +102,12 @@
                                                     <input type="text" class="form-control" id="engine-field" name="engine" placeholder="Engine (optional)" autocomplete="off">
                                                 </div>
                                                 <div class="search-button-container">
-                                                    <button class="btn btn-primary" type="submit" id="search-button">
-                                                        <i class="fas fa-search me-1"></i> Find Parts
+                                                    <button class="btn btn-danger" type="submit" id="search-button">
+                                                        <i class="fas fa-search me-1" style="font-size: 0.875rem;"></i> Find Parts
                                                     </button>
                                                 </div>
                                             </div>
-                                            <div class="form-text">
+                                            <div class="form-text mt-2">
                                                 Enter your vehicle details and the part you're looking for.
                                                 <button type="button" class="btn btn-link p-0 align-baseline" id="single-field-toggle">Switch to single field search</button>
                                             </div>
@@ -117,18 +118,19 @@
                                             <div class="input-group">
                                                 <input type="text" class="form-control" id="prompt" name="prompt" 
                                                     placeholder="Example: 2018 Toyota Camry front brake pads" autocomplete="off">
-                                                <button class="btn btn-primary" type="submit" id="single-search-button">
-                                                    <i class="fas fa-search me-1"></i> Find Parts
+                                                <button class="btn btn-danger" type="submit" id="single-search-button">
+                                                    <i class="fas fa-search me-1" style="font-size: 0.875rem;"></i> Find Parts
                                                 </button>
                                             </div>
-                                            <div class="form-text">
+                                            <div class="form-text mt-2">
                                                 Include year, make, model, and part. Example: "2018 Toyota Camry front brake pads"
                                                 <button type="button" class="btn btn-link p-0 align-baseline" id="multi-field-toggle">Switch to multi-field search</button>
                                             </div>
                                         </div>
                                     </form>
-                                    <!-- Search feedback container will be inserted here by JS -->
+                                    <div id="validation-error" class="alert alert-danger mt-2 d-none" role="alert"></div>
                                 </div>
+                                
                                 <div class="tab-pane fade" id="vin-content" role="tabpanel" aria-labelledby="vin-tab">
                                     <form id="vin-form" method="post">
                                         <div class="mb-3">
@@ -138,14 +140,15 @@
                                                     placeholder="Enter 17-character VIN" 
                                                     pattern="[A-HJ-NPR-Z0-9]{17}" 
                                                     maxlength="17" required>
-                                                <button class="btn btn-primary" type="submit" id="vin-button">
-                                                    <i class="fas fa-search me-1"></i> Decode VIN
+                                                <button class="btn btn-danger" type="submit" id="vin-button">
+                                                    <i class="fas fa-search me-1" style="font-size: 0.9rem;"></i> Decode VIN
                                                 </button>
                                             </div>
                                             <div class="form-text">A valid VIN has 17 characters (excluding I, O, and Q)</div>
                                         </div>
                                     </form>
                                 </div>
+                                
                                 <div class="tab-pane fade" id="favorites-content" role="tabpanel" aria-labelledby="favorites-tab">
                                     <div id="favorites-container">
                                         <div class="d-flex justify-content-between mb-3">
@@ -175,130 +178,129 @@
             </div>
 
             <!-- AI Analysis Loading Indicator -->
-            <div id="search-loading" class="text-center my-4">
-                <div class="spinner-border text-primary" role="status">
+            <div id="search-loading" class="text-center my-4" style="display: none;">
+                <div class="spinner-border text-primary" style="width:1rem;height:1rem;" role="status">
                     <span class="visually-hidden">Loading analysis...</span>
                 </div>
                 <p class="mt-2">Analyzing your request<span class="loader-dots"><div></div><div></div><div></div></span></p>
             </div>
 
             <!-- Results Container -->
-            <!-- Results Container -->
-<div id="result-container" class="row" style="display: none;">
-    <div class="col-12">
-        <div class="card mb-4">
-            <div class="card-header">
-                <ul class="nav nav-tabs card-header-tabs" id="resultsTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="analysis-tab" data-bs-toggle="tab" data-bs-target="#analysis-content" type="button" role="tab" aria-controls="analysis-content" aria-selected="true">
-                            <i class="fas fa-chart-bar me-2"></i>Analysis
-                            <span id="analysis-time" class="badge bg-secondary ms-2"></span>
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="products-tab" data-bs-toggle="tab" data-bs-target="#products-content" type="button" role="tab" aria-controls="products-content" aria-selected="false">
-                            <i class="fas fa-shopping-cart me-2"></i>Products
-                            <span id="products-count" class="badge bg-primary ms-2">0</span>
-                        </button>
-                    </li>
-                </ul>
-            </div>
-            <div class="card-body">
-                <div class="tab-content" id="resultsTabsContent">
-                    <!-- Analysis Tab Content -->
-                    <div class="tab-pane fade show active" id="analysis-content" role="tabpanel" aria-labelledby="analysis-tab">
-                        <div id="validation-error" class="alert alert-danger d-none" role="alert"></div>
-                        <div id="questions"></div>
-                    </div>
-                    
-                    <!-- Products Tab Content -->
-                    <div class="tab-pane fade" id="products-content" role="tabpanel" aria-labelledby="products-tab">
-                        <!-- Products Toolbar -->
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div>
-                                <span class="text-muted">Found <span id="product-total-count">0</span> products</span>
-                            </div>
-                            <div class="d-flex gap-2">
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="fas fa-filter me-1"></i> Filter
+            <div id="result-container" class="row" style="display: none;">
+                <div class="col-12">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <ul class="nav nav-tabs card-header-tabs" id="resultsTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="analysis-tab" data-bs-toggle="tab" data-bs-target="#analysis-content" type="button" role="tab" aria-controls="analysis-content" aria-selected="true">
+                                        <i class="fas fa-chart-bar me-2"></i>Analysis
+                                        <span id="analysis-time" class="badge bg-secondary ms-2"></span>
                                     </button>
-                                    <div class="dropdown-menu p-3" style="width: 250px;" aria-labelledby="filterDropdown">
-                                        <h6 class="dropdown-header">Filter Products</h6>
-                                        <div class="form-check">
-                                            <input class="form-check-input filter-check" type="checkbox" id="newOnly" data-filter="condition" data-value="new">
-                                            <label class="form-check-label" for="newOnly">New Only</label>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="products-tab" data-bs-toggle="tab" data-bs-target="#products-content" type="button" role="tab" aria-controls="products-content" aria-selected="false">
+                                        <i class="fas fa-shopping-cart me-2"></i>Products
+                                        <span id="products-count" class="badge bg-primary ms-2">0</span>
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="card-body">
+                            <div class="tab-content" id="resultsTabsContent">
+                                <!-- Analysis Tab Content -->
+                                <div class="tab-pane fade show active" id="analysis-content" role="tabpanel" aria-labelledby="analysis-tab">
+                                    <div id="validation-error" class="alert alert-danger d-none" role="alert"></div>
+                                    <div id="questions"></div>
+                                </div>
+                                
+                                <!-- Products Tab Content -->
+                                <div class="tab-pane fade" id="products-content" role="tabpanel" aria-labelledby="products-tab">
+                                    <!-- Products Toolbar -->
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <span class="text-muted">Found <span id="product-total-count">0</span> products</span>
                                         </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input filter-check" type="checkbox" id="freeShipping" data-filter="shipping" data-value="free">
-                                            <label class="form-check-label" for="freeShipping">Free Shipping</label>
+                                        <div class="d-flex gap-2">
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="fas fa-filter me-1"></i> Filter
+                                                </button>
+                                                <div class="dropdown-menu p-3" style="width: 250px;" aria-labelledby="filterDropdown">
+                                                    <h6 class="dropdown-header">Filter Products</h6>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input filter-check" type="checkbox" id="newOnly" data-filter="condition" data-value="new">
+                                                        <label class="form-check-label" for="newOnly">New Only</label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input filter-check" type="checkbox" id="freeShipping" data-filter="shipping" data-value="free">
+                                                        <label class="form-check-label" for="freeShipping">Free Shipping</label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input filter-check" type="checkbox" id="bestMatchOnly" data-filter="relevance" data-value="high">
+                                                        <label class="form-check-label" for="bestMatchOnly">Best Matches Only</label>
+                                                    </div>
+                                                    <div class="dropdown-divider"></div>
+                                                    <h6 class="dropdown-header">Sources</h6>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input filter-check" type="checkbox" id="ebaySource" data-filter="source" data-value="eBay" checked>
+                                                        <label class="form-check-label" for="ebaySource">eBay</label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input filter-check" type="checkbox" id="googleSource" data-filter="source" data-value="Google Shopping" checked>
+                                                        <label class="form-check-label" for="googleSource">Google Shopping</label>
+                                                    </div>
+                                                    <div class="dropdown-divider"></div>
+                                                    <button id="resetFilters" class="btn btn-sm btn-outline-secondary w-100">Reset Filters</button>
+                                                </div>
+                                            </div>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="fas fa-sort me-1"></i> <span id="sort-label">Relevance</span>
+                                                </button>
+                                                <ul class="dropdown-menu" aria-labelledby="sortDropdown">
+                                                    <li><a class="dropdown-item sort-option" href="#" data-sort="relevance">Relevance</a></li>
+                                                    <li><a class="dropdown-item sort-option" href="#" data-sort="price-low">Price: Low to High</a></li>
+                                                    <li><a class="dropdown-item sort-option" href="#" data-sort="price-high">Price: High to Low</a></li>
+                                                </ul>
+                                            </div>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="viewDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="fas fa-th-large me-1"></i> <span id="view-label">Grid</span>
+                                                </button>
+                                                <ul class="dropdown-menu" aria-labelledby="viewDropdown">
+                                                    <li><a class="dropdown-item view-option" href="#" data-view="grid"><i class="fas fa-th-large me-2"></i>Grid View</a></li>
+                                                    <li><a class="dropdown-item view-option" href="#" data-view="list"><i class="fas fa-list me-2"></i>List View</a></li>
+                                                    <li><a class="dropdown-item view-option" href="#" data-view="compact"><i class="fas fa-th me-2"></i>Compact View</a></li>
+                                                </ul>
+                                            </div>
                                         </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input filter-check" type="checkbox" id="bestMatchOnly" data-filter="relevance" data-value="high">
-                                            <label class="form-check-label" for="bestMatchOnly">Best Matches Only</label>
+                                    </div>
+                                    
+                                    <!-- Products Loading Indicator -->
+                                    <div id="products-loading" class="text-center my-4" style="display: none;">
+                                        <div class="spinner-border text-primary" style="width:1rem;height:1rem;" role="status">
+                                            <span class="visually-hidden">Loading products...</span>
                                         </div>
-                                        <div class="dropdown-divider"></div>
-                                        <h6 class="dropdown-header">Sources</h6>
-                                        <div class="form-check">
-                                            <input class="form-check-input filter-check" type="checkbox" id="ebaySource" data-filter="source" data-value="eBay" checked>
-                                            <label class="form-check-label" for="ebaySource">eBay</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input filter-check" type="checkbox" id="googleSource" data-filter="source" data-value="Google Shopping" checked>
-                                            <label class="form-check-label" for="googleSource">Google Shopping</label>
-                                        </div>
-                                        <div class="dropdown-divider"></div>
-                                        <button id="resetFilters" class="btn btn-sm btn-outline-secondary w-100">Reset Filters</button>
+                                        <p class="mt-2">Searching for products<span class="loader-dots"><div></div><div></div><div></div></span></p>
+                                    </div>
+                                    
+                                    <!-- Products Container -->
+                                    <div id="products-container" class="row g-3">
+                                        <!-- Products will be inserted here -->
+                                    </div>
+                                    
+                                    <!-- Load More Button -->
+                                    <div id="load-more-container" class="text-center mt-4 d-none">
+                                        <button id="load-more-btn" class="btn btn-outline-primary">
+                                            <i class="fas fa-sync me-2"></i>Load More Products
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="fas fa-sort me-1"></i> <span id="sort-label">Relevance</span>
-                                    </button>
-                                    <ul class="dropdown-menu" aria-labelledby="sortDropdown">
-                                        <li><a class="dropdown-item sort-option" href="#" data-sort="relevance">Relevance</a></li>
-                                        <li><a class="dropdown-item sort-option" href="#" data-sort="price-low">Price: Low to High</a></li>
-                                        <li><a class="dropdown-item sort-option" href="#" data-sort="price-high">Price: High to Low</a></li>
-                                    </ul>
-                                </div>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="viewDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="fas fa-th-large me-1"></i> <span id="view-label">Grid</span>
-                                    </button>
-                                    <ul class="dropdown-menu" aria-labelledby="viewDropdown">
-                                        <li><a class="dropdown-item view-option" href="#" data-view="grid"><i class="fas fa-th-large me-2"></i>Grid View</a></li>
-                                        <li><a class="dropdown-item view-option" href="#" data-view="list"><i class="fas fa-list me-2"></i>List View</a></li>
-                                        <li><a class="dropdown-item view-option" href="#" data-view="compact"><i class="fas fa-th me-2"></i>Compact View</a></li>
-                                    </ul>
-                                </div>
                             </div>
-                        </div>
-                        
-                        <!-- Products Loading Indicator -->
-                        <div id="products-loading" class="text-center my-4">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading products...</span>
-                            </div>
-                            <p class="mt-2">Searching for products<span class="loader-dots"><div></div><div></div><div></div></span></p>
-                        </div>
-                        
-                        <!-- Products Container -->
-                        <div id="products-container" class="row g-3">
-                            <!-- Products will be inserted here -->
-                        </div>
-                        
-                        <!-- Load More Button -->
-                        <div id="load-more-container" class="text-center mt-4 d-none">
-                            <button id="load-more-btn" class="btn btn-outline-primary">
-                                <i class="fas fa-sync me-2"></i>Load More Products
-                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
 
             <!-- VIN Results Container -->
             <div id="vin-result-container" class="d-none">
@@ -306,7 +308,7 @@
                     <div class="card-header">Vehicle Information</div>
                     <div class="card-body">
                         <div id="vin-loading" class="text-center my-4 d-none">
-                            <div class="spinner-border text-primary" role="status">
+                            <div class="spinner-border text-primary" style="width:1rem;height:1rem;" role="status">
                                 <span class="visually-hidden">Loading VIN data...</span>
                             </div>
                             <p class="mt-2">Decoding your VIN<span class="loader-dots"><div></div><div></div><div></div></span></p>
@@ -342,9 +344,8 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Add the autocomplete JavaScript file -->
     <script src="/static/js/field-autocomplete.js"></script>
     <script src="/static/js/main.js"></script>
-    <script src="static/js/updated_products.js"></script>
+    <script src="/static/js/updated_products.js"></script>
 </body>
 </html>

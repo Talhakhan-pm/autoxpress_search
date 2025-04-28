@@ -329,11 +329,67 @@ def extract_year_make_model_from_query(query):
         "part": vehicle_info.get("part")
     }
 
+# Add this function to app.py to improve the presentation of search results
+
+def post_process_search_results(listings, vehicle_info):
+    """
+    Post-processes search results to improve display and highlight exact year matches.
+    
+    Args:
+        listings: The list of product listings
+        vehicle_info: The extracted vehicle information
+        
+    Returns:
+        Processed listings with grouping and highlighting
+    """
+    if not listings or not vehicle_info:
+        return listings
+    
+    # Extract the year we're looking for
+    target_year = vehicle_info.get("year")
+    if not target_year:
+        return listings
+    
+    # Group listings into categories
+    exact_matches = []
+    compatible_matches = []
+    other_matches = []
+    
+    for item in listings:
+        title = item.get("title", "").lower()
+        
+        # Check if this is an exact year match
+        if re.search(r'\b' + re.escape(target_year) + r'\b', title):
+            # Add an "exactYearMatch" flag for frontend highlighting
+            item["exactYearMatch"] = True
+            item["specialHighlight"] = True
+            exact_matches.append(item)
+        else:
+            # Check for year ranges that include our target year
+            year_ranges = re.findall(r'\b(\d{4})[- /](\d{4})\b', title)
+            is_compatible = False
+            
+            for start_year, end_year in year_ranges:
+                if int(start_year) <= int(target_year) <= int(end_year):
+                    item["compatibleRange"] = f"{start_year}-{end_year}"
+                    item["specialHighlight"] = False
+                    compatible_matches.append(item)
+                    is_compatible = True
+                    break
+            
+            if not is_compatible:
+                item["specialHighlight"] = False
+                other_matches.append(item)
+    
+    # Return prioritized results: exact matches first, then compatible, then others
+    return exact_matches + compatible_matches + other_matches
+
 def process_ebay_results(results, query, max_items=20):
     """
     Helper function to process eBay results with improved filtering.
-    Increased max_items from 3 to 5.
+    Uses strict matching from the original version for better relevance.
     """
+    print(f"eBay raw results count: {len(results.get('organic_results', []))}")
     processed_items = []
     
     # Extract vehicle info for better filtering
@@ -342,9 +398,6 @@ def process_ebay_results(results, query, max_items=20):
     make = vehicle_info.get("make")
     model = vehicle_info.get("model")
     part = vehicle_info.get("part")
-    
-    # Build a list of keywords to match
-    keywords = query.lower().split()
     
     # Create a set of must-match terms for more accurate results
     must_match = set()
@@ -377,7 +430,7 @@ def process_ebay_results(results, query, max_items=20):
             if not any(x in title for x in ["assembly", "complete", "front end", "whole bumper"]):
                 continue
         
-        # Check if all must-match terms are in the title
+        # Check if all must-match terms are in the title - USING STRICT MATCHING FROM ORIGINAL
         if must_match and not all(term in title for term in must_match):
             continue
             
@@ -411,6 +464,7 @@ def process_ebay_results(results, query, max_items=20):
             "image": thumbnail
         })
     
+    print(f"eBay processed results count: {len(processed_items)}")
     return processed_items
 
 def get_google_shopping_results(query, part_type=None):
@@ -423,9 +477,27 @@ def get_google_shopping_results(query, part_type=None):
     
     # Map part types to Google product categories
     product_category = None
-    if part_type:
-        if "bumper" in part_type.lower():
-            product_category = "5613"  # Vehicle Parts & Accessories
+    
+    # Extract vehicle info for search enhancement
+    vehicle_info = extract_year_make_model_from_query(query)
+    
+    # Special handling for bumpers
+    if part_type and "bumper" in part_type.lower():
+        # For bumpers, explicitly add product category and expand query
+        product_category = "5613"  # Vehicle Parts & Accessories
+        
+        # Create a more specific query for Google Shopping
+        if vehicle_info.get("year") and vehicle_info.get("make") and vehicle_info.get("model"):
+            year = vehicle_info.get("year")
+            make = vehicle_info.get("make")
+            model = vehicle_info.get("model")
+            bumper_query = f"{year} {make} {model} front bumper"
+            
+            # Use this more precise query instead
+            print(f"Using specialized Google bumper query: {bumper_query}")
+            query = bumper_query
+    elif part_type and "engine" in part_type.lower():
+        product_category = "5613"  # Vehicle Parts & Accessories
     
     params = {}
     if product_category:
@@ -482,8 +554,12 @@ def process_google_shopping_results(results, query, max_items=20):
                 continue
         
         # Skip items that don't match all must-match terms
-        if must_match and not all(term in title for term in must_match):
-            continue
+        if must_match:
+            # For Google Shopping, match if at least 50% of terms match
+            matching_terms = sum(1 for term in must_match if term in title)
+            required_matches = max(1, len(must_match) / 2)  # At least 1 or 50% of terms
+            if matching_terms < required_matches:
+                continue
         
         # If we have year/make/model, make sure they appear in the title
         if year and make and model:
@@ -760,6 +836,86 @@ Question 1: Do you need any associated hardware with this part?
             })
 
 # AJAX endpoint for product search
+def prioritize_exact_part_matches(listings, part_query):
+    """
+    Prioritizes listings that exactly match the user's part query.
+    
+    Args:
+        listings: List of product listings
+        part_query: The specific part the user searched for (e.g., "engine")
+        
+    Returns:
+        Sorted list with exact matches first
+    """
+    print(f"Prioritizing {len(listings)} listings for part: '{part_query}'")
+    
+    exact_complete_matches = []
+    exact_matches = []
+    related_matches = []
+    other_matches = []
+    
+    # Clean the part query
+    clean_part = part_query.lower().strip()
+    
+    # Words that indicate a complete/full part
+    complete_indicators = ["complete", "assembly", "full", "entire", "oem", "motor", "assembly", "unit", "module"]
+    
+    # Words that indicate parts or accessories
+    part_indicators = ["cap", "cover", "filter", "sensor", "switch", "gasket", "seal", "bolt", "nut", "harness", "wire"]
+    
+    # Special case for engines
+    engine_indicators = []
+    if clean_part == "engine":
+        engine_indicators = ["complete engine", "engine assembly", "motor assembly", 
+                         "long block", "short block", "engine motor", "complete motor"]
+    
+    for item in listings:
+        title = item.get("title", "").lower()
+        
+        # Special case for engines
+        if clean_part == "engine" and any(indicator in title for indicator in engine_indicators):
+            item["matchType"] = "exact_complete"
+            item["priorityScore"] = 150  # Higher priority for complete engines
+            item["isExactMatch"] = True
+            exact_complete_matches.append(item)
+            continue  # Skip other checks
+        
+        # Check for exact part name match with word boundaries
+        if re.search(r'\b' + re.escape(clean_part) + r'\b', title):
+            # Check if it's likely a complete part
+            if any(indicator in title for indicator in complete_indicators):
+                item["matchType"] = "exact_complete"
+                item["priorityScore"] = 100
+                item["isExactMatch"] = True
+                exact_complete_matches.append(item)
+            # Check if it's likely just a small part of the main component
+            elif any(indicator in title for indicator in part_indicators):
+                item["matchType"] = "related"
+                item["priorityScore"] = 50
+                item["isExactMatch"] = False
+                related_matches.append(item)
+            else:
+                item["matchType"] = "exact"
+                item["priorityScore"] = 80
+                item["isExactMatch"] = True
+                exact_matches.append(item)
+        # Check if part name is mentioned but not as an exact match
+        elif clean_part in title:
+            item["matchType"] = "related"
+            item["priorityScore"] = 40
+            item["isExactMatch"] = False
+            related_matches.append(item)
+        else:
+            item["matchType"] = "other"
+            item["priorityScore"] = 10
+            item["isExactMatch"] = False
+            other_matches.append(item)
+    
+    print(f"Found {len(exact_complete_matches)} exact complete matches, {len(exact_matches)} exact matches, {len(related_matches)} related matches")
+    
+    # Return prioritized results
+    return exact_complete_matches + exact_matches + related_matches + other_matches
+
 @app.route("/api/search-products", methods=["POST"])
 def search_products():
     """Search for products using the provided search term with pagination support"""
@@ -775,9 +931,31 @@ def search_products():
         })
     
     try:
-        # Extract part type for category filtering
+        # Extract vehicle info for filtering
         vehicle_info = extract_year_make_model_from_query(original_query or search_term)
         part_type = vehicle_info.get("part")
+        
+        # Add special case handling for engines and other major parts
+        if part_type:
+            if "engine" in part_type.lower():
+                # Create a more specific search term for engines
+                if vehicle_info.get("year") and vehicle_info.get("make") and vehicle_info.get("model"):
+                    year = vehicle_info.get("year")
+                    make = vehicle_info.get("make")
+                    model = vehicle_info.get("model")
+                    engine_term = f"{year} {make} {model} complete engine motor assembly"
+                    print(f"Using engine-specific search term: {engine_term}")
+                    search_term = engine_term
+            elif "bumper" in part_type.lower() and "assembly" not in part_type.lower():
+                # For bumpers, ensure we're searching for complete assemblies
+                bumper_term = f"{search_term} complete assembly"
+                print(f"Using bumper-specific search term: {bumper_term}")
+                search_term = bumper_term
+            elif any(x in part_type.lower() for x in ["transmission", "gearbox"]):
+                # For transmissions
+                trans_term = f"{search_term} complete assembly"
+                print(f"Using transmission-specific search term: {trans_term}")
+                search_term = trans_term
         
         # Try multiple search strategies (fallbacks if needed)
         all_listings = []
@@ -792,6 +970,45 @@ def search_products():
             
             all_listings.extend(ebay_listings)
             all_listings.extend(google_listings)
+        
+        # If we have too few Google Shopping results for certain parts, try again with a simpler term
+        if part_type and len(google_listings) < 3 and ("bumper" in part_type.lower() or "engine" in part_type.lower()):
+            # Create a very simple search term
+            if vehicle_info.get("year") and vehicle_info.get("make"):
+                simple_term = f"{vehicle_info.get('year')} {vehicle_info.get('make')} {part_type}"
+                print(f"Too few Google results, trying simplified term: {simple_term}")
+                
+                # Use timestamp for cache invalidation
+                cache_timestamp = int(time.time() / 300)
+                
+                # Try a direct Google Shopping search with minimal filtering
+                backup_results = get_serpapi_cached("google_shopping", simple_term, timestamp=cache_timestamp)
+                backup_items = []
+                
+                # Process with very minimal filtering
+                for item in backup_results.get("shopping_results", []):
+                    title = item.get("title", "").lower()
+                    
+                    # Only the most basic filtering
+                    if vehicle_info.get("make") and vehicle_info.get("make").lower() not in title:
+                        continue
+                        
+                    # Extract link and other details
+                    link = item.get("link") or ""
+                    
+                    backup_items.append({
+                        "title": item.get("title"),
+                        "price": item.get("price", "Price not available"),
+                        "shipping": item.get("shipping", "Shipping not specified"),
+                        "condition": "New",  # Google Shopping typically shows new items
+                        "source": "Google Shopping",
+                        "link": link,
+                        "image": item.get("thumbnail", "")
+                    })
+                
+                # Append these items to our list
+                all_listings.extend(backup_items)
+                print(f"Added {len(backup_items)} additional Google Shopping items")
         
         # If we don't have enough results, try with a simplified search
         if len(all_listings) < 8 and original_query:
@@ -894,18 +1111,25 @@ def search_products():
         # Add relevance score to each item
         all_listings = [add_relevance_score(item, search_term, vehicle_info) for item in all_listings]
         
-        # Sort by relevance score by default
-        all_listings.sort(key=lambda x: x.get("relevanceScore", 0), reverse=True)
+        # If we have part information, prioritize exact matches
+        if part_type:
+            all_listings = prioritize_exact_part_matches(all_listings, part_type)
+        else:
+            # Sort by relevance score by default when we don't have a specific part
+            all_listings.sort(key=lambda x: x.get("relevanceScore", 0), reverse=True)
         
-        # Add an exact match flag for frontend use
-        for item in all_listings:
-            if item.get("relevanceScore", 0) > 40:
-                item["exactMatch"] = True
+        # Add "Best Match" flag for top matches for UI highlight
+        for i, item in enumerate(all_listings):
+            if i < 4 or item.get("priorityScore", 0) > 80:
+                item["bestMatch"] = True
+            else:
+                item["bestMatch"] = False
         
         return jsonify({
             "success": True,
             "listings": all_listings,
             "total": len(all_listings),
+            "exactMatchCount": sum(1 for item in all_listings if item.get("isExactMatch", False)),
             "page": page,
             "pageSize": page_size
         })
@@ -915,6 +1139,127 @@ def search_products():
             "success": False,
             "error": "An error occurred while searching for products. Please try again."
         })
+
+def enhanceProductListings(listings, query, vehicleInfo):
+    """
+    Enhanced function to filter and score product listings with stronger emphasis on exact year matches
+    """
+    if not listings or not listings:
+        return []
+    
+    # Check if we're searching for a bumper
+    is_bumper_search = vehicleInfo.get("part") and "bumper" in vehicleInfo.get("part").lower()
+    
+    # Score each listing based on relevance to the search
+    scoredListings = []
+    
+    for listing in listings:
+        score = 0
+        title = listing.get("title", "").lower()
+        
+        # Strong preference for exact year matches
+        if vehicleInfo.get("year"):
+            exact_year = vehicleInfo.get("year")
+            
+            # Check for exact year in the title
+            if re.search(r'\b' + re.escape(exact_year) + r'\b', title):
+                # Massive boost for exact year matches
+                score += 50
+            else:
+                # Check for year ranges that might include our year
+                year_ranges = re.findall(r'\b(\d{4})[- /](\d{4})\b', title)
+                year_matched = False
+                
+                for start_year, end_year in year_ranges:
+                    if int(start_year) <= int(exact_year) <= int(end_year):
+                        # Moderate boost for being within a year range
+                        score += 25
+                        year_matched = True
+                        break
+                
+                # Small boost if no explicit year match but vehicle generation is likely correct
+                if not year_matched:
+                    # Look for generation indicators
+                    if any(term in title for term in ["generation", "gen", vehicleInfo.get("year_range", {}).get("generation", "")]):
+                        score += 10
+        
+        # Add points for make match
+        if vehicleInfo.get("make") and vehicleInfo.get("make").lower() in title:
+            score += 15
+        
+        # Add points for model match - check for model with different formats (F-150, F150, etc.)
+        if vehicleInfo.get("model"):
+            model = vehicleInfo.get("model").lower()
+            model_variants = [
+                model,
+                model.replace("-", ""),
+                model.replace("-", " ")
+            ]
+            
+            if any(variant in title for variant in model_variants):
+                score += 20
+        
+        # Add points for part match
+        if vehicleInfo.get("part") and vehicleInfo.get("part").lower() in title:
+            score += 15
+            
+            # Extra points for assembly keyword for complete parts
+            if "assembly" in vehicleInfo.get("part").lower() and "assembly" in title:
+                score += 10
+        
+        # Boost score for exact word match indicators
+        if "exact fit" in title or "direct fit" in title or "perfect fit" in title:
+            score += 15
+            
+        # Boost for OEM parts
+        if "oem" in title or "factory" in title or "original" in title:
+            score += 10
+        
+        # Add points for condition (prefer new parts)
+        if "new" in listing.get("condition", "").lower():
+            score += 5
+        
+        # Add points for source preference
+        if listing.get("source") == "eBay":
+            score += 5
+            
+        # Penalize if the condition is poor or unknown
+        if "used" in listing.get("condition", "").lower():
+            # Still useful but not preferred
+            score -= 5
+            
+        # Adjust score for bumper searches
+        if is_bumper_search:
+            # Boost score for actual bumper assemblies
+            if "assembly" in title and "bumper" in title:
+                score += 15
+                
+            # Penalize accessories when searching for full assemblies
+            if any(keyword in title for keyword in ["guard", "protector", "pad", "cover only", "bracket only"]):
+                if not any(keyword in title for keyword in ["assembly", "complete", "front end"]):
+                    score -= 30
+        
+        # Store the scored listing
+        scoredListings.append({
+            **listing,
+            "relevanceScore": score,
+            "exactYearMatch": re.search(r'\b' + re.escape(vehicleInfo.get("year", "")) + r'\b', title) is not None
+        })
+    
+    # Sort by relevance score (highest first)
+    scoredListings.sort(key=lambda x: x["relevanceScore"], reverse=True)
+    
+    # Add "Best Match" flag for top matches
+    for i, item in enumerate(scoredListings):
+        if i < 4 or item["relevanceScore"] > 40:
+            item["bestMatch"] = True
+        else:
+            item["bestMatch"] = False
+    
+    return scoredListings
+
+# Flask app setup
+    
 
 # For backward compatibility - combined analyze and search
 @app.route("/api/search", methods=["POST"])

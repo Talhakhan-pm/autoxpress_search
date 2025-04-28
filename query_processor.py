@@ -789,8 +789,20 @@ class EnhancedQueryProcessor:
     "wheel stud": "wheel stud replacement set",
     "lug nut": "lug nuts complete set oem",
     "crankshaft sensor": "crankshaft position sensor oem",
-    "camshaft sensor": "camshaft position sensor with harness"
-        }
+    "camshaft sensor": "camshaft position sensor with harness",
+    
+    # Year range pattern matching terms
+    "87-91": "1987-1991",
+    "88-91": "1988-1991",
+    "91/92": "1991-1992",
+    "92/93": "1992-1993",
+    "93-97": "1993-1997",
+    "98-02": "1998-2002",
+    "03-07": "2003-2007",
+    "08-12": "2008-2012",
+    "13-17": "2013-2017",
+    "18-22": "2018-2022"
+    }
     
     def normalize_query(self, query):
         """Normalize the query text (lowercase, remove excess whitespace, etc.)"""
@@ -811,33 +823,698 @@ class EnhancedQueryProcessor:
         
         return query
     
-    def extract_vehicle_info(self, query):
-        """
-        Extract structured vehicle information from query
-        Returns a dict with year, make, model, and part
-        """
-        normalized = self.normalize_query(query)
+    def _extract_year(self, query):
+        """Extract vehicle year from query with enhanced year range detection"""
+        # First, try to match year ranges in various formats
         
-        result = {
-            "year": self._extract_year(normalized),
-            "make": self._extract_make(normalized),
-            "model": self._extract_model(normalized),
-            "part": self._extract_part(normalized),
-            "position": self._extract_position(normalized),
-            "engine_specs": self._extract_engine_specs(normalized),
-            "original_query": query,
-            "normalized_query": normalized
+        # Format: 87-91, 2015-2020, etc.
+        year_range_match = re.search(r'\b((?:19|20)?\d{2})[-/](?:19|20)?\d{2}\b', query)
+        if year_range_match:
+            year_range = year_range_match.group(0)
+            
+            # Extract the first year from the range
+            first_year_match = re.search(r'\b((?:19|20)?\d{2})', year_range)
+            if first_year_match:
+                year = first_year_match.group(0)
+                
+                # Handle 2-digit years
+                if len(year) == 2:
+                    if int(year) > 50:  # Assume 19xx for years > 50
+                        return "19" + year
+                    else:  # Assume 20xx for years <= 50
+                        return "20" + year
+                else:
+                    return year
+        
+        # Match specific year range patterns from our dictionary
+        for pattern in self.part_terms.keys():
+            if re.search(pattern, query) and pattern in ["87-91", "91/92", "93-97"]:
+                # Extract the first year from the normalized range
+                normalized_range = self.part_terms[pattern]
+                first_year = normalized_range.split("-")[0]
+                return first_year
+        
+        # Match 4-digit years from 1900-2099
+        year_match = re.search(r'\b(19|20)\d{2}\b', query)
+        if year_match:
+            return year_match.group(0)
+        
+        # Match 2-digit years and convert to 4 digits
+        short_year_match = re.search(r'\b\d{2}\b', query)
+        if short_year_match:
+            year = short_year_match.group(0)
+            if int(year) > 50:  # Assume 19xx for years > 50
+                return "19" + year
+            else:  # Assume 20xx for years <= 50
+                return "20" + year
+        
+        return None
+
+    def _extract_make(self, query):
+        """Extract vehicle make from query with improved brand recognition"""
+        words = query.split()
+        query_lower = query.lower()
+        
+        # Check for exact make matches
+        for make in self.vehicle_makes:
+            make_lower = make.lower()
+            # Use word boundary check for more accurate matching
+            if re.search(r'\b' + re.escape(make_lower) + r'\b', query_lower):
+                return make
+        
+        # Check for synonyms with word boundary
+        for synonym, make in self.make_synonyms.items():
+            if re.search(r'\b' + re.escape(synonym.lower()) + r'\b', query_lower):
+                return make
+        
+        # Try partial matching for certain premium brands that might be abbreviated
+        # This helps with queries like "benz front bumper" instead of "mercedes-benz"
+        special_cases = {
+            "benz": "mercedes-benz",
+            "merc": "mercedes-benz",
+            "chevy": "chevrolet", 
+            "vw": "volkswagen",
+            "bmw": "bmw",  # Already normalized but included for completeness
+            "audi": "audi"  # Already normalized but included for completeness
         }
         
-        # Additional fields that might be useful
-        result["search_confidence"] = self._calculate_confidence(result)
+        for partial, make in special_cases.items():
+            if re.search(r'\b' + re.escape(partial) + r'\b', query_lower):
+                return make
         
-        # Add year range information for specific models (useful for parts compatibility)
+        return None
+
+    def _extract_model(self, query):
+        """Extract vehicle model from query with improved model variation handling"""
+        # Get the make first to narrow down model search
+        make = self._extract_make(query)
+        query_lower = query.lower()
+        
+        if not make:
+            # Try to extract model without make if possible, but with lower confidence
+            for make_name, models in self.make_models.items():
+                for model in models:
+                    model_lower = model.lower()
+                    # Use word boundary to ensure we match complete terms
+                    if re.search(r'\b' + re.escape(model_lower) + r'\b', query_lower):
+                        return model
+            return None
+                
+        # Check if we have models for this make
+        models = self.make_models.get(make.lower(), [])
+        if not models:
+            return None
+            
+        # Try to find models with exact word boundaries first - improved matching
+        for model in models:
+            model_lower = model.lower()
+            if re.search(r'\b' + re.escape(model_lower) + r'\b', query_lower):
+                return model
+        
+        # Handle special cases for models with variations
+        if make.lower() == "ford":
+            # F-series trucks (F-150, F150, F 150)
+            f_series_match = re.search(r'\bf[-\s]?([0-9]{2,3})\b', query_lower, re.IGNORECASE)
+            if f_series_match:
+                model_num = f_series_match.group(1)
+                return f"f-{model_num}"
+        
+        # Handle BMW 3-Series, 5-Series variations (335i, 530i, etc.)
+        if make.lower() == "bmw":
+            series_match = re.search(r'\b([1-8])[- ]?series\b', query_lower)
+            if series_match:
+                series_num = series_match.group(1)
+                return f"{series_num}-Series"
+            
+            # Match patterns like 328i, 530i, X5
+            bmw_model_match = re.search(r'\b([1-8][0-9]{2}i?|[mxz][1-8])\b', query_lower)
+            if bmw_model_match:
+                model_code = bmw_model_match.group(1)
+                # Map to series if possible
+                first_digit = model_code[0]
+                if first_digit.isdigit():
+                    return f"{first_digit}-Series"
+                elif first_digit.lower() == 'x':
+                    return f"X{model_code[1]}"
+                return model_code
+        
+        # Handle Mercedes model variations (C-Class, C300, etc.)
+        if make.lower() == "mercedes-benz":
+            class_match = re.search(r'\b([a-glms])[- ]?class\b', query_lower)
+            if class_match:
+                class_letter = class_match.group(1).upper()
+                return f"{class_letter}-Class"
+            
+            # Match models like C300, E350, etc.
+            merc_model_match = re.search(r'\b([a-glms][0-9]{2,3})\b', query_lower)
+            if merc_model_match:
+                model_code = merc_model_match.group(1)
+                class_letter = model_code[0].upper()
+                return f"{class_letter}-Class"
+        
+        # Then try less strict matching
+        for model in models:
+            model_lower = model.lower()
+            if model_lower in query_lower:
+                return model
+                    
+        return None
+
+    def _extract_engine_specs(self, query):
+        """Extract engine displacement and other specifications with improved pattern matching"""
+        specs = {}
+        query_lower = query.lower()
+        
+        # Extract engine displacement (e.g., 5.3L, 2.0L, 350ci, etc.)
+        # Improved pattern matching for various formats
+        displacement_match = re.search(r'\b(\d+\.\d+)L\b', query, re.IGNORECASE)
+        if displacement_match:
+            specs["displacement"] = displacement_match.group(1) + "L"
+        else:
+            # Try to match formats like 5.3, 2.0 without the L
+            displacement_match = re.search(r'\b(\d+\.\d+)\b', query)
+            if displacement_match:
+                specs["displacement"] = displacement_match.group(1) + "L"
+            else:
+                # Handle cubic inch displacements (350ci, 350 ci, etc.)
+                ci_match = re.search(r'\b(\d{3})(?:\s?ci|\s?cubic inch)\b', query_lower)
+                if ci_match:
+                    # Convert to liters roughly
+                    ci_value = int(ci_match.group(1))
+                    liter_value = round(ci_value * 0.016387, 1)  # Convert CI to L
+                    specs["displacement"] = f"{liter_value}L"
+                    specs["original_ci"] = f"{ci_value}ci"
+                    
+        # Look for engine types (V6, V8, I4, inline 4, etc.)
+        engine_type_patterns = [
+            (r'\bv[468]\b', lambda m: m.group(0).upper()),  # V6, V8
+            (r'\bi[3456]\b', lambda m: m.group(0).upper()),  # I4, I6
+            (r'\binline[ -]?([3456])\b', lambda m: f"I{m.group(1)}"),  # Inline 4 -> I4
+            (r'\bstraight[ -]?([3456])\b', lambda m: f"I{m.group(1)}")  # Straight 6 -> I6
+        ]
+        
+        for pattern, formatter in engine_type_patterns:
+            type_match = re.search(pattern, query_lower)
+            if type_match:
+                specs["type"] = formatter(type_match)
+                break
+                
+        # Look for turbo/supercharged
+        if re.search(r'\bturbo\b', query_lower):
+            specs["forced_induction"] = "turbo"
+        elif re.search(r'\bsupercharged|\bsc\b', query_lower):
+            specs["forced_induction"] = "supercharged"
+        elif re.search(r'\btwin[ -]?turbo\b', query_lower):
+            specs["forced_induction"] = "twin-turbo"
+                
+        # Look for diesel/gas
+        if re.search(r'\bdiesel\b', query_lower):
+            specs["fuel_type"] = "diesel"
+        elif re.search(r'\bgas|gasoline\b', query_lower):
+            specs["fuel_type"] = "gas"
+        elif re.search(r'\bhybrid\b', query_lower):
+            specs["fuel_type"] = "hybrid"
+        elif re.search(r'\belectric|ev\b', query_lower):
+            specs["fuel_type"] = "electric"
+                
+        return specs if specs else None
+
+    def _extract_part(self, query):
+        """Extract part information from query with improved compound part recognition"""
+        query_lower = query.lower()
+        
+        # Check for front-end part patterns first (most specific to most general)
+        front_end_parts = [
+            "complete front end assembly",
+            "front end assembly",
+            "front end",
+            "front bumper assembly",
+            "front bumper complete assembly",
+            "rear bumper complete assembly",
+            "rear bumper assembly",
+            "front bumper cover",
+            "bumper assembly",
+            "bumper cover",
+            "front fascia"
+        ]
+        
+        for part in front_end_parts:
+            if part in query_lower:
+                return part
+        
+        # Check for compound parts 
+        compound_parts = [
+            "headlight assembly",
+            "tail light assembly",
+            "strut assembly",
+            "wheel hub assembly",
+            "radiator assembly",
+            "engine wire harness",
+            "engine wiring harness",
+            "power steering pump",
+            "brake master cylinder",
+            "ac compressor",
+            "transmission mount",
+            "engine mount",
+            "control arm",
+            "sway bar link",
+            "window regulator",
+            "door lock actuator",
+            "ignition coil pack",
+            "timing belt kit",
+            "timing chain kit",
+            "water pump assembly",
+            "valve cover gasket",
+            "catalytic converter",
+            "oxygen sensor",
+            "fuel pump assembly", 
+            "starter motor",
+            "alternator assembly",
+            "intake manifold",
+            "exhaust manifold",
+            "throttle body",
+            "mass air flow sensor",
+            "crankshaft position sensor"
+        ]
+        
+        for part in compound_parts:
+            part_pattern = r'\b' + re.escape(part) + r'\b'
+            if re.search(part_pattern, query_lower):
+                return part
+        
+        # More precise pattern matching with word boundaries for exact part matches
+        for part, replacement in self.part_terms.items():
+            # Skip year patterns
+            if part in ["87-91", "91/92", "93-97"]:
+                continue
+                    
+            pattern = r'\b' + re.escape(part) + r'\b'
+            if re.search(pattern, query_lower):
+                return part
+        
+        # Check for category matches (less specific)
+        for category, part_list in self.part_categories.items():
+            for part in part_list:
+                part_pattern = r'\b' + re.escape(part) + r'\b'
+                if re.search(part_pattern, query_lower):
+                    return part
+        
+        # If no specific part found, try to extract the remainder after vehicle info
+        year = self._extract_year(query)
+        make = self._extract_make(query)
+        model = self._extract_model(query)
+        
+        if any([year, make, model]):
+            # Get what's left after removing vehicle info
+            remaining = query_lower
+            
+            if year:
+                remaining = re.sub(r'\b' + re.escape(year) + r'\b', '', remaining)
+            if make:
+                remaining = re.sub(r'\b' + re.escape(make.lower()) + r'\b', '', remaining, flags=re.IGNORECASE)
+            if model:
+                # Handle hyphenated models like F-150
+                model_pattern = model.lower().replace('-', '[-]?')
+                remaining = re.sub(r'\b' + model_pattern + r'\b', '', remaining, flags=re.IGNORECASE)
+                
+            # Remove common filler words
+            remaining = re.sub(r'\b(for|a|the|my|i|need|want|looking|with|and|in|on|of|to|from)\b', ' ', remaining, flags=re.IGNORECASE)
+                
+            # Clean up and return what's left as the likely part
+            remaining = re.sub(r'\s+', ' ', remaining).strip()
+            if remaining:
+                return remaining
+        
+        return None
+
+    def _extract_position(self, query):
+        """Extract position information like 'front', 'rear', 'driver side', etc."""
+        positions = []
+        query_lower = query.lower()
+        
+        position_terms = {
+            "front": ["front", "forward"],
+            "rear": ["rear", "back"],
+            "left": ["left", "driver", "driver's", "driver side", "driver-side"],
+            "right": ["right", "passenger", "passenger's", "passenger side", "passenger-side"],
+            "upper": ["upper", "top"],
+            "lower": ["lower", "bottom"],
+            "inner": ["inner", "inside"],
+            "outer": ["outer", "outside"]
+        }
+        
+        for position, terms in position_terms.items():
+            for term in terms:
+                pattern = r'\b' + re.escape(term) + r'\b'
+                if re.search(pattern, query_lower):
+                    positions.append(position)
+                    break
+        
+        return positions if positions else None
+
+    def _get_year_range(self, year, make, model):
+        """
+        Get the year range for specific model generations.
+        Enhanced to handle more vehicles and provide compatibility information.
+        """
+        if not all([year, make, model]):
+            return None
+            
+        # Convert inputs to standard format
+        make_lower = make.lower()
+        model_lower = model.lower().replace(" ", "-")  # Standardize spaces in model names
+        year_int = int(year)
+        
+        # Handle common model variations
+        if make_lower == "ford":
+            # Standardize F-series format
+            if re.match(r'f[0-9]{2,3}', model_lower):
+                model_number = re.search(r'([0-9]{2,3})', model_lower).group(0)
+                model_lower = f"f-{model_number}"
+            elif model_lower == "f-series":
+                model_lower = "f-150"  # Default to most common model
+        
+        elif make_lower in ["chevy", "chevrolet"]:
+            # Map common name variations
+            if model_lower in ["silverado-1500", "1500"]:
+                model_lower = "silverado"
+        
+        elif make_lower == "dodge":
+            if model_lower in ["ram", "ram-1500"]:
+                make_lower = "ram"
+                model_lower = "1500"
+        
+        # Check for known patterns for this make/model
+        if make_lower in self.year_range_patterns and model_lower in self.year_range_patterns[make_lower]:
+            ranges = self.year_range_patterns[make_lower][model_lower]
+            
+            # Find the correct year range
+            for year_range, gen_info in ranges.items():
+                start_year, end_year = map(int, year_range.split('-'))
+                if start_year <= year_int <= end_year:
+                    return {
+                        "range": year_range,
+                        "generation": gen_info,
+                        "compatible_years": f"{start_year}-{end_year}"
+                    }
+        
+        # Enhanced auto-generation of year ranges for common vehicles
+        # This helps provide better compatibility ranges even for models we don't have specific data for
+        common_generation_spans = {
+            "ford": {
+                "f-150": 6,       # 6-year generations typically
+                "mustang": 8,      # ~8 year generations
+                "explorer": 5      # ~5 year generations
+            },
+            "toyota": {
+                "camry": 5,        # ~5 year generations
+                "corolla": 6,
+                "rav4": 5,
+                "tacoma": 8
+            },
+            "honda": {
+                "accord": 5,
+                "civic": 5,
+                "cr-v": 5
+            },
+            "chevrolet": {
+                "silverado": 7,
+                "malibu": 5,
+                "tahoe": 7
+            }
+        }
+        
+        # Look up the appropriate generation span
+        gen_span = 7  # Default to 7 years if unknown
+        if make_lower in common_generation_spans and model_lower in common_generation_spans[make_lower]:
+            gen_span = common_generation_spans[make_lower][model_lower]
+        
+        # Calculate estimated generation
+        gen_start = (year_int // gen_span) * gen_span
+        gen_end = gen_start + (gen_span - 1)
+        
+        return {
+            "range": f"{gen_start}-{gen_end}",
+            "generation": "estimated",
+            "compatible_years": f"{gen_start}-{gen_end}",
+            "note": f"Estimated generation based on typical {gen_span}-year vehicle cycles"
+        }
+
+    def _calculate_confidence(self, result):
+        """Calculate a confidence score for the extracted information with improved weighting"""
+        confidence = 0
+        
+        # Base points for each field we successfully extracted
+        if result["year"]:
+            confidence += 25
+        if result["make"]:
+            confidence += 25
+        if result["model"]:
+            confidence += 15
+        if result["part"]:
+            confidence += 25
+        if result["position"]:
+            confidence += 5
+        if result["engine_specs"]:
+            confidence += 5
+            
+        # Additional points for completeness
         if result["year"] and result["make"] and result["model"]:
-            result["year_range"] = self._get_year_range(result["year"], result["make"], result["model"])
+            confidence += 5  # Bonus for having complete vehicle info
+            
+        # Additional points for year range detection
+        if "year_range" in result and result["year_range"]:
+            if result["year_range"].get("generation") != "estimated":
+                confidence += 5  # Bonus for known generation
+            else:
+                confidence += 2  # Smaller bonus for estimated generation
+                
+        # Check if part is in our predefined lists (more confidence)
+        if result["part"]:
+            part = result["part"].lower()
+            predefined_part = False
+            
+            # Check if it's a compound part we recognize
+            for compound_part in ["front bumper assembly", "headlight assembly", 
+                                "wheel hub assembly", "timing belt kit"]:
+                if compound_part in part:
+                    predefined_part = True
+                    break
+                    
+            # Check if it's in our part terms dictionary
+            if not predefined_part:
+                for part_term in self.part_terms:
+                    if part_term.lower() == part:
+                        predefined_part = True
+                        break
+                        
+            # Add bonus for recognized parts
+            if predefined_part:
+                confidence += 5
+        
+        return min(confidence, 100)
+    
+    def generate_search_terms(self, vehicle_info):
+        """
+        Generate optimized search terms based on extracted vehicle information
+        Returns a list of search terms in decreasing order of specificity
+        - Enhanced for better Google Shopping and eBay queries
+        """
+        search_terms = []
+        
+        year = vehicle_info.get("year")
+        make = vehicle_info.get("make")
+        model = vehicle_info.get("model")
+        part = vehicle_info.get("part")
+        position = vehicle_info.get("position")
+        engine_specs = vehicle_info.get("engine_specs")
+        original_query = vehicle_info.get("original_query", "")
+        year_range = vehicle_info.get("year_range")
+        
+        # Format model properly if we have a preferred format
+        formatted_model = None
+        if model and model.lower() in self.model_formatting:
+            formatted_model = self.model_formatting[model.lower()]
+        else:
+            formatted_model = model
+                
+        # Format make properly (capitalize)
+        formatted_make = make.capitalize() if make else None
+        
+        # Get engine displacement if available
+        engine_disp = None
+        if engine_specs and "displacement" in engine_specs:
+            engine_disp = engine_specs["displacement"]
+        
+        # Generate year range string if available
+        year_range_str = None
+        if year_range and "compatible_years" in year_range:
+            year_range_str = year_range["compatible_years"]
+        
+        # Generate different types of search terms
+        
+        # --- GOOGLE SHOPPING OPTIMIZED TERMS ---
+        
+        # 1. Generate precise Google Shopping search term
+        if year and make and part:
+            # Format positions if any exist
+            position_str = ''
+            if position and len(position) > 0:
+                position_str = ' ' + ' '.join(position)
+            
+            # Format terms for Google Shopping's preference for complete phrases
+            gs_term = f"{year} {formatted_make}"
+            
+            if formatted_model:
+                # Special handling for certain model types
+                if formatted_make == "Ford" and "F-" in formatted_model:
+                    gs_term += f" {formatted_model.upper()}"
+                elif formatted_make in ["BMW", "Mercedes-Benz"]:
+                    gs_term += f" {formatted_model}"  # Leave as-is for luxury brands
+                else:
+                    gs_term += f" {formatted_model.capitalize()}"
+                    
+            # Add position string
+            gs_term += position_str
+            
+            # Add exact part name
+            gs_term += f" {part}"
+            
+            # Add OEM only for certain parts and brands
+            if any(oem_term in part.lower() for oem_term in ["bumper", "headlight", "taillight", "fender", "hood", "door"]):
+                gs_term += " OEM"
+            
+            # Add compatibility for Google Shopping
+            if year_range_str and year_range_str != f"{year}-{year}":
+                gs_term += f" (Fits {year_range_str})"
+                
+            search_terms.append(gs_term)
+        
+        # --- EBAY OPTIMIZED TERMS ---
+        
+        # 2. eBay optimized term with specific formats
+        if year and make and part:
+            # eBay prefers keywords with + symbols and specific formats
+            ebay_term = f"{year} {formatted_make}"
+            
+            if formatted_model:
+                # Special handling for certain model types for eBay
+                if formatted_make == "Ford" and "F-" in formatted_model:
+                    ebay_term += f" {formatted_model.upper()}"
+                else:
+                    ebay_term += f" {formatted_model}"
+                    
+            # Add position
+            if position and len(position) > 0:
+                ebay_term += f" {' '.join(position)}"
+                
+            # Add part with enhanced terminology for eBay
+            if part in self.part_terms:
+                enhanced_part = self.part_terms[part]
+                ebay_term += f" {enhanced_part}"
+            else:
+                ebay_term += f" {part}"
+                
+            # Add specific eBay keywords
+            if "bumper" in part.lower():
+                ebay_term += " complete assembly"
+            elif "headlight" in part.lower():
+                ebay_term += " assembly complete"
+            elif "engine" in part.lower():
+                ebay_term += " motor"
+                
+            # Only add if different from previous terms
+            if ebay_term not in search_terms:
+                search_terms.append(ebay_term)
+        
+        # 3. Original query as a search term (for both platforms)
+        if original_query and original_query not in search_terms:
+            # Check if query already contains 'oem', if not add it
+            if 'oem' not in original_query.lower():
+                search_terms.append(f"{original_query} oem")
+            else:
+                search_terms.append(original_query)
+        
+        # 4. Year range search terms (for eBay's preference for compatible parts)
+        if year and make and part and year_range_str:
+            # 4.1. Search term with model and year range
+            if formatted_model:
+                year_range_term = f"{year_range_str} {formatted_make} {formatted_model}"
+                if position:
+                    year_range_term += f" {' '.join(position)}"
+                year_range_term += f" {part} compatible"
+                
+                if year_range_term not in search_terms:
+                    search_terms.append(year_range_term)
+        
+        # 5. For certain parts like bumpers and front end assemblies, add specific search terms
+        if part and any(x in part.lower() for x in ["bumper", "front end"]):
+            if make and year:
+                front_terms = [
+                    "bumper assembly", 
+                    "front end assembly", 
+                    "complete front end", 
+                    "bumper cover complete",
+                    "front bumper complete assembly"
+                ]
+                
+                for front_term in front_terms:
+                    # Don't repeat if already in search terms
+                    front_specific = f"{year} {formatted_make}"
+                    if formatted_model:
+                        front_specific += f" {formatted_model}"
+                    front_specific += f" {front_term} oem"
+                    
+                    if front_specific not in search_terms:
+                        search_terms.append(front_specific)
+        
+        # 6. Fallback search terms with less information (for Google Shopping)
+        if make and part and len(search_terms) < 3:
+            term6 = f"{formatted_make}"
+            if formatted_model:
+                term6 += f" {formatted_model}"
+            if year:
+                term6 += f" {year}"
+            if engine_disp:
+                term6 += f" {engine_disp}"
+            if position:
+                term6 += f" {' '.join(position)}"
+            term6 += f" {part} replacement"
+            
+            if term6 not in search_terms:
+                search_terms.append(term6)
+        
+        # 7. If we still don't have enough info, just use the normalized query
+        if not search_terms and vehicle_info.get("normalized_query"):
+            search_terms.append(vehicle_info.get("normalized_query") + " oem")
+        
+        # Ensure we have unique search terms
+        return list(dict.fromkeys(search_terms))
+    
+        
+    def process_query(self, query, structured_data=None):
+        """
+        Main processing function that takes a raw query and returns structured results
+        with extracted information and optimized search terms.
+        
+        Now supports structured data input from multi-field form.
+        """
+        # Use structured data if provided, otherwise extract from query
+        if structured_data:
+            vehicle_info = self.process_structured_data(structured_data)
+        else:
+            vehicle_info = self.extract_vehicle_info(query)
+            
+        search_terms = self.generate_search_terms(vehicle_info)
+        
+        result = {
+            "vehicle_info": vehicle_info,
+            "search_terms": search_terms,
+            "confidence": vehicle_info.get("search_confidence", 0)
+        }
         
         return result
-    
+        
     def process_structured_data(self, structured_data):
         """
         Process structured data from multi-field input
@@ -894,40 +1571,58 @@ class EnhancedQueryProcessor:
             result["year_range"] = self._get_year_range(result["year"], result["make"], result["model"])
         
         return result
-    
+
     def _parse_engine_string(self, engine_str):
         """Parse engine string to extract specifications"""
         specs = {}
+        engine_str_lower = engine_str.lower()
         
         # Check for displacement
-        displacement_match = re.search(r'(\d+\.\d+)L', engine_str, re.IGNORECASE)
-        if displacement_match:
-            specs["displacement"] = displacement_match.group(0)
-        else:
-            # Try to match formats like 5.3, 2.0 without the L
-            displacement_match = re.search(r'(\d+\.\d+)', engine_str)
+        # Match patterns like 5.3L, 2.0L, 5.3, 2.0, 350ci
+        patterns = [
+            (r'(\d+\.\d+)L', lambda m: m.group(1) + "L"),  # 5.3L
+            (r'(\d+\.\d+)', lambda m: m.group(1) + "L"),   # 5.3 -> 5.3L
+            (r'(\d+)\s*ci', lambda m: str(round(int(m.group(1)) * 0.016387, 1)) + "L")  # 350ci -> 5.7L
+        ]
+        
+        for pattern, formatter in patterns:
+            displacement_match = re.search(pattern, engine_str, re.IGNORECASE)
             if displacement_match:
-                specs["displacement"] = displacement_match.group(0) + "L"
+                specs["displacement"] = formatter(displacement_match)
+                break
         
         # Check for engine type (V6, V8, I4, etc.)
-        engine_type_match = re.search(r'(V[468]|I[346]|Straight[346]|Inline[346])', engine_str, re.IGNORECASE)
-        if engine_type_match:
-            specs["type"] = engine_type_match.group(0)
+        engine_type_patterns = [
+            (r'(V[468])', lambda m: m.group(1)),
+            (r'(I[346])', lambda m: m.group(1)),
+            (r'(Straight[346])', lambda m: "I" + m.group(1)[-1]),
+            (r'(Inline[346])', lambda m: "I" + m.group(1)[-1])
+        ]
+        
+        for pattern, formatter in engine_type_patterns:
+            engine_type_match = re.search(pattern, engine_str, re.IGNORECASE)
+            if engine_type_match:
+                specs["type"] = formatter(engine_type_match)
+                break
         
         # Check for turbo/supercharged
-        if re.search(r'turbo', engine_str, re.IGNORECASE):
+        if re.search(r'turbo', engine_str_lower):
             specs["forced_induction"] = "turbo"
-        elif re.search(r'supercharged', engine_str, re.IGNORECASE):
+        elif re.search(r'supercharged|sc', engine_str_lower):
             specs["forced_induction"] = "supercharged"
+        elif re.search(r'twin[\s-]?turbo', engine_str_lower):
+            specs["forced_induction"] = "twin-turbo"
         
         # Check for fuel type
-        if re.search(r'diesel', engine_str, re.IGNORECASE):
+        if re.search(r'diesel', engine_str_lower):
             specs["fuel_type"] = "diesel"
-        elif re.search(r'gas|gasoline', engine_str, re.IGNORECASE):
+        elif re.search(r'gas|gasoline', engine_str_lower):
             specs["fuel_type"] = "gas"
+        elif re.search(r'hybrid', engine_str_lower):
+            specs["fuel_type"] = "hybrid"
         
         return specs if specs else None
-    
+
     def _calculate_structured_confidence(self, result):
         """Calculate confidence score for structured data"""
         confidence = 0
@@ -944,371 +1639,39 @@ class EnhancedQueryProcessor:
         if result["engine_specs"]:
             confidence += 5
         
-        return min(confidence, 100)
-    
-    def _extract_year(self, query):
-        """Extract vehicle year from query"""
-        # Match 4-digit years from 1900-2099
-        year_match = re.search(r'\b(19|20)\d{2}\b', query)
-        if year_match:
-            return year_match.group(0)
-        
-        # Match 2-digit years and convert to 4 digits
-        short_year_match = re.search(r'\b\d{2}\b', query)
-        if short_year_match:
-            year = short_year_match.group(0)
-            if int(year) > 50:  # Assume 19xx for years > 50
-                return "19" + year
-            else:  # Assume 20xx for years <= 50
-                return "20" + year
-        
-        return None
-    
-    def _extract_make(self, query):
-        """Extract vehicle make from query"""
-        words = query.split()
-        
-        # Check for exact make matches
-        for make in self.vehicle_makes:
-            if make in query.split() or f" {make} " in f" {query} ":
-                return make
-        
-        # Check for synonyms
-        for synonym, make in self.make_synonyms.items():
-            if synonym in query.split() or f" {synonym} " in f" {query} ":
-                return make
-        
-        return None
-    
-    def _extract_model(self, query):
-        """Extract vehicle model from query"""
-        # Get the make first to narrow down model search
-        make = self._extract_make(query)
-        if not make:
-            # Try to extract model without make if possible, but with lower confidence
-            for make_name, models in self.make_models.items():
-                for model in models:
-                    if re.search(r'\b' + re.escape(model) + r'\b', query):
-                        return model
-            return None
+        # Bonus points for complete vehicle info
+        if result["year"] and result["make"] and result["model"]:
+            confidence += 10
             
-        # Check if we have models for this make
-        models = self.make_models.get(make, [])
-        if not models:
-            return None
-        
-        query_lower = query.lower()
-            
-        # Try to find models with exact word boundaries first - improved matching
-        for model in models:
-            if re.search(r'\b' + re.escape(model) + r'\b', query):
-                return model
-        
-        # Then try less strict matching
-        for model in models:
-            if model in query:
-                return model
-                
-        # Special case handling for F-series trucks due to varying formats (F-150, F150, etc.)
-        if make == "ford" and re.search(r'\bf[-\s]?[0-9]{2,3}\b', query, re.IGNORECASE):
-            match = re.search(r'\bf[-\s]?([0-9]{2,3})\b', query, re.IGNORECASE)
-            if match:
-                model_num = match.group(1)
-                return f"f-{model_num}"
-                
-        return None
-    
-    def _extract_engine_specs(self, query):
-        """Extract engine displacement and other specifications"""
-        specs = {}
-        
-        # Extract engine displacement (e.g., 5.3L, 2.0L, 350ci, etc.)
-        displacement_match = re.search(r'\b(\d+\.\d+)L\b', query, re.IGNORECASE)
-        if displacement_match:
-            specs["displacement"] = displacement_match.group(1) + "L"
-        else:
-            # Try to match formats like 5.3, 2.0 without the L
-            displacement_match = re.search(r'\b(\d+\.\d+)\b', query)
-            if displacement_match:
-                specs["displacement"] = displacement_match.group(1) + "L"
-                
-        # Look for engine types (V6, V8, I4, etc.)
-        engine_type_match = re.search(r'\b(V[468]|I[346]|Straight[346]|Inline[346])\b', query, re.IGNORECASE)
-        if engine_type_match:
-            specs["type"] = engine_type_match.group(0)
-            
-        # Look for turbo/supercharged
-        if re.search(r'\bturbo\b', query, re.IGNORECASE):
-            specs["forced_induction"] = "turbo"
-        elif re.search(r'\bsupercharged\b', query, re.IGNORECASE):
-            specs["forced_induction"] = "supercharged"
-            
-        # Look for diesel/gas
-        if re.search(r'\bdiesel\b', query, re.IGNORECASE):
-            specs["fuel_type"] = "diesel"
-        elif re.search(r'\bgas|gasoline\b', query, re.IGNORECASE):
-            specs["fuel_type"] = "gas"
-            
-        return specs if specs else None
-    
-    def _extract_part(self, query):
-        """Extract part information from query"""
-        # Check for compound parts first (like "front bumper assembly")
-        # This is important to handle multi-word parts correctly
-        compound_parts = [
-            "front bumper assembly",
-            "rear bumper assembly",
-            "bumper assembly",
-            "headlight assembly",
-            "tail light assembly",
-            "strut assembly",
-            "wheel hub assembly",
-            "radiator assembly",
-            "engine wire harness",
-            "engine wiring harness",
-            "front end assembly"
-        ]
-        
-        for part in compound_parts:
-            if part in query:
-                return part
-        
-        # Then check for exact matches in part terms dictionary
-        for part, replacement in self.part_terms.items():
-            pattern = r'\b' + re.escape(part) + r'\b'
-            if re.search(pattern, query):
-                return part
-        
-        # Then check for generic part categories
-        for category, part_list in self.part_categories.items():
-            for part in part_list:
-                if part in query:
-                    return part
-        
-        # If no specific part found, try to extract the remainder after vehicle info
-        year = self._extract_year(query)
-        make = self._extract_make(query)
-        model = self._extract_model(query)
-        engine_specs = self._extract_engine_specs(query)
-        
-        if any([year, make, model]):
-            # Get what's left after removing vehicle info
-            remaining = query
-            
-            if year:
-                remaining = remaining.replace(year, '')
-            if make:
-                remaining = remaining.replace(make, '')
-            if model:
-                remaining = remaining.replace(model, '')
-            if engine_specs and "displacement" in engine_specs:
-                remaining = re.sub(r'\b' + re.escape(engine_specs["displacement"]) + r'\b', '', remaining, flags=re.IGNORECASE)
-                
-            # Clean up and return what's left as the likely part
-            remaining = re.sub(r'\s+', ' ', remaining).strip()
-            if remaining:
-                return remaining
-        
-        return None
-    
-    def _extract_position(self, query):
-        """Extract position information like 'front', 'rear', 'driver side', etc."""
-        positions = []
-        
-        position_terms = {
-            "front": ["front", "forward"],
-            "rear": ["rear", "back"],
-            "left": ["left", "driver", "driver's", "driver side"],
-            "right": ["right", "passenger", "passenger's", "passenger side"],
-            "upper": ["upper", "top"],
-            "lower": ["lower", "bottom"],
-            "inner": ["inner", "inside"],
-            "outer": ["outer", "outside"]
-        }
-        
-        for position, terms in position_terms.items():
-            for term in terms:
-                pattern = r'\b' + re.escape(term) + r'\b'
-                if re.search(pattern, query):
-                    positions.append(position)
-                    break
-        
-        return positions if positions else None
-    
-    def _get_year_range(self, year, make, model):
-        """Get the year range for specific model generations"""
-        if not all([year, make, model]):
-            return None
-            
-        # Convert to lowercase for lookup
-        make_lower = make.lower()
-        model_lower = model.lower()
-        year_int = int(year)
-        
-        # Check if we have info for this make/model
-        if make_lower in self.year_range_patterns and model_lower in self.year_range_patterns[make_lower]:
-            ranges = self.year_range_patterns[make_lower][model_lower]
-            
-            for year_range, gen_info in ranges.items():
-                start_year, end_year = map(int, year_range.split('-'))
-                if start_year <= year_int <= end_year:
-                    return {
-                        "range": year_range,
-                        "generation": gen_info
-                    }
-        
-        return None
-    
-    def _calculate_confidence(self, result):
-        """Calculate a confidence score for the extracted information"""
-        confidence = 0
-        
-        # Add points for each field we successfully extracted
-        if result["year"]:
-            confidence += 25  # Reduced from 30 to account for model
-        if result["make"]:
-            confidence += 25  # Reduced from 30 to account for model
-        if result["model"]:
-            confidence += 15  # Add points for model detection
-        if result["part"]:
-            confidence += 25  # Reduced from 30 to account for model
-        if result["position"]:
-            confidence += 5   # Reduced from 10 to account for engine specs
-        if result["engine_specs"]:
-            confidence += 5   # Add points for engine specs
+        # Bonus points if year range is found
+        if "year_range" in result and result["year_range"]:
+            confidence += 5
         
         return min(confidence, 100)
-    
-    def generate_search_terms(self, vehicle_info):
+
+    def extract_vehicle_info(self, query):
         """
-        Generate optimized search terms based on extracted vehicle information
-        Returns a list of search terms in decreasing order of specificity
+        Extract structured vehicle information from query
+        Returns a dict with year, make, model, and part
         """
-        search_terms = []
-        
-        year = vehicle_info.get("year")
-        make = vehicle_info.get("make")
-        model = vehicle_info.get("model")
-        part = vehicle_info.get("part")
-        position = vehicle_info.get("position")
-        engine_specs = vehicle_info.get("engine_specs")
-        original_query = vehicle_info.get("original_query", "")
-        
-        # Format model properly if we have a preferred format
-        formatted_model = None
-        if model and model.lower() in self.model_formatting:
-            formatted_model = self.model_formatting[model.lower()]
-        else:
-            formatted_model = model
-            
-        # Format make properly (capitalize)
-        formatted_make = make.capitalize() if make else None
-        
-        # Get engine displacement if available
-        engine_disp = None
-        if engine_specs and "displacement" in engine_specs:
-            engine_disp = engine_specs["displacement"]
-        
-        # Generate year range if available
-        year_range = None
-        if "year_range" in vehicle_info and vehicle_info["year_range"]:
-            year_range = vehicle_info["year_range"].get("range")
-        
-        # Generate exact match for the original query (important for precise matching)
-        if original_query:
-            # Check if query already contains 'oem', if not add it
-            if 'oem' not in original_query.lower():
-                search_terms.append(f"{original_query} oem")
-            else:
-                search_terms.append(original_query)
-        
-        # If we have all information, generate a complete search term
-        if year and make and part:
-            # Most specific search terms first
-            
-            # 1. Search term with model properly formatted (very specific)
-            if formatted_model:
-                term1 = f"{year} {formatted_make} {formatted_model}"
-                if position:
-                    term1 += f" {' '.join(position)}"
-                term1 += f" {part} oem"
-                search_terms.append(term1)
-            
-            # 2. Search term with year range for better compatibility
-            if year_range:
-                term2 = f"{year_range} {formatted_make}"
-                if formatted_model:
-                    term2 += f" {formatted_model}"
-                if position:
-                    term2 += f" {' '.join(position)}"
-                term2 += f" {part} oem"
-                search_terms.append(term2)
-            
-            # 3. Search using the part terminology mapping with model
-            if part in self.part_terms and formatted_model:
-                enhanced_part = self.part_terms[part]
-                term3 = f"{year} {formatted_make} {formatted_model}"
-                if engine_disp:
-                    term3 += f" {engine_disp}"
-                term3 += f" {enhanced_part}"
-                search_terms.append(term3)
-            
-            # 4. Fallback to basic year/make/part if we don't have model
-            if not formatted_model:
-                term4 = f"{year} {formatted_make}"
-                if position:
-                    term4 += f" {' '.join(position)}"
-                term4 += f" {part} oem"
-                search_terms.append(term4)
-                
-                # Also try with enhanced part terms if available
-                if part in self.part_terms:
-                    enhanced_part = self.part_terms[part]
-                    term5 = f"{year} {formatted_make} {enhanced_part}"
-                    search_terms.append(term5)
-        
-        # Fallback search terms with less information
-        if make and part and not search_terms:
-            term6 = f"{formatted_make}"
-            if formatted_model:
-                term6 += f" {formatted_model}"
-            if year:
-                term6 += f" {year}"
-            if engine_disp:
-                term6 += f" {engine_disp}"
-            if position:
-                term6 += f" {' '.join(position)}"
-            term6 += f" {part} oem"
-            
-            if term6 not in search_terms:
-                search_terms.append(term6)
-        
-        # If we still don't have enough info, just use the normalized query
-        if not search_terms and vehicle_info.get("normalized_query"):
-            search_terms.append(vehicle_info.get("normalized_query") + " oem")
-        
-        # Ensure we have unique search terms
-        return list(dict.fromkeys(search_terms))
-    
-    def process_query(self, query, structured_data=None):
-        """
-        Main processing function that takes a raw query and returns structured results
-        with extracted information and optimized search terms.
-        
-        Now supports structured data input from multi-field form.
-        """
-        # Use structured data if provided, otherwise extract from query
-        if structured_data:
-            vehicle_info = self.process_structured_data(structured_data)
-        else:
-            vehicle_info = self.extract_vehicle_info(query)
-            
-        search_terms = self.generate_search_terms(vehicle_info)
+        normalized = self.normalize_query(query)
         
         result = {
-            "vehicle_info": vehicle_info,
-            "search_terms": search_terms,
-            "confidence": vehicle_info.get("search_confidence", 0)
+            "year": self._extract_year(normalized),
+            "make": self._extract_make(normalized),
+            "model": self._extract_model(normalized),
+            "part": self._extract_part(normalized),
+            "position": self._extract_position(normalized),
+            "engine_specs": self._extract_engine_specs(normalized),
+            "original_query": query,
+            "normalized_query": normalized
         }
+        
+        # Additional fields that might be useful
+        result["search_confidence"] = self._calculate_confidence(result)
+        
+        # Add year range information for specific models (useful for parts compatibility)
+        if result["year"] and result["make"] and result["model"]:
+            result["year_range"] = self._get_year_range(result["year"], result["make"], result["model"])
         
         return result

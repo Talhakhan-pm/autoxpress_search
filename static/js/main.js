@@ -49,29 +49,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchFeedbackContainer = document.createElement('div');
     searchFeedbackContainer.className = 'search-feedback mt-2 d-none';
     searchFeedbackContainer.innerHTML = `
-        <div class="card">
-            <div class="card-body p-2">
-                <div class="small mb-1 text-muted">Detected vehicle information:</div>
-                <div class="d-flex flex-wrap gap-2">
-                    <span class="badge bg-primary year-badge">Year: <span>--</span></span>
-                    <span class="badge bg-success make-badge">Make: <span>--</span></span>
-                    <span class="badge bg-info text-dark model-badge">Model: <span>--</span></span>
-                    <span class="badge bg-warning text-dark part-badge">Part: <span>--</span></span>
-                    <span class="badge bg-secondary text-white position-badge d-none">Position: <span>--</span></span>
-                    <span class="badge bg-danger text-white engine-badge d-none">Engine: <span>--</span></span>
+    <div class="card">
+        <div class="card-body p-2">
+            <div class="small mb-1 text-muted">Detected vehicle information:</div>
+            <div class="d-flex flex-wrap gap-2">
+                <span class="badge border border-primary text-primary year-badge">Year: <span>--</span></span>
+                <span class="badge border border-success text-success make-badge">Make: <span>--</span></span>
+                <span class="badge border border-info text-info model-badge">Model: <span>--</span></span>
+                <span class="badge border border-warning text-warning part-badge">Part: <span>--</span></span>
+                <span class="badge border border-secondary text-secondary position-badge d-none">Position: <span>--</span></span>
+                <span class="badge border border-danger text-danger engine-badge d-none">Engine: <span>--</span></span>
+            </div>
+            <div class="confidence-meter mt-2 mb-1">
+                <div class="progress" style="height: 4px;">
+                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
                 </div>
-                <div class="confidence-meter mt-2 mb-1">
-                    <div class="progress" style="height: 4px;">
-                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                    </div>
-                    <div class="d-flex justify-content-between mt-1">
-                        <small class="text-muted">Search confidence</small>
-                        <small class="confidence-value text-muted">0%</small>
-                    </div>
+                <div class="d-flex justify-content-between mt-1">
+                    <small class="text-muted">Search confidence</small>
+                    <small class="confidence-value text-muted">0%</small>
                 </div>
             </div>
         </div>
-    `;
+    </div>
+`;
     
     // Insert the feedback container after the search form
     searchForm.parentNode.insertBefore(searchFeedbackContainer, searchForm.nextSibling);
@@ -819,7 +819,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Disable the search button and show loading
             const activeSearchButton = isSingleField ? singleSearchButton : searchButton;
             activeSearchButton.disabled = true;
-            activeSearchButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Finding Parts...';
+            activeSearchButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" style="width: 1rem; height: 1rem;" role="status" aria-hidden="true"></span><span style="vertical-align: middle;">Finding Parts...</span>';
             
             // Reset UI for search results only
             validationError.classList.add('d-none');
@@ -1268,4 +1268,238 @@ document.addEventListener('DOMContentLoaded', function() {
     imageModal.style.alignItems = 'center';
     imageModal.style.justifyContent = 'center';
   }
+  
 });
+
+/**
+ * This code replaces the button color override section at the end of main.js
+ * Remove these lines from the original file and use the class-based approach instead
+ */
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Remove any direct style overrides for buttons
+    // Instead of manually styling buttons in JavaScript, we'll let CSS handle it through proper classes
+    
+    // Ensure all "Find Parts" buttons have the btn-danger class instead of btn-primary
+    const findPartsButtons = document.querySelectorAll('#find-parts-btn, [id$="find-parts"], button[type="submit"]');
+    findPartsButtons.forEach(button => {
+        if (button.classList.contains('btn-primary')) {
+            button.classList.remove('btn-primary');
+            button.classList.add('btn-danger');
+        }
+    });
+    
+    // Make sure that View Details buttons have the correct classes
+    const viewDetailsButtons = document.querySelectorAll('.view-details, .product-card .btn, .product-actions .btn');
+    viewDetailsButtons.forEach(button => {
+        if (button.classList.contains('btn-primary')) {
+            button.classList.remove('btn-primary');
+            button.classList.add('btn-danger');
+        }
+    });
+    
+    // Use MutationObserver to handle dynamically added buttons
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1) { // ELEMENT_NODE
+                        // Find new buttons inside the added node
+                        const newButtons = node.querySelectorAll('.btn-primary, .view-details, .product-card .btn');
+                        newButtons.forEach(button => {
+                            if (button.classList.contains('btn-primary')) {
+                                button.classList.remove('btn-primary');
+                                button.classList.add('btn-danger');
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    });
+    
+    // Observe the entire document body for changes
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+});
+// Add this to your main.js file to integrate the exact year matching improvements
+
+/**
+ * Enhanced function to display products with exact year highlighting
+ */
+function displayProducts(listings) {
+    // Clear the container
+    productsContainer.innerHTML = '';
+    
+    if (!listings || listings.length === 0) {
+        productsContainer.innerHTML = '<div class="col-12 text-center"><p>No products found. Try a different search term.</p></div>';
+        return;
+    }
+    
+    // Extract the year we searched for (from query or structured form)
+    const searchYear = getSearchYear();
+    
+    // Group by match type if we have exact year matches
+    const exactMatches = listings.filter(item => item.exactYearMatch);
+    const compatibleMatches = listings.filter(item => item.compatibleRange && !item.exactYearMatch);
+    const otherMatches = listings.filter(item => !item.exactYearMatch && !item.compatibleRange);
+    
+    // Show headers for each section if we have exact matches
+    if (exactMatches.length > 0) {
+        // Create exact match section header
+        const exactMatchHeader = document.createElement('div');
+        exactMatchHeader.className = 'col-12';
+        exactMatchHeader.innerHTML = `
+            <div class="results-section-title">
+                <i class="fas fa-check-circle text-success me-2"></i>
+                Exact Year Matches (${exactMatches.length})
+            </div>
+        `;
+        productsContainer.appendChild(exactMatchHeader);
+        
+        // Display exact matches
+        exactMatches.forEach(item => {
+            renderProductCard(item, true);
+        });
+        
+        // Show compatible matches if any
+        if (compatibleMatches.length > 0) {
+            const compatibleHeader = document.createElement('div');
+            compatibleHeader.className = 'col-12 mt-4';
+            compatibleHeader.innerHTML = `
+                <div class="results-section-title">
+                    <i class="fas fa-calendar-alt text-primary me-2"></i>
+                    Compatible Year Range Matches (${compatibleMatches.length})
+                </div>
+            `;
+            productsContainer.appendChild(compatibleHeader);
+            
+            // Display compatible matches
+            compatibleMatches.forEach(item => {
+                renderProductCard(item, false, true);
+            });
+        }
+        
+        // Show other matches if any
+        if (otherMatches.length > 0) {
+            const otherHeader = document.createElement('div');
+            otherHeader.className = 'col-12 mt-4';
+            otherHeader.innerHTML = `
+                <div class="results-section-title">
+                    <i class="fas fa-search me-2"></i>
+                    Other Matches (${otherMatches.length})
+                </div>
+            `;
+            productsContainer.appendChild(otherHeader);
+            
+            // Display other matches
+            otherMatches.forEach(item => {
+                renderProductCard(item, false, false);
+            });
+        }
+    } else {
+        // No exact matches - just show all listings without sections
+        listings.forEach(item => {
+            renderProductCard(item, false, !!item.compatibleRange);
+        });
+    }
+    
+    // Add event listeners to the favorite buttons
+    attachFavoriteButtonListeners();
+    // Add event listeners to the image containers
+    attachImagePreviewListeners();
+    
+    // Update product count badges
+    const productCountBadge = document.getElementById('products-count');
+    if (productCountBadge) {
+        productCountBadge.textContent = listings.length;
+    }
+}
+
+/**
+ * Helper function to get the search year
+ */
+function getSearchYear() {
+    // Try multi-field first
+    const yearField = document.getElementById('year-field');
+    if (yearField && yearField.value) {
+        return yearField.value.trim();
+    }
+    
+    // Try single field prompt - extract year with regex
+    const promptField = document.getElementById('prompt');
+    if (promptField && promptField.value) {
+        const yearMatch = promptField.value.match(/\b(19|20)\d{2}\b/);
+        if (yearMatch) {
+            return yearMatch[0];
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * Helper function to render a product card with appropriate styling
+ */
+function renderProductCard(product, isExactMatch, isCompatible) {
+    const productId = generateProductId(product);
+    const sourceClass = product.source === 'eBay' ? 'source-ebay' : 'source-google';
+    const conditionClass = product.condition.toLowerCase().includes('new') ? 'condition-new' : 'condition-used';
+    const shippingClass = product.shipping.toLowerCase().includes('free') ? 'free-shipping' : '';
+    
+    // Check if this product is a favorite
+    const favorites = loadFavorites();
+    const isFavorite = favorites[productId] !== undefined;
+    
+    // Build card classes
+    let cardClasses = "product-card";
+    if (isExactMatch) {
+        cardClasses += " exact-year-match";
+    }
+    
+    // Create the product card element
+    const productCard = document.createElement('div');
+    productCard.className = 'col-md-4 col-lg-3 mb-3';
+    
+    // Build badge HTML
+    let badgeHtml = '';
+    if (isExactMatch) {
+        badgeHtml = '<div class="exact-match-badge">Exact Year Match</div>';
+    } else if (isCompatible && product.compatibleRange) {
+        badgeHtml = `<div class="compatible-badge">Compatible ${product.compatibleRange}</div>`;
+    }
+    
+    // Build the card HTML
+    productCard.innerHTML = `
+        <div class="${cardClasses}">
+            <div class="product-source ${sourceClass}">${product.source}</div>
+            ${badgeHtml}
+            <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-product-id="${productId}">
+                <i class="fas fa-heart"></i>
+            </button>
+            <div class="product-image-container" data-image="${product.image || '/static/placeholder.png'}">
+                <img src="${product.image || '/static/placeholder.png'}" class="product-image" alt="${product.title}">
+            </div>
+            <div class="p-3">
+                <div class="product-title mb-2">${product.title}</div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span>Condition:</span>
+                    <span class="${conditionClass}">${product.condition}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span>Price:</span>
+                    <span class="product-price">${product.price}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                    <span>Shipping:</span>
+                    <span class="${shippingClass}">${product.shipping}</span>
+                </div>
+                <a href="${product.link}" target="_blank" class="btn btn-danger btn-sm w-100">View Details</a>
+            </div>
+        </div>
+    `;
+    
+    productsContainer.appendChild(productCard);
+}

@@ -391,22 +391,46 @@ function generateProductId(product) {
   /**
    * Creates HTML for a product in grid view
    */
+  /**
+ * Creates HTML for a product in grid view with modern UI
+ */
+  
+  /**
+   * Creates HTML for a product in grid view with proper condition and shipping styling
+   */
   function createGridViewProduct(product, productId, sourceClass, exactMatchClass, isFavorite) {
-    const conditionClass = product.condition.toLowerCase().includes('new') ? 'condition-new' : 'condition-used';
-    const shippingClass = product.shipping.toLowerCase().includes('free') ? 'free-shipping' : '';
-    const relevanceBadge = exactMatchClass ? `<div class="relevance-badge">Best Match</div>` : '';
+    // Determine condition class based on product condition
+    let conditionClass = 'condition-unknown';
+    if (product.condition.toLowerCase().includes('new')) {
+      conditionClass = 'condition-new';
+    } else if (product.condition.toLowerCase().includes('used') || 
+               product.condition.toLowerCase().includes('pre-owned') || 
+               product.condition.toLowerCase().includes('preowned')) {
+      conditionClass = 'condition-used';
+    } else if (product.condition.toLowerCase().includes('refurbished')) {
+      conditionClass = 'condition-refurbished';
+    }
+    
+    // Determine shipping class
+    let shippingClass = '';
+    if (product.shipping.toLowerCase().includes('free')) {
+      shippingClass = 'free-shipping';
+    }
     
     // Create tags
     let tags = '';
     if (product.condition.toLowerCase().includes('new')) {
       tags += `<span class="product-tag tag-new">New</span>`;
+    } else if (product.condition.toLowerCase().includes('used') || 
+               product.condition.toLowerCase().includes('pre-owned')) {
+      tags += `<span class="product-tag tag-used">Pre-Owned</span>`;
     }
+    
     if (product.shipping.toLowerCase().includes('free')) {
       tags += `<span class="product-tag tag-free-shipping">Free Shipping</span>`;
     }
-    if (exactMatchClass) {
-      tags += `<span class="product-tag tag-best-match">Best Match</span>`;
-    }
+    
+    const relevanceBadge = exactMatchClass ? `<div class="relevance-badge">Best Match</div>` : '';
     
     return `
       <div class="product-card ${exactMatchClass}">
@@ -421,19 +445,19 @@ function generateProductId(product) {
         <div class="product-details">
           <div class="product-title">${product.title}</div>
           <div class="product-tags mb-2">${tags}</div>
-          <div class="product-meta">
-            <span>Condition:</span>
-            <span class="${conditionClass}">${product.condition}</span>
+          <div class="product-meta justify-between">
+            <span class="condition-label">Condition:</span>
+            <span class="${conditionClass} condition-value">${product.condition}</span>
           </div>
-          <div class="product-meta">
-            <span>Shipping:</span>
-            <span class="${shippingClass}">${product.shipping}</span>
+          <div class="product-meta justify-between">
+            <span class="shipping-label">Shipping:</span>
+            <span class="${shippingClass} shipping-value">${product.shipping}</span>
           </div>
-          <div class="d-flex justify-content-between align-items-center mt-2 mb-2">
+          <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
             <span class="product-price">${product.price}</span>
           </div>
           <div class="product-actions">
-            <a href="${product.link}" target="_blank" class="btn btn-primary btn-sm">View Details</a>
+            <a href="${product.link}" target="_blank" class="btn btn-danger view-details" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">View Details</a>
           </div>
         </div>
       </div>
@@ -441,24 +465,41 @@ function generateProductId(product) {
   }
   
   /**
-   * Creates HTML for a product in list view
+   * Creates HTML for a product in list view with proper condition and shipping styling
    */
   function createListViewProduct(product, productId, sourceClass, exactMatchClass, isFavorite) {
-    const conditionClass = product.condition.toLowerCase().includes('new') ? 'condition-new' : 'condition-used';
-    const shippingClass = product.shipping.toLowerCase().includes('free') ? 'free-shipping' : '';
-    const relevanceBadge = exactMatchClass ? `<div class="relevance-badge">Best Match</div>` : '';
+    // Determine condition class based on product condition
+    let conditionClass = 'condition-unknown';
+    if (product.condition.toLowerCase().includes('new')) {
+      conditionClass = 'condition-new';
+    } else if (product.condition.toLowerCase().includes('used') || 
+               product.condition.toLowerCase().includes('pre-owned') || 
+               product.condition.toLowerCase().includes('preowned')) {
+      conditionClass = 'condition-used';
+    } else if (product.condition.toLowerCase().includes('refurbished')) {
+      conditionClass = 'condition-refurbished';
+    }
+    
+    // Determine shipping class
+    let shippingClass = '';
+    if (product.shipping.toLowerCase().includes('free')) {
+      shippingClass = 'free-shipping';
+    }
     
     // Create tags
     let tags = '';
     if (product.condition.toLowerCase().includes('new')) {
       tags += `<span class="product-tag tag-new">New</span>`;
+    } else if (product.condition.toLowerCase().includes('used') || 
+               product.condition.toLowerCase().includes('pre-owned')) {
+      tags += `<span class="product-tag tag-used">Pre-Owned</span>`;
     }
+    
     if (product.shipping.toLowerCase().includes('free')) {
       tags += `<span class="product-tag tag-free-shipping">Free Shipping</span>`;
     }
-    if (exactMatchClass) {
-      tags += `<span class="product-tag tag-best-match">Best Match</span>`;
-    }
+    
+    const relevanceBadge = exactMatchClass ? `<div class="relevance-badge">Best Match</div>` : '';
     
     return `
       <div class="product-card ${exactMatchClass}">
@@ -473,21 +514,26 @@ function generateProductId(product) {
         <div class="product-details">
           <div class="product-title">${product.title}</div>
           <div class="product-tags">${tags}</div>
-          <div class="d-flex justify-content-between align-items-center my-1">
-            <div>
-              <span class="${conditionClass}">${product.condition}</span> • 
-              <span class="${shippingClass}">${product.shipping}</span>
+          <div class="d-flex justify-between my-2">
+            <div class="d-flex flex-column">
+              <div class="product-meta justify-between mb-1">
+                <span class="condition-label me-2">Condition:</span>
+                <span class="${conditionClass} condition-value">${product.condition}</span>
+              </div>
+              <div class="product-meta justify-between">
+                <span class="shipping-label me-2">Shipping:</span>
+                <span class="${shippingClass} shipping-value">${product.shipping}</span>
+              </div>
             </div>
             <span class="product-price">${product.price}</span>
           </div>
           <div class="product-actions mt-auto">
-            <a href="${product.link}" target="_blank" class="btn btn-primary btn-sm">View Details</a>
+            <a href="${product.link}" target="_blank" class="btn btn-danger view-details">View Details</a>
           </div>
         </div>
       </div>
     `;
-  }
-  
+  }  
   /**
    * Loads the next page of products
    */

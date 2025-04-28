@@ -164,51 +164,57 @@ class EnhancedFieldAutocomplete {
     this.styleContainer();
   }
   
-  styleContainer() {
-    this.suggestionsContainer.style.position = 'absolute';
-    this.suggestionsContainer.style.width = `${this.field.offsetWidth}px`;
-    this.suggestionsContainer.style.zIndex = '1050';
-    this.suggestionsContainer.style.backgroundColor = 'white';
-    this.suggestionsContainer.style.border = '1px solid #ddd';
-    this.suggestionsContainer.style.borderRadius = '0 0 4px 4px';
-    this.suggestionsContainer.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-    this.suggestionsContainer.style.maxHeight = '350px';
-    this.suggestionsContainer.style.overflowY = 'auto';
-    this.suggestionsContainer.style.display = 'none';
-    
-    // Position under the input field
-    this.updateContainerPosition();
-    
-    // Add resize listener to update position when window is resized
-    window.addEventListener('resize', () => this.updateContainerPosition());
-  }
+  /**
+ * This is the revised version of the updateContainerPosition function
+ * Replace it in field-autocomplete.js to fix z-index issues with the autocomplete dropdown
+ */
+
+updateContainerPosition() {
+  if (!this.field) return;
   
-  updateContainerPosition() {
-    if (!this.field) return;
+  try {
+    // Get the field position
+    const fieldRect = this.field.getBoundingClientRect();
     
-    try {
-      const fieldRect = this.field.getBoundingClientRect();
-      const formGroup = this.field.closest('.form-group');
-      
-      if (formGroup) {
-        // Position relative to the form group containing the field
-        this.suggestionsContainer.style.width = `${this.field.offsetWidth}px`;
-        this.suggestionsContainer.style.top = `${fieldRect.height}px`;
-        this.suggestionsContainer.style.left = '0';
-        this.suggestionsContainer.style.position = 'absolute';
-      } else {
-        // Fallback to absolute positioning relative to document
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-        
-        this.suggestionsContainer.style.top = `${fieldRect.bottom + scrollTop}px`;
-        this.suggestionsContainer.style.left = `${fieldRect.left + scrollLeft}px`;
-        this.suggestionsContainer.style.position = 'absolute';
-      }
-    } catch (error) {
-      console.error("Error positioning dropdown:", error);
-    }
+    // Position the dropdown directly using fixed positioning
+    // This avoids issues with stacking contexts
+    this.suggestionsContainer.style.position = 'fixed';
+    this.suggestionsContainer.style.width = `${this.field.offsetWidth}px`;
+    this.suggestionsContainer.style.top = `${fieldRect.bottom}px`;
+    this.suggestionsContainer.style.left = `${fieldRect.left}px`;
+    this.suggestionsContainer.style.zIndex = '100000'; // Extremely high z-index
+    
+  } catch (error) {
+    console.error("Error positioning dropdown:", error);
   }
+}
+
+/**
+ * Also replace the styleContainer method with this version
+ */
+styleContainer() {
+  // Create a completely clean styling approach
+  Object.assign(this.suggestionsContainer.style, {
+    position: 'fixed',
+    width: `${this.field.offsetWidth}px`,
+    zIndex: '100000',
+    backgroundColor: 'white',
+    border: '1px solid #ddd',
+    borderRadius: '0 0 4px 4px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+    maxHeight: '350px',
+    overflowY: 'auto',
+    display: 'none'
+  });
+  
+  // Position under the input field
+  this.updateContainerPosition();
+  
+  // Add resize and scroll listeners to update position
+  window.addEventListener('resize', () => this.updateContainerPosition());
+  window.addEventListener('scroll', () => this.updateContainerPosition(), true);
+}
+
   
   onInput() {
     const query = this.field.value.trim();
