@@ -291,6 +291,28 @@ class EnhancedQueryProcessor:
         "gas tank", "fuel rail", "fuel pressure regulator", 
         "fuel door", "gas tank cap", "fuel cap", "pcv valve"
     ],
+    "lighting_components": [
+    "headlight lens", "headlight housing", "headlight reflector", "bulb socket",
+    "projector housing", "hid kit", "led conversion", "headlight switch",
+    "tail light lens", "corner light", "turn signal housing", "daytime running light"
+    ],
+
+    "interior_components": [
+        "headliner material", "dash bezel", "center console lid", "cup holder insert",
+        "door panel insert", "dome light lens", "seat track", "window switch panel" 
+    ],
+
+    "fluid_system_components": [
+        "coolant reservoir cap", "radiator hose upper", "radiator hose lower", 
+        "heater hose", "master cylinder reservoir", "power steering reservoir", 
+        "overflow tank"
+    ],
+
+    "suspension_small_parts": [
+        "coil spring isolator", "suspension bushing", "radius arm bushing",
+        "leaf spring shackle", "sway bar link", "sway bar bushing",
+        "shock mount", "strut mount bearing"
+    ],
     
     # Trim/Appearance (new category)
     "trim": [
@@ -314,8 +336,11 @@ class EnhancedQueryProcessor:
     "lighting": [
         "headlight", "tail light", "turn light", "turn signal light", 
         "fog light", "brake light", "reverse light", "marker light",
-        "dome light", "license plate light"
+        "dome light", "license plate light",
+        "headlight lens", "lens cover", "light lens", "headlamp lens", 
+        "clear lens", "plastic lens"
     ]
+    
             # Add more makes and models as needed
         }
 
@@ -704,6 +729,50 @@ class EnhancedQueryProcessor:
     "dashboard": "dashboard assembly complete",
     "dash": "dashboard assembly with harness",
     
+        # Interior components
+    "headliner material": "headliner fabric replacement",
+    "dash bezel": "dashboard instrument panel bezel",
+    "center console lid": "center console armrest lid",
+    "cup holder insert": "cup holder replacement insert",
+    "door panel insert": "door panel trim insert",
+    "dome light lens": "interior dome light lens cover",
+    "seat track": "seat slider rail track assembly",
+    "window switch panel": "door panel window switch assembly",
+    "headlight lens": "headlight lens cover replacement",
+    "lens cover": "headlight lens cover replacement",
+    "light lens": "headlight lens cover replacement",
+    "headlamp lens": "headlamp lens cover replacement",
+    "clear lens": "clear headlight lens replacement",
+    "plastic lens": "plastic headlight lens cover",
+
+    # Engine management
+    "tune up kit": "engine tune up kit filters plugs",
+    "vacuum line": "vacuum hose line replacement kit",
+    "idle control valve": "idle air control valve",
+    "manifold pressure sensor": "map sensor with harness",
+    "air flow meter": "mass air flow meter sensor",
+    "ecu": "engine control unit computer module",
+    "tune module": "performance tuner programmer module",
+
+    # Fluid systems
+    "coolant reservoir cap": "coolant overflow tank cap",
+    "radiator hose upper": "upper radiator hose assembly",
+    "radiator hose lower": "lower radiator hose assembly",
+    "heater hose": "heater core hose assembly",
+    "master cylinder reservoir": "brake master cylinder reservoir",
+    "power steering reservoir": "power steering fluid reservoir",
+    "overflow tank": "coolant overflow tank with sensor",
+
+    # Suspension components 
+    "coil spring isolator": "coil spring insulator pad",
+    "suspension bushing": "suspension control arm bushing",
+    "radius arm bushing": "radius arm suspension bushing",
+    "leaf spring shackle": "leaf spring mounting shackle kit",
+    "sway bar link": "stabilizer sway bar end link",
+    "sway bar bushing": "stabilizer bar bushing kit",
+    "shock mount": "shock absorber mounting bracket",
+    "strut mount bearing": "strut mounting bearing plate",
+    
     # From second CSV analysis
     "gas tank": "fuel tank assembly complete",
     "gas tank cap": "fuel tank cap oem",
@@ -790,6 +859,66 @@ class EnhancedQueryProcessor:
     "lug nut": "lug nuts complete set oem",
     "crankshaft sensor": "crankshaft position sensor oem",
     "camshaft sensor": "camshaft position sensor with harness",
+    # Headlight component parts
+    "headlight lens": "headlight lens cover replacement",
+    "headlight housing": "headlight housing shell replacement",
+    "headlight bracket": "headlight mounting bracket",
+    "headlight bulb": "headlight replacement bulb",
+    "headlight cover": "headlight lens cover",
+    "headlight glass": "headlight glass lens",
+    "lens cover": "headlight lens cover replacement",
+    "light lens": "headlight lens cover replacement",
+    "headlamp lens": "headlamp lens cover replacement",
+    "headlamp cover": "headlamp lens cover replacement",
+
+    # Additional part terms for Nissan Frontier specifically
+    "frontier headlight": "frontier headlight assembly complete",
+    "frontier tail light": "frontier tail light assembly complete",
+    "frontier grille": "frontier grille assembly complete",
+    "frontier bumper": "frontier front bumper assembly",
+
+    # More detailed brake components
+    "brake hardware": "brake hardware kit complete",
+    "brake hose": "brake hose assembly",
+    "brake line": "brake line kit complete",
+    "brake bleeder": "brake bleeder screw kit",
+    "brake piston": "brake caliper piston",
+    "brake fluid reservoir": "brake fluid reservoir complete",
+
+    # More electrical components
+    "fuse": "fuse kit assortment",
+    "relay": "electrical relay replacement",
+    "wiring connector": "wiring harness connector",
+    "pigtail connector": "wiring harness pigtail connector",
+    "electrical connector": "electrical wiring connector",
+
+    # Gaskets and seals
+    "valve cover gasket": "valve cover gasket set",
+    "oil pan gasket": "oil pan gasket set",
+    "rear main seal": "rear main seal replacement",
+    "head gasket": "cylinder head gasket set",
+    "intake manifold gasket": "intake manifold gasket set",
+    "exhaust gasket": "exhaust manifold gasket set",
+
+    # Sensors
+    "oxygen sensor": "oxygen o2 sensor",
+    "crankshaft sensor": "crankshaft position sensor",
+    "camshaft sensor": "camshaft position sensor",
+    "throttle position sensor": "throttle position sensor",
+    "map sensor": "manifold absolute pressure sensor",
+    "maf sensor": "mass air flow sensor",
+    "knock sensor": "engine knock sensor",
+    "coolant temp sensor": "coolant temperature sensor",
+    "oil pressure sensor": "oil pressure switch sensor",
+    "abs sensor": "abs wheel speed sensor",
+
+    # Window and mirror components
+    "power window motor": "power window lift motor",
+    "window regulator": "window regulator assembly",
+    "mirror glass": "side mirror glass replacement",
+    "mirror motor": "side mirror motor actuator",
+    "mirror cover": "side mirror cover cap",
+    "window switch": "power window switch",
     
     # Year range pattern matching terms
     "87-91": "1987-1991",
@@ -1062,6 +1191,24 @@ class EnhancedQueryProcessor:
             if part in query_lower:
                 return part
         
+        # Check for component parts specifically before checking for assemblies
+        component_parts = [
+            "headlight lens",
+            "lens cover",
+            "light lens",
+            "headlamp lens",
+            "clear lens",
+            "plastic lens",
+            "tail light lens",
+            "fog light lens",
+            "turn signal lens"
+        ]
+        
+        for part in component_parts:
+            part_pattern = r'\b' + re.escape(part) + r'\b'
+            if re.search(part_pattern, query_lower):
+                return part
+        
         # Check for compound parts 
         compound_parts = [
             "headlight assembly",
@@ -1143,9 +1290,9 @@ class EnhancedQueryProcessor:
             # Clean up and return what's left as the likely part
             remaining = re.sub(r'\s+', ' ', remaining).strip()
             if remaining:
-                return remaining
-        
-        return None
+                return remaining    
+            
+            return None
 
     def _extract_position(self, query):
         """Extract position information like 'front', 'rear', 'driver side', etc."""
