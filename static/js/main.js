@@ -833,8 +833,76 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!imageModal || !modalImage) {
             return;
         }
-        modalImage.src = imgSrc;
+        
+        // Try to get a higher-quality version of the image if available
+        const highQualityImg = getHighQualityImageUrl(imgSrc);
+        
+        // Set the image source with a loading indicator
+        modalImage.src = '/static/placeholder.png'; // Use a placeholder while loading
+        modalImage.style.opacity = '0.5';
+        
+        // Create a new image object to preload the high-quality image
+        const img = new Image();
+        img.onload = function() {
+            // Once loaded, update the modal image and fade it in
+            modalImage.src = this.src;
+            modalImage.style.opacity = '1';
+        };
+        img.onerror = function() {
+            // On error, fall back to the original image
+            console.log('Failed to load high-quality image, falling back to original');
+            modalImage.src = imgSrc;
+            modalImage.style.opacity = '1';
+        };
+        img.src = highQualityImg;
+        
+        // Show the modal
         imageModal.style.display = 'block';
+    };
+    
+    // Function to attempt to get a higher quality version of an image
+    function getHighQualityImageUrl(url) {
+        if (!url) return url;
+        
+        try {
+            // For eBay images, try to modify the URL to get a higher quality version
+            // Example: https://i.ebayimg.com/thumbs/images/g/XYZ/s-l225.jpg → https://i.ebayimg.com/images/g/XYZ/s-l1600.jpg
+            if (url.includes('ebayimg.com')) {
+                // Step 1: Extract the unique identifier from the URL
+                const imgId = url.match(/\/g\/([^/]+)\//);
+                if (imgId && imgId[1]) {
+                    // We found the image identifier, reconstruct the URL with high quality
+                    return `https://i.ebayimg.com/images/g/${imgId[1]}/s-l1600.jpg`;
+                }
+                
+                // Fall back to simple replacement if pattern matching fails
+                return url.replace('/thumbs', '')
+                         .replace('s-l225', 's-l1600')
+                         .replace('s-l300', 's-l1600')
+                         .replace('s-l400', 's-l1600');
+            }
+            
+            // For Amazon images
+            if (url.includes('amazon.com') || url.includes('images-amazon.com')) {
+                // Replace thumbnail size indicators with larger ones
+                return url.replace(/_SL\d+_/, '_SL1500_')
+                         .replace(/_SS\d+_/, '_SL1500_');
+            }
+            
+            // For Walmart images
+            if (url.includes('walmart.com') || url.includes('walmartimages.com')) {
+                // Remove size limitations
+                return url.replace(/[?&]odnHeight=\d+/, '')
+                         .replace(/[?&]odnWidth=\d+/, '')
+                         .replace(/[?&]odnBg=\w+/, '');
+            }
+            
+            // For Google Shopping images, no specific pattern to upgrade, return as is
+            return url;
+        } catch (e) {
+            console.error('Error processing image URL:', e);
+            return url;
+        }
     };
 
     window.closeImageModal = function () {
@@ -1425,16 +1493,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Also update the modal content styling in the CSS
     if (imageModal && modalImage) {
-        // Add CSS styles for better modal positioning and sizing
+        // Add CSS classes for consistent styling
         modalImage.classList.add('modal-content');
-        modalImage.style.maxWidth = '650px';
-        modalImage.style.maxHeight = '450px';
-        modalImage.style.objectFit = 'contain';
-
-        // Center the modal better
+        
+        // Add a loading indicator to the modal
+        const loadingSpinner = document.createElement('div');
+        loadingSpinner.className = 'image-loading';
+        loadingSpinner.id = 'image-loading';
+        imageModal.appendChild(loadingSpinner);
+        
+        // Center the modal
         imageModal.style.display = 'none';
         imageModal.style.alignItems = 'center';
         imageModal.style.justifyContent = 'center';
+        
+        // Update the openImageModal function to show/hide the spinner
+        const originalOpen = window.openImageModal;
+        window.openImageModal = function(imgSrc) {
+            // Show the loading spinner
+            document.getElementById('image-loading').style.display = 'block';
+            
+            // Call the original function
+            originalOpen(imgSrc);
+            
+            // Hide the spinner when the image is loaded
+            modalImage.onload = function() {
+                document.getElementById('image-loading').style.display = 'none';
+            };
+        };
     }
 
 });
