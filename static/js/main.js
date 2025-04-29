@@ -435,14 +435,19 @@ document.addEventListener('DOMContentLoaded', function () {
     // Toggle favorite status for a product
     function toggleFavorite(productId, productData) {
         const favorites = loadFavorites();
+        
+        // Check if this is being called from the favorites tab
+        const isFavoritesTab = document.getElementById('favorites-content') && 
+                              document.getElementById('favorites-content').classList.contains('active');
 
         if (favorites[productId]) {
             // Store the notes before removing the favorite
             const notes = favorites[productId].notes || '';
             delete favorites[productId];
             
-            // If there are notes and we're toggling back on, preserve them
-            if (notes && productData) {
+            // Only add back the item if we're NOT in the favorites tab and we have notes
+            if (!isFavoritesTab && notes && productData) {
+                // If toggling elsewhere in the app and we have notes to preserve
                 favorites[productId] = {
                     ...productData,
                     notes: notes,
@@ -451,6 +456,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return true;
             }
         } else {
+            // Adding a new favorite
             favorites[productId] = {
                 ...productData,
                 notes: '',  // Initialize with empty notes
@@ -822,8 +828,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 this.classList.toggle('active', isFavorite);
 
                 // If we're on the favorites tab, refresh the display
+                // We need a short delay to let the DOM update, especially when removing items
                 if (document.getElementById('favorites-content').classList.contains('active')) {
-                    displayFavorites();
+                    // Give a small delay for DOM updates to complete
+                    setTimeout(() => {
+                        displayFavorites();
+                    }, 50);
                 }
             });
         });
