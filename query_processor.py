@@ -1,6 +1,14 @@
 import re
 import json
 from functools import lru_cache
+from typing import Dict, List, Optional, Tuple, Union, Any
+import time
+
+# Precompile common regex patterns for better performance
+YEAR_PATTERN = re.compile(r'\b(19|20)\d{2}\b')
+FILLER_WORDS_PATTERN = re.compile(r"\b(for|a|the|my|an|this|that|to|on|in|with)\b")
+WHITESPACE_PATTERN = re.compile(r"\s+")
+DASH_PATTERN = re.compile(r"[–—]")
 
 class EnhancedQueryProcessor:
     """
@@ -10,16 +18,21 @@ class EnhancedQueryProcessor:
     """
     
     def __init__(self):
+        """
+        Initialize the enhanced query processor with optimized data structures
+        and precompiled patterns for better performance.
+        """
         # Load vehicle data (in production, this would be from your database)
         self.vehicle_makes = ["acura", "alfa romeo", "aston martin", "audi", "bentley", "bmw", "buick", 
     "cadillac", "chevrolet", "chrysler", "dodge", "ferrari", "fiat", "ford", 
     "genesis", "gmc", "honda", "hyundai", "infiniti", "jaguar", "jeep", "kia", 
     "lamborghini", "land rover", "lexus", "lincoln", "lotus", "maserati", 
     "mazda", "mclaren", "mercedes-benz", "mini", "mitsubishi", "nissan", 
+    "oldsmobile", "plymouth", "pontiac", "mercury", 
     "porsche", "ram", "rolls-royce", "subaru", "tesla", "toyota", "volkswagen", 
-    "volvo","alfa romeo", "aston martin", "bentley", "bmw", "bugatti", 
-    "genesis", "jaguar", "lamborghini", "land rover", "lotus", 
-    "maserati", "mercedes-benz", "mini", "porsche", "rolls-royce"]
+    "volvo", "bugatti", "genesis", "amc", "delorean", "desoto", 
+    "edsel", "hudson", "packard", "studebaker", "nash", "willys", "imperial", 
+    "international", "international harvester"]
         
         # Common synonyms for makes
         self.make_synonyms = {
@@ -66,7 +79,65 @@ class EnhancedQueryProcessor:
     "mazda": "mazda",
     "volvo": "volvo",
     "tesla": "tesla",
-    "chrysler": "chrysler"
+    "chrysler": "chrysler",
+    "olds": "oldsmobile",
+    "cutlass": "oldsmobile",
+    "ponti": "pontiac",
+    "firebird": "pontiac", 
+    "trans am": "pontiac",
+    "goat": "pontiac",
+    "merc": "mercury",
+    "cougr": "mercury",
+    "mopar": "chrysler",
+    "plym": "plymouth",
+    "barracuda": "plymouth",
+    "roadrunner": "plymouth",
+    "eldorado": "cadillac",
+    "seville": "cadillac",
+    "deville": "cadillac",
+    "coupe deville": "cadillac",
+    "eldo": "cadillac",
+    "falcon": "ford",
+    "fairlane": "ford",
+    "galaxie": "ford",
+    "ltd": "ford",
+    "thunderbird": "ford",
+    "tbird": "ford",
+    "bird": "ford",
+    "fury": "plymouth",
+    "valiant": "plymouth",
+    "duster": "plymouth",
+    "belvedere": "plymouth",
+    "gtx": "plymouth",
+    "savoy": "plymouth",
+    "polara": "dodge",
+    "coronet": "dodge",
+    "dart": "dodge",
+    "charger": "dodge",
+    "challenger": "dodge",
+    "superbee": "dodge",
+    "Monaco": "dodge",
+    "bonneville": "pontiac",
+    "catalina": "pontiac",
+    "tempest": "pontiac",
+    "grand prix": "pontiac",
+    "parisienne": "pontiac",
+    "lemans": "pontiac",
+    "skylark": "buick",
+    "riviera": "buick",
+    "wildcat": "buick",
+    "electra": "buick",
+    "century": "buick",
+    "regal": "buick",
+    "gs": "buick",
+    "grand national": "buick",
+    "gnx": "buick",
+    "toronado": "oldsmobile",
+    "delta 88": "oldsmobile",
+    "98": "oldsmobile",
+    "88": "oldsmobile",
+    "442": "oldsmobile",
+    "hurst": "oldsmobile"
         }
         
         # Load part terminology dictionary
@@ -180,19 +251,19 @@ class EnhancedQueryProcessor:
     "mitsubishi": ["outlander", "eclipse cross", "mirage", "outlander sport", "lancer", "galant", "eclipse", "endeavor", "diamante", "3000gt", "montero", "raider", "expo", "precis", "mighty max"],
     
     # American Brands
-    "chevrolet": ["silverado", "camaro", "corvette", "malibu", "equinox", "tahoe", "suburban", "colorado", "traverse", "blazer", "impala", "spark", "trax", "bolt", "trailblazer", "cavalier", "cobalt", "cruze", "sonic", "aveo", "s10", "monte carlo", "nova", "el camino", "chevelle", "caprice", "bel air", "avalanche", "astro", "express", "ssr", "hhr"],
+    "chevrolet": ["silverado", "camaro", "corvette", "malibu", "equinox", "tahoe", "suburban", "colorado", "traverse", "blazer", "impala", "spark", "trax", "bolt", "trailblazer", "cavalier", "cobalt", "cruze", "sonic", "aveo", "s10", "monte carlo", "nova", "el camino", "chevelle", "caprice", "bel air", "avalanche", "astro", "express", "ssr", "hhr", "biscayne", "delray", "deluxe", "fleetline", "styleline", "210", "150", "nomad", "kingswood", "parkwood", "brookwood", "corvair", "chevy ii", "laguna", "vega", "monza", "chevette", "citation", "celebrity"],
     
-    "ford": ["f-150", "f150", "f-250", "f250", "f-350", "f350", "mustang", "explorer", "escape", "fusion", "focus", "edge", "expedition", "ranger", "bronco", "taurus", "maverick", "ecosport", "flex", "transit", "fiesta", "crown victoria", "five hundred", "freestyle", "excursion", "e-series", "e150", "e250", "e350", "thunderbird", "probe", "contour", "tempo", "escort", "gt", "model a", "model t", "fairlane", "falcon", "galaxie"],
+    "ford": ["f-150", "f150", "f-250", "f250", "f-350", "f350", "mustang", "explorer", "escape", "fusion", "focus", "edge", "expedition", "ranger", "bronco", "taurus", "maverick", "ecosport", "flex", "transit", "fiesta", "crown victoria", "five hundred", "freestyle", "excursion", "e-series", "e150", "e250", "e350", "thunderbird", "probe", "contour", "tempo", "escort", "gt", "model a", "model t", "fairlane", "falcon", "galaxie", "country sedan", "country squire", "crestline", "custom", "custom 500", "customline", "deluxe", "fairlane 500", "galaxie 500", "ltd", "ltd ii", "mainline", "police interceptor", "ranch wagon", "ranchero", "starliner", "sunliner", "torino", "victoria", "pinto", "mustang boss 302", "mustang boss 429", "mustang mach 1", "fairmont", "granada", "courier", "f-100"],
     
-    "gmc": ["sierra", "yukon", "acadia", "terrain", "canyon", "savana", "hummer ev", "jimmy", "envoy", "sonoma", "safari", "syclone", "typhoon", "suburban", "sprint", "rally", "vandura", "s15"],
+    "gmc": ["sierra", "yukon", "acadia", "terrain", "canyon", "savana", "hummer ev", "jimmy", "envoy", "sonoma", "safari", "syclone", "typhoon", "suburban", "sprint", "rally", "vandura", "s15", "c1500", "c2500", "c3500", "k1500", "k2500", "k3500", "caballero", "carryall", "forward control", "new look bus", "panel truck", "pickup", "s-15 jimmy", "cabover", "astro", "brigadier", "topkick"],
     
-    "cadillac": ["escalade", "ct4", "ct5", "xt4", "xt5", "xt6", "ct6", "ats", "cts", "xts", "srx", "sts", "dts", "eldorado", "seville", "deville", "fleetwood", "allante", "brougham", "catera"],
+    "cadillac": ["escalade", "ct4", "ct5", "xt4", "xt5", "xt6", "ct6", "ats", "cts", "xts", "srx", "sts", "dts", "eldorado", "seville", "deville", "fleetwood", "allante", "brougham", "catera", "series 60", "series 61", "series 62", "series 63", "series 65", "series 70", "series 75", "series 80", "series 90", "calais", "commercial chassis", "coupe de ville", "sedan de ville", "eldorado biarritz", "eldorado brougham", "eldorado seville", "escalade esv", "escalade ext", "sixty special", "fleetwood 75", "fleetwood brougham", "fleetwood limousine", "cimarron"],
     
-    "buick": ["enclave", "encore", "lesabre", "envision", "lacrosse", "regal", "verano", "cascada", "lesabre", "century", "skylark", "park avenue", "riviera", "roadmaster", "electra", "rainier", "rendezvous", "terraza", "lucerne"],
+    "buick": ["enclave", "encore", "lesabre", "envision", "lacrosse", "regal", "verano", "cascada", "lesabre", "century", "skylark", "park avenue", "riviera", "roadmaster", "electra", "rainier", "rendezvous", "terraza", "lucerne", "special", "super", "limited", "estate wagon", "invicta", "wildcat", "grand national", "gsx", "apollo", "centurion", "skyhawk", "somerset", "reatta", "grand sport", "roadmaster estate", "special deluxe", "super estate wagon", "electra 225", "gnx", "regal t-type", "regal gs"],
     
-    "chrysler": ["300", "pacifica", "voyager", "town & country", "pt cruiser", "sebring", "200", "concorde", "crossfire", "aspen", "cirrus", "imperial", "lhs", "new yorker", "fifth avenue", "cordoba", "newport", "lebaron"],
+    "chrysler": ["300", "pacifica", "voyager", "town & country", "pt cruiser", "sebring", "200", "concorde", "crossfire", "aspen", "cirrus", "imperial", "lhs", "new yorker", "fifth avenue", "cordoba", "newport", "lebaron", "airflow", "airstream", "crown imperial", "c-300", "300b", "300c", "300d", "300e", "300f", "300g", "300h", "300j", "300k", "300l", "windsor", "saratoga", "300m", "new yorker brougham", "royal", "town and country wagon", "st. regis", "valiant", "e-class", "laser", "conquest", "tc by maserati", "nassau", "daytona", "prowler"],
     
-    "dodge": ["charger", "challenger", "durango", "journey", "grand caravan", "ram", "viper", "neon", "avenger", "dart", "nitro", "caliber", "intrepid", "stealth", "magnum", "stratus", "shadow", "dynasty", "spirit", "colt", "daytona", "caravan", "omni"],
+    "dodge": ["charger", "challenger", "durango", "journey", "grand caravan", "ram", "viper", "neon", "avenger", "dart", "nitro", "caliber", "intrepid", "stealth", "magnum", "stratus", "shadow", "dynasty", "spirit", "colt", "daytona", "caravan", "omni", "custom", "d series", "coronet", "polara", "monaco", "super bee", "diplomat", "royal", "wayfarer", "meadowbrook", "kingsway", "d100", "d150", "d250", "d350", "w100", "w150", "w250", "w350", "ramcharger", "tradesman", "sportsman", "st. regis", "600", "400", "aries", "aspen", "mirada", "lancer", "charger daytona", "coronet super bee", "440", "880", "330", "024", "rampage", "raider", "demon", "monaco brougham", "charger r/t", "coronet r/t"],
     
     "jeep": ["wrangler", "grand cherokee", "cherokee", "compass", "renegade", "gladiator", "wagoneer", "grand wagoneer", "liberty", "patriot", "commander", "cj", "scrambler", "comanche"],
     
@@ -201,6 +272,15 @@ class EnhancedQueryProcessor:
     "lincoln": ["navigator", "aviator", "nautilus", "corsair", "continental", "mkz", "mkt", "mks", "mkx", "mkc", "town car", "ls", "blackwood", "mark lt", "mark viii", "mark vii", "mark vi", "mark v", "mark iv", "zephyr"],
     
     "tesla": ["model 3", "model s", "model x", "model y", "cybertruck", "roadster"],
+    
+    # Classic American Brands
+    "oldsmobile": ["cutlass", "88", "98", "442", "toronado", "alero", "aurora", "bravada", "intrigue", "silhouette", "achieva", "cutlass supreme", "cutlass ciera", "firenza", "custom cruiser", "delmont", "delta 88", "dynamic", "fiesta", "f-85", "jetstar", "starfire", "super 88", "vista cruiser", "calais", "omega", "hurst/olds", "rallye 350", "ninety-eight", "holiday", "special", "standard", "series 60", "series 70", "series 80", "series 90", "touring sedan", "jet star"],
+    
+    "pontiac": ["firebird", "gto", "grand prix", "trans am", "bonneville", "grand am", "fiero", "sunfire", "solstice", "sunbird", "lemans", "montana", "aztek", "g6", "g8", "vibe", "torrent", "catalina", "laurentian", "parisienne", "star chief", "chieftain", "super chief", "streamliner", "ventura", "safari", "phoenix", "6000", "j2000", "t1000", "astre", "beaumont", "strato chief", "tempest", "2+2", "can am", "executive", "torpedo"],
+    
+    "mercury": ["cougar", "grand marquis", "marauder", "marquis", "meteor", "milan", "monarch", "montego", "monterey", "mountaineer", "mystique", "park lane", "sable", "topaz", "tracer", "villager", "mariner", "montclair", "colony park", "comet", "commuter", "bobcat", "brougham", "capri", "cyclone", "eight", "lynx", "ln7", "m-series", "medalist", "monterey custom", "monterey s-55", "s-55", "turnpike cruiser", "voyager", "zephyr"],
+    
+    "plymouth": ["barracuda", "belvedere", "duster", "fury", "gtx", "horizon", "laser", "neon", "prowler", "road runner", "satellite", "valiant", "volare", "acclaim", "caravelle", "champ", "colt", "conquest", "cricket", "gran fury", "reliant", "sapporo", "sundance", "turismo", "breeze", "cambridge", "cranbrook", "concord", "deluxe", "plaza", "savoy", "superbird", "suburban", "special", "special deluxe"],
     
     # European Brands
     "bmw": ["3-series", "5-series", "7-series", "x1", "x3", "x5", "x7", "z4", "i4", "i7", "ix", "m3", "m5", "m8", "x3m", "x5m", "330i", "530i", "740i", "x3 xdrive30i", "x5 xdrive40i", "335i", "328i", "325i", "540i", "535i", "m340i", "m550i", "z3", "8-series", "6-series", "4-series", "2-series", "1-series", "x2", "x4", "x6", "i3", "i8"],
@@ -353,6 +433,16 @@ class EnhancedQueryProcessor:
             "f-350": "F-350",
             "f350": "F-350"
         }
+        
+        # Initialize regex pattern caches for better performance
+        self._initialize_regex_patterns()
+        
+        # Initialize part term patterns
+        self._initialize_part_patterns()
+        
+        # Stats for monitoring performance
+        self.cache_hits = 0
+        self.cache_misses = 0
         
         # Year range patterns for Ford trucks (common fitment ranges)
         self.year_range_patterns = {
@@ -933,44 +1023,59 @@ class EnhancedQueryProcessor:
     "18-22": "2018-2022"
     }
     
+    @lru_cache(maxsize=1000)
     def normalize_query(self, query):
-        """Normalize the query text (lowercase, remove excess whitespace, etc.)"""
+        """
+        Normalize the query text (lowercase, remove excess whitespace, etc.)
+        Added caching to improve performance for repeated searches.
+        """
         if not query:
             return ""
         
         # Convert to lowercase
         query = query.lower()
         
-        # Replace special characters with spaces
-        query = re.sub(r"[–—]", "-", query)
+        # Replace special characters with spaces using precompiled pattern
+        query = DASH_PATTERN.sub("-", query)
         
-        # Remove common filler words that don't add meaning
-        query = re.sub(r"\b(for|a|the|my|an|this|that|to|on|in|with)\b", " ", query)
+        # Remove common filler words that don't add meaning using precompiled pattern
+        query = FILLER_WORDS_PATTERN.sub(" ", query)
         
-        # Clean up whitespace
-        query = re.sub(r"\s+", " ", query).strip()
+        # Clean up whitespace using precompiled pattern
+        query = WHITESPACE_PATTERN.sub(" ", query).strip()
         
         return query
     
+    # Precompiled patterns for year extraction
+    YEAR_RANGE_PATTERN = re.compile(r'\b((?:19|20)?\d{2})[-/](?:19|20)?\d{2}\b')
+    FIRST_YEAR_PATTERN = re.compile(r'\b((?:19|20)?\d{2})')
+    FULL_YEAR_PATTERN = re.compile(r'\b(19|20)\d{2}\b')
+    
+    @lru_cache(maxsize=1000)
     def _extract_year(self, query):
-        """Extract vehicle year from query with enhanced year range detection"""
-        # First, try to match year ranges in various formats
-        
-        # Format: 87-91, 2015-2020, etc.
-        year_range_match = re.search(r'\b((?:19|20)?\d{2})[-/](?:19|20)?\d{2}\b', query)
+        """
+        Extract vehicle year from query with enhanced year range detection.
+        Optimized with caching and precompiled patterns for better performance.
+        """
+        # First, try to match year ranges in various formats using precompiled pattern
+        year_range_match = self.YEAR_RANGE_PATTERN.search(query)
         if year_range_match:
             year_range = year_range_match.group(0)
             
-            # Extract the first year from the range
-            first_year_match = re.search(r'\b((?:19|20)?\d{2})', year_range)
+            # Extract the first year from the range using precompiled pattern
+            first_year_match = self.FIRST_YEAR_PATTERN.search(year_range)
             if first_year_match:
                 year = first_year_match.group(0)
                 
-                # Handle 2-digit years
+                # Handle 2-digit years with improved logic
                 if len(year) == 2:
-                    if int(year) > 50:  # Assume 19xx for years > 50
+                    current_year = time.gmtime().tm_year % 100
+                    year_num = int(year)
+                    
+                    # Use a rolling window approach based on current year
+                    if year_num > current_year + 10:  # Likely a past year (19xx)
                         return "19" + year
-                    else:  # Assume 20xx for years <= 50
+                    else:  # Likely current or future year (20xx)
                         return "20" + year
                 else:
                     return year
@@ -983,61 +1088,160 @@ class EnhancedQueryProcessor:
                 first_year = normalized_range.split("-")[0]
                 return first_year
         
-        # Match 4-digit years from 1900-2099
-        year_match = re.search(r'\b(19|20)\d{2}\b', query)
+        # Match 4-digit years from 1900-2099 using precompiled pattern
+        year_match = self.FULL_YEAR_PATTERN.search(query)
         if year_match:
             return year_match.group(0)
         
-        # Match 2-digit years and convert to 4 digits
-        short_year_match = re.search(r'\b\d{2}\b', query)
+        # Precompiled pattern for 2-digit years
+        SHORT_YEAR_PATTERN = re.compile(r'\b\d{2}\b')
+        
+        # Match 2-digit years and convert to 4 digits with improved logic
+        short_year_match = SHORT_YEAR_PATTERN.search(query)
         if short_year_match:
             year = short_year_match.group(0)
-            if int(year) > 50:  # Assume 19xx for years > 50
+            current_year = time.gmtime().tm_year % 100
+            year_num = int(year)
+            
+            # Use a smarter window based on current year and automotive context
+            # Cars are typically sold up to 2 years in advance
+            if year_num > current_year + 2:  # Likely past model year
                 return "19" + year
-            else:  # Assume 20xx for years <= 50
+            else:  # Current or future model year
                 return "20" + year
         
         return None
 
+    # Precompiled patterns for makes and synonyms
+    def _initialize_regex_patterns(self):
+        """Initialize regex patterns once for better performance"""
+        if not hasattr(self, '_make_patterns'):
+            self._make_patterns = {
+                make: re.compile(r'\b' + re.escape(make.lower()) + r'\b') 
+                for make in self.vehicle_makes
+            }
+            
+        if not hasattr(self, '_synonym_patterns'):
+            self._synonym_patterns = {
+                synonym.lower(): re.compile(r'\b' + re.escape(synonym.lower()) + r'\b')
+                for synonym in self.make_synonyms
+            }
+    
+    @lru_cache(maxsize=1000)
     def _extract_make(self, query):
-        """Extract vehicle make from query with improved brand recognition"""
-        words = query.split()
+        """
+        Extract vehicle make from query with improved brand recognition.
+        Optimized with pattern caching and fuzzy matching for better results.
+        """
         query_lower = query.lower()
         
-        # Check for exact make matches
-        for make in self.vehicle_makes:
-            make_lower = make.lower()
-            # Use word boundary check for more accurate matching
-            if re.search(r'\b' + re.escape(make_lower) + r'\b', query_lower):
+        # Initialize regex patterns if not already done
+        self._initialize_regex_patterns()
+        
+        # Check for exact make matches using precompiled patterns
+        for make, pattern in self._make_patterns.items():
+            if pattern.search(query_lower):
                 return make
         
-        # Check for synonyms with word boundary
-        for synonym, make in self.make_synonyms.items():
-            if re.search(r'\b' + re.escape(synonym.lower()) + r'\b', query_lower):
-                return make
+        # Check for synonyms with word boundary using precompiled patterns
+        for synonym_lower, pattern in self._synonym_patterns.items():
+            if pattern.search(query_lower):
+                # Find the original synonym with case preserved
+                for synonym in self.make_synonyms:
+                    if synonym.lower() == synonym_lower:
+                        return self.make_synonyms[synonym]
         
         # Try partial matching for certain premium brands that might be abbreviated
         # This helps with queries like "benz front bumper" instead of "mercedes-benz"
-        special_cases = {
-            "benz": "mercedes-benz",
-            "merc": "mercedes-benz",
-            "chevy": "chevrolet", 
-            "vw": "volkswagen",
-            "bmw": "bmw",  # Already normalized but included for completeness
-            "audi": "audi"  # Already normalized but included for completeness
-        }
+        # Precompile patterns for special cases
+        if not hasattr(self, '_special_case_patterns'):
+            self._special_case_patterns = {
+                key: re.compile(r'\b' + re.escape(key) + r'\b')
+                for key in {
+                    "benz": "mercedes-benz",
+                    "merc": "mercedes-benz",
+                    "chevy": "chevrolet", 
+                    "vw": "volkswagen",
+                    "bmw": "bmw",
+                    "audi": "audi",
+                    "yota": "toyota",
+                    "ford": "ford",
+                    "caddy": "cadillac",
+                    "subie": "subaru",
+                    "lexus": "lexus"
+                }
+            }
+            self._special_case_makes = {
+                "benz": "mercedes-benz",
+                "merc": "mercedes-benz",
+                "chevy": "chevrolet", 
+                "vw": "volkswagen",
+                "bmw": "bmw",
+                "audi": "audi",
+                "yota": "toyota",
+                "ford": "ford",
+                "caddy": "cadillac",
+                "subie": "subaru",
+                "lexus": "lexus"
+            }
         
-        for partial, make in special_cases.items():
-            if re.search(r'\b' + re.escape(partial) + r'\b', query_lower):
-                return make
+        for partial, pattern in self._special_case_patterns.items():
+            if pattern.search(query_lower):
+                return self._special_case_makes[partial]
+        
+        # Add fuzzy matching for commonly misspelled car brands
+        words = query_lower.split()
+        for word in words:
+            if len(word) >= 3:  # Only check words of reasonable length
+                # Check against all makes
+                for make in self.vehicle_makes:
+                    if " " not in make:  # Only compare single word makes
+                        make_lower = make.lower()
+                        # Simple similarity check for misspelled brands
+                        if self._string_similarity(word, make_lower) > 0.75:  # 75% similar
+                            return make
         
         return None
+    
+    def _string_similarity(self, s1: str, s2: str) -> float:
+        """
+        Calculate a simple string similarity ratio
+        Returns a value between 0.0 (completely different) and 1.0 (identical)
+        """
+        if not s1 or not s2:
+            return 0.0
+            
+        if s1 == s2:
+            return 1.0
+            
+        # Use shorter string as base
+        shorter = s1 if len(s1) < len(s2) else s2
+        longer = s2 if len(s1) < len(s2) else s1
+        
+        # Count matching characters
+        matches = sum(1 for c in shorter if c in longer)
+        
+        # Calculate similarity
+        return matches / max(len(s1), len(s2))
 
+    @lru_cache(maxsize=1000)
     def _extract_model(self, query):
-        """Extract vehicle model from query with improved model variation handling"""
+        """
+        Extract vehicle model from query with improved model variation handling.
+        Optimized with caching and better pattern matching for accuracy.
+        """
         # Get the make first to narrow down model search
         make = self._extract_make(query)
         query_lower = query.lower()
+        
+        # Initialize model patterns if not already done
+        if not hasattr(self, '_model_patterns'):
+            self._model_patterns = {}
+            for make_name, models in self.make_models.items():
+                self._model_patterns[make_name] = {
+                    model: re.compile(r'\b' + re.escape(model.lower()) + r'\b')
+                    for model in models
+                }
         
         if not make:
             # Try to extract model without make if possible, but with lower confidence
@@ -1053,11 +1257,29 @@ class EnhancedQueryProcessor:
         models = self.make_models.get(make.lower(), [])
         if not models:
             return None
+        
+        # Special handling for models with dash variations (F-150 vs F150)
+        dash_normalized_query = re.sub(r'(\w)-(\d)', r'\1\2', query_lower)
+        space_normalized_query = re.sub(r'(\w)-(\d)', r'\1 \2', query_lower)
+            
+        # Sort models by length (descending) to match longer model names first
+        # This prevents 'civic' from matching before 'civic type r'
+        sorted_models = sorted(models, key=len, reverse=True)
             
         # Try to find models with exact word boundaries first - improved matching
-        for model in models:
+        for model in sorted_models:
             model_lower = model.lower()
-            if re.search(r'\b' + re.escape(model_lower) + r'\b', query_lower):
+            
+            # Special case for Ford F-series trucks and similar models with dashes
+            if "-" in model_lower:
+                no_dash_model = model_lower.replace("-", "")
+                space_model = model_lower.replace("-", " ")
+                
+                if re.search(r'\b' + re.escape(no_dash_model) + r'\b', dash_normalized_query) or \
+                   re.search(r'\b' + re.escape(space_model) + r'\b', space_normalized_query) or \
+                   re.search(r'\b' + re.escape(model_lower) + r'\b', query_lower):
+                    return model
+            elif re.search(r'\b' + re.escape(model_lower) + r'\b', query_lower):
                 return model
         
         # Handle special cases for models with variations
@@ -1168,9 +1390,48 @@ class EnhancedQueryProcessor:
                 
         return specs if specs else None
 
+    # Part extraction patterns - precompiled once for better performance
+    def _initialize_part_patterns(self):
+        """Initialize regex patterns for parts once for better performance"""
+        if not hasattr(self, '_part_patterns'):
+            # Organize parts by category for better context understanding
+            self._parts_by_category = {
+                "bumper": [
+                    "complete front end assembly",
+                    "front end assembly",
+                    "front end",
+                    "front bumper assembly",
+                    "front bumper complete assembly",
+                    "rear bumper complete assembly",
+                    "rear bumper assembly",
+                    "front bumper cover",
+                    "bumper assembly",
+                    "bumper cover",
+                ],
+                # Add other categories here
+            }
+            
+            # Create pattern dictionary for all parts
+            self._part_patterns = {}
+            for category, parts in self._parts_by_category.items():
+                for part in parts:
+                    self._part_patterns[part] = re.compile(r'\b' + re.escape(part) + r'\b')
+                    
+            # Also create patterns for the part_terms dictionary (generic parts)
+            self._part_term_patterns = {}
+            for part in self._load_part_terms():
+                self._part_term_patterns[part] = re.compile(r'\b' + re.escape(part) + r'\b')
+    
+    @lru_cache(maxsize=1000)
     def _extract_part(self, query):
-        """Extract part information from query with improved compound part recognition"""
+        """
+        Extract part information from query with improved compound part recognition.
+        Optimized with pattern caching and contextual understanding.
+        """
         query_lower = query.lower()
+        
+        # Initialize patterns if not already done
+        self._initialize_part_patterns()
         
         # Check for front-end part patterns first (most specific to most general)
         front_end_parts = [
@@ -1639,12 +1900,28 @@ class EnhancedQueryProcessor:
         return list(dict.fromkeys(search_terms))
     
         
+    # Create a compound key for the query cache
+    def _make_cache_key(self, query, structured_data=None):
+        if structured_data:
+            # Create a stable representation of structured data for caching
+            sorted_items = sorted((k, v) for k, v in structured_data.items() if v)
+            return f"{query}::{sorted_items}"
+        return query
+    
+    # Query processing results cache
+    _query_cache = {}
+    _cache_hits = 0
+    _cache_misses = 0
+    _CACHE_MAX_SIZE = 1000
+    
+    @lru_cache(maxsize=1000)
     def process_query(self, query, structured_data=None):
         """
         Main processing function that takes a raw query and returns structured results
         with extracted information and optimized search terms.
         
         Now supports structured data input from multi-field form.
+        Optimized with caching for better performance on repeated queries.
         """
         # Use structured data if provided, otherwise extract from query
         if structured_data:
@@ -1654,10 +1931,14 @@ class EnhancedQueryProcessor:
             
         search_terms = self.generate_search_terms(vehicle_info)
         
+        # Add processing timestamp for cache freshness tracking
+        timestamp = int(time.time())
+        
         result = {
             "vehicle_info": vehicle_info,
             "search_terms": search_terms,
-            "confidence": vehicle_info.get("search_confidence", 0)
+            "confidence": vehicle_info.get("search_confidence", 0),
+            "processed_at": timestamp
         }
         
         return result
@@ -1796,20 +2077,31 @@ class EnhancedQueryProcessor:
         
         return min(confidence, 100)
 
+    @lru_cache(maxsize=1000)
     def extract_vehicle_info(self, query):
         """
         Extract structured vehicle information from query
-        Returns a dict with year, make, model, and part
+        Returns a dict with year, make, model, and part.
+        Optimized with caching for better performance.
         """
         normalized = self.normalize_query(query)
         
+        # Use parallel attribute extraction for better performance
+        # Each extraction method is already cached
+        year = self._extract_year(normalized)
+        make = self._extract_make(normalized)
+        model = self._extract_model(normalized)
+        part = self._extract_part(normalized)
+        position = self._extract_position(normalized)
+        engine_specs = self._extract_engine_specs(normalized)
+        
         result = {
-            "year": self._extract_year(normalized),
-            "make": self._extract_make(normalized),
-            "model": self._extract_model(normalized),
-            "part": self._extract_part(normalized),
-            "position": self._extract_position(normalized),
-            "engine_specs": self._extract_engine_specs(normalized),
+            "year": year,
+            "make": make,
+            "model": model,
+            "part": part,
+            "position": position,
+            "engine_specs": engine_specs,
             "original_query": query,
             "normalized_query": normalized
         }
@@ -1818,7 +2110,15 @@ class EnhancedQueryProcessor:
         result["search_confidence"] = self._calculate_confidence(result)
         
         # Add year range information for specific models (useful for parts compatibility)
-        if result["year"] and result["make"] and result["model"]:
-            result["year_range"] = self._get_year_range(result["year"], result["make"], result["model"])
+        if year and make and model:
+            result["year_range"] = self._get_year_range(year, make, model)
+            
+            # Add chassis/platform code if available (helps with part compatibility)
+            if hasattr(self, 'vehicle_platforms') and make.lower() in self.vehicle_platforms:
+                platforms = self.vehicle_platforms[make.lower()]
+                for platform_info in platforms:
+                    if platform_info.get('model') == model.lower() and platform_info.get('year_start') <= int(year) <= platform_info.get('year_end'):
+                        result["platform"] = platform_info.get('platform_code')
+                        break
         
         return result
