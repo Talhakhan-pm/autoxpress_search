@@ -436,10 +436,23 @@ document.addEventListener('DOMContentLoaded', function () {
         const favorites = loadFavorites();
 
         if (favorites[productId]) {
+            // Store the notes before removing the favorite
+            const notes = favorites[productId].notes || '';
             delete favorites[productId];
+            
+            // If there are notes and we're toggling back on, preserve them
+            if (notes && productData) {
+                favorites[productId] = {
+                    ...productData,
+                    notes: notes,
+                    savedAt: new Date().toISOString()
+                };
+                return true;
+            }
         } else {
             favorites[productId] = {
                 ...productData,
+                notes: '',  // Initialize with empty notes
                 savedAt: new Date().toISOString()
             };
         }
@@ -479,6 +492,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const shippingElement = productCard.querySelector('[class*="shipping"]');
         const linkElement = productCard.querySelector('a');
         const sourceElement = productCard.querySelector('.product-source');
+        const notesElement = productCard.querySelector('.favorite-notes');
 
         if (!titleElement || !priceElement || !imageElement) {
             console.error('Required product elements not found');
@@ -492,7 +506,8 @@ document.addEventListener('DOMContentLoaded', function () {
             condition: conditionElement ? conditionElement.textContent : 'Not specified',
             shipping: shippingElement ? shippingElement.textContent : 'Shipping not specified',
             link: linkElement ? linkElement.href : '#',
-            source: sourceElement ? sourceElement.textContent : 'Unknown'
+            source: sourceElement ? sourceElement.textContent : 'Unknown',
+            notes: notesElement ? notesElement.value.trim() : ''
         };
 
         const isFavorite = toggleFavorite(productId, productData);
@@ -543,6 +558,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const sourceClass = item.source === 'eBay' ? 'source-ebay' : 'source-google';
             const conditionClass = item.condition.toLowerCase().includes('new') ? 'condition-new' : 'condition-used';
             const shippingClass = item.shipping.toLowerCase().includes('free') ? 'free-shipping' : '';
+            const notes = item.notes || '';
 
             const productCard = document.createElement('div');
             productCard.className = 'col-md-6 col-lg-4 mb-3';
@@ -569,7 +585,11 @@ document.addEventListener('DOMContentLoaded', function () {
                             <span>Shipping:</span>
                             <span class="${shippingClass}">${item.shipping}</span>
                         </div>
-                        <a href="${item.link}" target="_blank" class="btn btn-primary btn-sm w-100">View Details</a>
+                        <a href="${item.link}" target="_blank" class="btn btn-danger btn-sm w-100 mb-2">View Details</a>
+                        <div class="favorite-notes-container mt-2">
+                            <label for="notes-${id}" class="favorite-notes-label">Notes:</label>
+                            <textarea id="notes-${id}" class="favorite-notes" placeholder="Add notes about this item..." data-product-id="${id}">${notes}</textarea>
+                        </div>
                     </div>
                 </div>
             `;
@@ -581,11 +601,56 @@ document.addEventListener('DOMContentLoaded', function () {
         attachFavoriteButtonListeners();
         // Add event listeners to the image containers
         attachImagePreviewListeners();
+        // Add event listeners to the notes textareas
+        attachNotesListeners();
+    }
+    
+    // Save notes for a favorite
+    function saveNotes(productId, notesText) {
+        const favorites = loadFavorites();
+        if (favorites[productId]) {
+            favorites[productId].notes = notesText;
+            saveFavorites(favorites);
+        }
+    }
+    
+    // Attach listeners to notes textareas
+    function attachNotesListeners() {
+        document.querySelectorAll('.favorite-notes').forEach(textarea => {
+            // Save notes when user stops typing
+            textarea.addEventListener('blur', function() {
+                const productId = this.dataset.productId;
+                const notesText = this.value.trim();
+                saveNotes(productId, notesText);
+            });
+            
+            // Auto-resize textarea as user types
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+            
+            // Initialize height
+            textarea.dispatchEvent(new Event('input'));
+        });
     }
 
     // Export favorites as JSON file
     function exportFavorites() {
         const favorites = loadFavorites();
+        
+        // Ensure all notes are up-to-date before exporting
+        document.querySelectorAll('.favorite-notes').forEach(textarea => {
+            const productId = textarea.dataset.productId;
+            const notesText = textarea.value.trim();
+            if (favorites[productId]) {
+                favorites[productId].notes = notesText;
+            }
+        });
+        
+        // Save updated favorites first
+        saveFavorites(favorites);
+        
         const dataStr = JSON.stringify(favorites, null, 2);
         const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
 
@@ -635,9 +700,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     productCard.querySelector('[class*="shipping"]').textContent : 'Shipping not specified';
                 const link = productCard.querySelector('a').href;
                 const source = productCard.querySelector('.product-source').textContent;
+                
+                // Get notes if they exist (for favorites tab)
+                const notesTextarea = productCard.querySelector('.favorite-notes');
+                let notes = '';
+                if (notesTextarea) {
+                    notes = notesTextarea.value.trim();
+                }
 
                 const productData = {
-                    title, price, image, condition, shipping, link, source
+                    title, price, image, condition, shipping, link, source, 
+                    notes: notes // Include notes in the product data
                 };
 
                 const isFavorite = toggleFavorite(productId, productData);

@@ -809,6 +809,46 @@ footer p.small {
     }
 }
 
+/* Favorite notes styling */
+.favorite-notes-container {
+    margin-top: 0.75rem;
+    border-top: 1px solid #eee;
+    padding-top: 0.75rem;
+}
+
+.favorite-notes-label {
+    display: block;
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+}
+
+.favorite-notes {
+    width: 100%;
+    min-height: 60px;
+    padding: 0.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: #212529;
+    background-color: #f9f9f9;
+    resize: vertical;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.favorite-notes:focus {
+    outline: none;
+    border-color: #a0b9d2;
+    box-shadow: 0 0 0 0.2rem rgba(229, 50, 56, 0.15);
+    background-color: white;
+}
+
+.favorite-notes::placeholder {
+    color: #adb5bd;
+    font-style: italic;
+}
+
 /* Utility classes for consistency */
 .justify-between {
     display: flex !important;
