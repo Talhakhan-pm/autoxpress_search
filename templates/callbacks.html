@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoXpress Callback Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .form-container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h3 {
+            color: #2c3e50;
+            font-weight: 600;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        h3::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 3px;
+            background: #3498db;
+            border-radius: 2px;
+        }
+
+        .form-label {
+            color: #34495e;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .form-control, .form-select {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 8px rgba(52, 152, 219, 0.3);
+            transform: scale(1.02);
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+            background: linear-gradient(45deg, #2980b9, #3498db);
+        }
+
+        /* Dimmed state for the button */
+        .btn-primary.dimmed {
+            opacity: 0.5;
+            background: linear-gradient(45deg, #7f8c8d, #95a5a6);
+            cursor: not-allowed;
+            animation: dim 0.3s ease forwards;
+        }
+
+        @keyframes dim {
+            from {
+                opacity: 1;
+                background: linear-gradient(45deg, #3498db, #2980b9);
+            }
+            to {
+                opacity: 0.5;
+                background: linear-gradient(45deg, #7f8c8d, #95a5a6);
+            }
+        }
+
+        .alert-success {
+            background: #2ecc71;
+            border: none;
+            color: white;
+            border-radius: 8px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .mb-3 {
+            position: relative;
+        }
+
+        .form-control:hover:not(:focus),
+        .form-select:hover:not(:focus) {
+            border-color: #3498db;
+        }
+
+        
+        /* Custom red button for Assistant */
+        .btn-custom-red {
+            background-color: #fff !important; /* White fill */
+            color: #e74c3c; /* Red text to match outline */
+            border: 2px solid #e74c3c; /* Red outline */
+            border-radius: 8px; /* Match existing button border-radius */
+            transition: all 0.3s ease; /* Match existing transition */
+        }
+        
+        /* Hover and focus states for red button */
+        .btn-custom-red:hover,
+        .btn-custom-red:focus {
+            background-color: #e74c3c !important; /* Red fill on hover */
+            color: #fff; /* White text on hover */
+            border-color: #e74c3c;
+            box-shadow: 0 0 8px rgba(231, 76, 60, 0.3); /* Match existing focus shadow */
+            transform: scale(1.02); /* Match existing focus transform */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="form-container">
+       <div class="d-flex justify-content-between align-items-center mb-4">
+            <div></div>
+            <h3 class="text-center">Callback Tracker</h3>
+            <div>
+                <a href="https://autoxpress.us/order" class="btn btn-custom-red btn-sm me-2">New Order</a>
+                <a href="https://assistant-autoxpress.onrender.com/" class="btn btn-custom-red btn-sm">AI Assistant</a>
+            </div>
+        </div>
+        <form id="callbackForm">
+            <div class="mb-3">
+                <label class="form-label">Agent Name</label>
+                <select class="form-select" id="agentName" required>
+                    <option value="">Select Agent</option>
+                    <option>Ayesha</option>
+                    <option>Farhan</option>
+                    <option>Khan</option>
+                    <option>Murtaza</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Product</label>
+                <input type="text" class="form-control" id="product" required>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label class="form-label">Car (Make & Model)</label>
+                    <input type="text" class="form-control" id="vehicleInfo">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Year</label>
+                    <input type="number" class="form-control" id="year" min="1900" max="2100">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Zip Code</label>
+                <input type="text" class="form-control" id="zip" maxlength="10">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Customer Name</label>
+                <input type="text" class="form-control" id="customerName">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Best Callback Number</label>
+                <input type="tel" class="form-control" id="callbackNumber" maxlength="15" required>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">Follow-up Date</label>
+                <input type="date" class="form-control" id="followupDate">
+            </div>
+            
+            <div class="mb-4">
+                <label for="comments" class="form-label">Comments</label>
+                <textarea class="form-control" id="comments" rows="3" maxlength="300" placeholder="Quoted Price:"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Add to Callback Sheet</button>
+        </form>
+
+        <div class="mt-3" id="successMessage" style="display:none;">
+            <div class="alert alert-success">Callback submitted!</div>
+        </div>
+    </div>
+
+<script>
+    // Function to capitalize the first letter of each word
+    function capitalizeWords(str) {
+        return str.replace(/\b\w/g, char => char.toUpperCase());
+    }
+
+    document.getElementById('callbackForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        // Get the submit button
+        const submitButton = document.querySelector('button[type="submit"]');
+
+        // Disable the button and apply the dimmed effect
+        submitButton.disabled = true;
+        submitButton.classList.add('dimmed');
+
+        // Prepare form data with capitalization for relevant fields
+        const formData = {
+            agentName: document.getElementById('agentName').value,
+            product: capitalizeWords(document.getElementById('product').value),
+            vehicleInfo: capitalizeWords(document.getElementById('vehicleInfo').value),
+            year: document.getElementById('year').value, // Number, no capitalization
+            zip: document.getElementById('zip').value,   // Zip code, no capitalization
+            customerName: capitalizeWords(document.getElementById('customerName').value),
+            callbackNumber: document.getElementById('callbackNumber').value, // Phone, no capitalization
+            followupDate: document.getElementById('followupDate').value,     // Date, no capitalization
+            comments: capitalizeWords(document.getElementById('comments').value)
+        };
+
+        fetch('https://script.google.com/macros/s/AKfycbzFldA90XFFOuUgK9qJLjRSktD-5mCO2Bmm8GZBH9PclhHvr_DBYxvfI0Rpduae6WUPDg/exec', {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(() => {
+            document.getElementById('successMessage').style.display = 'block';
+            document.getElementById('callbackForm').reset();
+
+            // Re-enable the button and remove the dimmed effect after success
+            submitButton.disabled = false;
+            submitButton.classList.remove('dimmed');
+
+            setTimeout(() => {
+                document.getElementById('successMessage').style.display = 'none';
+            }, 3000);
+        })
+        .catch((error) => {
+            alert('Error submitting form: ' + error.message);
+
+            // Re-enable the button and remove the dimmed effect if there's an error
+            submitButton.disabled = false;
+            submitButton.classList.remove('dimmed');
+        });
+    });
+</script>
+</body>
+
+</html>

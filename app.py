@@ -649,6 +649,16 @@ def index():
         return render_template("index.html")
     return render_template("index.html")
 
+# Callback form route
+@app.route("/callbacks.html", methods=["GET"])
+def callbacks():
+    return render_template("callbacks.html")
+
+# Order form route
+@app.route("/orders.html", methods=["GET"])
+def orders():
+    return render_template("orders.html")
+
 # Sanitize user input with comprehensive security
 def sanitize_input(text):
     """
