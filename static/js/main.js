@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchButton = document.getElementById('search-button');
     const singleSearchButton = document.getElementById('single-search-button');
     const vinForm = document.getElementById('vin-form');
+    const vinButton = document.getElementById('vin-button');
     const resultContainer = document.getElementById('result-container');
     const vinResultContainer = document.getElementById('vin-result-container');
     const questionsContainer = document.getElementById('questions');
@@ -1237,6 +1238,7 @@ document.addEventListener('DOMContentLoaded', function () {
         vinForm.addEventListener('submit', async function (e) {
             e.preventDefault();
             const vinValue = document.getElementById('vin').value.trim();
+            const vinButton = document.getElementById('vin-button');
 
             if (!vinValue) {
                 alert('Please enter a VIN.');
@@ -1250,6 +1252,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Show loading
             vinLoading.classList.remove('d-none');
+            
+            // Disable the button during request
+            vinButton.disabled = true;
+            vinButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Decoding...';
 
             try {
                 const response = await fetch('/api/vin-decode', {
@@ -1281,6 +1287,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 vinLoading.classList.add('d-none');
                 vinError.textContent = 'A network error occurred. Please try again later.';
                 vinError.classList.remove('d-none');
+            } finally {
+                // Re-enable the button
+                vinButton.disabled = false;
+                vinButton.innerHTML = '<i class="fas fa-search me-1" style="font-size: 0.9rem;"></i> Decode VIN';
             }
         });
     }

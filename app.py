@@ -1411,12 +1411,15 @@ def vin_decode_api():
         return jsonify({"error": "Invalid VIN format. VIN should be 17 alphanumeric characters (excluding I, O, and Q)."})
     
     try:
+        print(f"Decoding VIN: {vin}")
         vin_info = decode_vin(vin)
         
         if not vin_info or not vin_info.get('Make'):
+            print(f"VIN decode failed - no Make found in result: {vin_info}")
             return jsonify({"error": "Could not decode VIN. Please check the VIN and try again."})
         
         # Return the VIN information as JSON
+        print(f"VIN decode successful for {vin}")
         return jsonify(vin_info)
     except Exception as e:
         # Log the error but don't expose details to the client
