@@ -488,23 +488,65 @@ document.addEventListener('DOMContentLoaded', function () {
         const titleElement = productCard.querySelector('.product-title');
         const priceElement = productCard.querySelector('.product-price');
         const imageElement = productCard.querySelector('.product-image');
-        const conditionElement = productCard.querySelector('[class*="condition-"]');
-        const shippingElement = productCard.querySelector('[class*="shipping"]');
+        const notesElement = productCard.querySelector('.favorite-notes');
+        
+        // Get the condition and shipping values more carefully
+        let condition = 'Not specified';
+        let shipping = 'Shipping not specified';
+        
+        // First, check if we have a product-meta structure (from updated_products.js display)
+        const conditionValueEl = productCard.querySelector('.condition-value');
+        const shippingValueEl = productCard.querySelector('.shipping-value');
+        
+        if (conditionValueEl) {
+            condition = conditionValueEl.textContent.trim();
+        } else {
+            // Fallback to searching in flex rows
+            const conditionRow = Array.from(productCard.querySelectorAll('.d-flex')).find(row => 
+                row.textContent.includes('Condition:')
+            );
+            if (conditionRow) {
+                const valueEl = conditionRow.querySelector('span:last-child');
+                if (valueEl && !valueEl.textContent.includes('Condition:')) {
+                    condition = valueEl.textContent.trim();
+                }
+            }
+        }
+        
+        if (shippingValueEl) {
+            shipping = shippingValueEl.textContent.trim();
+        } else {
+            // Fallback to searching in flex rows
+            const shippingRow = Array.from(productCard.querySelectorAll('.d-flex')).find(row => 
+                row.textContent.includes('Shipping:')
+            );
+            if (shippingRow) {
+                const valueEl = shippingRow.querySelector('span:last-child');
+                if (valueEl && !valueEl.textContent.includes('Shipping:')) {
+                    shipping = valueEl.textContent.trim();
+                }
+            }
+        }
+        
         const linkElement = productCard.querySelector('a');
         const sourceElement = productCard.querySelector('.product-source');
-        const notesElement = productCard.querySelector('.favorite-notes');
 
         if (!titleElement || !priceElement || !imageElement) {
             console.error('Required product elements not found');
             return;
         }
 
+        // Log for debugging
+        console.log('Found product data:',
+            '\n - Condition:', condition,
+            '\n - Shipping:', shipping);
+
         const productData = {
             title: titleElement.textContent,
             price: priceElement.textContent,
             image: imageElement.src,
-            condition: conditionElement ? conditionElement.textContent : 'Not specified',
-            shipping: shippingElement ? shippingElement.textContent : 'Shipping not specified',
+            condition: condition,
+            shipping: shipping,
             link: linkElement ? linkElement.href : '#',
             source: sourceElement ? sourceElement.textContent : 'Unknown',
             notes: notesElement ? notesElement.value.trim() : ''
@@ -556,9 +598,30 @@ document.addEventListener('DOMContentLoaded', function () {
         favoriteIds.forEach(id => {
             const item = favorites[id];
             const sourceClass = item.source === 'eBay' ? 'source-ebay' : 'source-google';
-            const conditionClass = item.condition.toLowerCase().includes('new') ? 'condition-new' : 'condition-used';
-            const shippingClass = item.shipping.toLowerCase().includes('free') ? 'free-shipping' : '';
+            
+            // Process condition class
+            let conditionClass = 'condition-unknown';
+            if (item.condition && item.condition.toLowerCase().includes('new')) {
+                conditionClass = 'condition-new';
+            } else if (item.condition && item.condition.toLowerCase().includes('used')) {
+                conditionClass = 'condition-used';
+            } else if (item.condition && item.condition.toLowerCase().includes('refurbished')) {
+                conditionClass = 'condition-refurbished';
+            }
+            
+            // Process shipping class
+            let shippingClass = '';
+            if (item.shipping && item.shipping.toLowerCase().includes('free')) {
+                shippingClass = 'free-shipping';
+            }
+            
             const notes = item.notes || '';
+            
+            // Log for debugging
+            console.log('Displaying favorite item:',
+                '\n - ID:', id,
+                '\n - Condition:', item.condition,
+                '\n - Shipping:', item.shipping);
 
             const productCard = document.createElement('div');
             productCard.className = 'col-md-6 col-lg-4 mb-3';
@@ -575,7 +638,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div class="product-title mb-2">${item.title}</div>
                         <div class="d-flex justify-content-between mb-1">
                             <span>Condition:</span>
-                            <span class="${conditionClass}">${item.condition}</span>
+                            <span class="${conditionClass} condition-value">${item.condition}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-1">
                             <span>Price:</span>
@@ -583,7 +646,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         </div>
                         <div class="d-flex justify-content-between mb-3">
                             <span>Shipping:</span>
-                            <span class="${shippingClass}">${item.shipping}</span>
+                            <span class="${shippingClass} shipping-value">${item.shipping}</span>
                         </div>
                         <a href="${item.link}" target="_blank" class="btn btn-danger btn-sm w-100 mb-2">View Details</a>
                         <div class="favorite-notes-container mt-2">
@@ -695,9 +758,45 @@ document.addEventListener('DOMContentLoaded', function () {
                 const title = productCard.querySelector('.product-title').textContent;
                 const price = productCard.querySelector('.product-price').textContent;
                 const image = productCard.querySelector('.product-image').src;
-                const condition = productCard.querySelector('[class*="condition-"]').textContent;
-                const shipping = productCard.querySelector('[class*="shipping"]') ?
-                    productCard.querySelector('[class*="shipping"]').textContent : 'Shipping not specified';
+                
+                // Get the condition and shipping values more carefully
+                let condition = 'Not specified';
+                let shipping = 'Shipping not specified';
+                
+                // First, check if we have a product-meta structure (from updated_products.js display)
+                const conditionValueEl = productCard.querySelector('.condition-value');
+                const shippingValueEl = productCard.querySelector('.shipping-value');
+                
+                if (conditionValueEl) {
+                    condition = conditionValueEl.textContent.trim();
+                } else {
+                    // Fallback to searching in flex rows
+                    const conditionRow = Array.from(productCard.querySelectorAll('.d-flex')).find(row => 
+                        row.textContent.includes('Condition:')
+                    );
+                    if (conditionRow) {
+                        const valueEl = conditionRow.querySelector('span:last-child');
+                        if (valueEl && !valueEl.textContent.includes('Condition:')) {
+                            condition = valueEl.textContent.trim();
+                        }
+                    }
+                }
+                
+                if (shippingValueEl) {
+                    shipping = shippingValueEl.textContent.trim();
+                } else {
+                    // Fallback to searching in flex rows
+                    const shippingRow = Array.from(productCard.querySelectorAll('.d-flex')).find(row => 
+                        row.textContent.includes('Shipping:')
+                    );
+                    if (shippingRow) {
+                        const valueEl = shippingRow.querySelector('span:last-child');
+                        if (valueEl && !valueEl.textContent.includes('Shipping:')) {
+                            shipping = valueEl.textContent.trim();
+                        }
+                    }
+                }
+                
                 const link = productCard.querySelector('a').href;
                 const source = productCard.querySelector('.product-source').textContent;
                 
@@ -707,6 +806,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (notesTextarea) {
                     notes = notesTextarea.value.trim();
                 }
+
+                // Log for debugging
+                console.log('Found product data (attachFavoriteButtonListeners):',
+                    '\n - Condition:', condition,
+                    '\n - Shipping:', shipping);
 
                 const productData = {
                     title, price, image, condition, shipping, link, source, 
