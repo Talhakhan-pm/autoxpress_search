@@ -838,6 +838,43 @@ footer p.small {
     }
 }
 
+/* Location styling */
+.location-card {
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    transition: all 0.2s ease;
+}
+
+.location-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.location-icon {
+    background-color: rgba(229, 50, 56, 0.1);
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.shipping-notice {
+    color: #28a745;
+    border-left: 3px solid #28a745;
+}
+
+.saved-location-card {
+    transition: all 0.2s ease;
+}
+
+.saved-location-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
 /* Favorite notes styling */
 .favorite-notes-container {
     margin-top: 0.75rem;
