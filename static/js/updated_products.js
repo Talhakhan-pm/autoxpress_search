@@ -47,7 +47,8 @@ const productConfig = {
     condition: [],
     shipping: [],
     source: ['eBay', 'Google Shopping'], // Default: show all sources
-    relevance: []
+    relevance: [],
+    badge: []  // Filter by badge types
   },
   allProducts: [], // All products returned from API
   displayedProducts: [], // Products currently shown (after filtering)
@@ -204,7 +205,8 @@ function resetFilters() {
     condition: [],
     shipping: [],
     source: ['eBay', 'Google Shopping'],
-    relevance: []
+    relevance: [],
+    badge: []  // New filter for badge types
   };
 
   // Reset checkbox UI
@@ -261,9 +263,34 @@ function applyFilters() {
   if (productConfig.activeFilters.relevance.length > 0) {
     filteredProducts = filteredProducts.filter(product => {
       if (productConfig.activeFilters.relevance.includes('high')) {
-        return product.relevanceScore && product.relevanceScore > 50;
+        return product.relevanceScore && product.relevanceScore > 80;
       }
       return true;
+    });
+  }
+  
+  // Apply badge filters
+  if (productConfig.activeFilters.badge.length > 0) {
+    filteredProducts = filteredProducts.filter(product => {
+      // Skip products without badge data
+      if (!product.secondaryBadges && !product.primaryBadge) {
+        return false;
+      }
+      
+      // Check if any of the filtered badge types exist in the product's badges
+      return productConfig.activeFilters.badge.some(badgeType => {
+        // Check primary badge
+        if (product.primaryBadge && product.primaryBadge.type === badgeType) {
+          return true;
+        }
+        
+        // Check secondary badges
+        if (product.secondaryBadges && Array.isArray(product.secondaryBadges)) {
+          return product.secondaryBadges.some(badge => badge.type === badgeType);
+        }
+        
+        return false;
+      });
     });
   }
 
@@ -274,6 +301,11 @@ function applyFilters() {
 
   // Update product counts
   updateProductCounts();
+  
+  // Dispatch event for filter changes
+  document.dispatchEvent(new CustomEvent('filters-changed', {
+    detail: { filters: productConfig.activeFilters }
+  }));
 }
 
 /**
@@ -693,16 +725,36 @@ function sortAndDisplayProducts() {
   switch (productConfig.currentSort) {
     case 'relevance':
       // Sort by relevance score (highest first)
-      sortedProducts.sort((a, b) =>
-        (b.relevanceScore || 0) - (a.relevanceScore || 0)
-      );
+      sortedProducts.sort((a, b) => {
+        // First by relevance score
+        const scoreComp = (b.relevanceScore || 0) - (a.relevanceScore || 0);
+        
+        // If scores are the same, sort by badges
+        // Give higher priority to products with exact year match
+        if (scoreComp === 0) {
+          const hasYearA = hasSpecificBadge(a, 'year');
+          const hasYearB = hasSpecificBadge(b, 'year');
+          if (hasYearA !== hasYearB) {
+            return hasYearB ? 1 : -1;
+          }
+          
+          // Then check for exact part match
+          const hasPartA = hasSpecificBadge(a, 'partType');
+          const hasPartB = hasSpecificBadge(b, 'partType');
+          if (hasPartA !== hasPartB) {
+            return hasPartB ? 1 : -1;
+          }
+        }
+        
+        return scoreComp;
+      });
       break;
 
     case 'price-low':
       // Sort by price (lowest first)
       sortedProducts.sort((a, b) => {
-        const priceA = parseFloat(a.price.replace(/[^0-9.]/g, '')) || 0;
-        const priceB = parseFloat(b.price.replace(/[^0-9.]/g, '')) || 0;
+        const priceA = parseFloat(a.price.toString().replace(/[^0-9.]/g, '')) || 0;
+        const priceB = parseFloat(b.price.toString().replace(/[^0-9.]/g, '')) || 0;
         return priceA - priceB;
       });
       break;
@@ -710,8 +762,8 @@ function sortAndDisplayProducts() {
     case 'price-high':
       // Sort by price (highest first)
       sortedProducts.sort((a, b) => {
-        const priceA = parseFloat(a.price.replace(/[^0-9.]/g, '')) || 0;
-        const priceB = parseFloat(b.price.replace(/[^0-9.]/g, '')) || 0;
+        const priceA = parseFloat(a.price.toString().replace(/[^0-9.]/g, '')) || 0;
+        const priceB = parseFloat(b.price.toString().replace(/[^0-9.]/g, '')) || 0;
         return priceB - priceA;
       });
       break;
@@ -722,6 +774,25 @@ function sortAndDisplayProducts() {
   displayProductsPage();
 }
 
+/**
+ * Helper function to check if a product has a specific badge type
+ */
+function hasSpecificBadge(product, badgeType) {
+  if (!product) return false;
+  
+  // Check primary badge
+  if (product.primaryBadge && product.primaryBadge.type === badgeType) {
+    return true;
+  }
+  
+  // Check secondary badges
+  if (product.secondaryBadges && Array.isArray(product.secondaryBadges)) {
+    return product.secondaryBadges.some(badge => badge.type === badgeType);
+  }
+  
+  return false;
+}
+
 // Export the API
 window.productDisplay = {
   setProducts,
@@ -729,8 +800,15 @@ window.productDisplay = {
   resetFilters,
   updateViewMode,
   sortAndDisplayProducts,
+  applyFilters,
   // Provide access to the product data
   getProducts: function() {
     return productConfig.allProducts || [];
-  }
+  },
+  // Provide access to product config
+  getProductConfig: function() {
+    return productConfig;
+  },
+  // Helper for badge filtering
+  hasSpecificBadge
 };

@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="/static/css/styles.css">
     <link rel="stylesheet" href="/static/css/favorites-actions.css">
     <link rel="stylesheet" href="/static/css/badges.css">
+    <link rel="stylesheet" href="/static/css/filter-badges.css">
     <!-- No inline styles here anymore - all styles are in the CSS file -->
 </head>
 
@@ -409,6 +410,8 @@
                                             <span class="text-muted">Found <span id="product-total-count">0</span>
                                                 products</span>
                                         </div>
+                                        <!-- Applied filters will appear here -->
+                                        <div id="applied-filters" class="applied-filters"></div>
                                         <div class="d-flex gap-2">
                                             <div class="dropdown">
                                                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
@@ -416,27 +419,62 @@
                                                     aria-expanded="false">
                                                     <i class="fas fa-filter me-1"></i> Filter
                                                 </button>
-                                                <div class="dropdown-menu p-3" style="width: 250px;"
+                                                <div class="dropdown-menu p-3" style="width: 280px;"
                                                     aria-labelledby="filterDropdown">
-                                                    <h6 class="dropdown-header">Filter Products</h6>
+                                                    <h6 class="dropdown-header">Relevance & Match Type</h6>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input filter-check" type="checkbox"
+                                                            id="exactYearMatch" data-filter="badge" data-value="year">
+                                                        <label class="form-check-label" for="exactYearMatch">
+                                                            <span class="filter-badge badge-exact-year">Exact Year Match</span>
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input filter-check" type="checkbox"
+                                                            id="exactPartMatch" data-filter="badge" data-value="partType">
+                                                        <label class="form-check-label" for="exactPartMatch">
+                                                            <span class="filter-badge badge-part-match">Exact Part Match</span>
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input filter-check" type="checkbox"
+                                                            id="bestMatchOnly" data-filter="relevance" data-value="high">
+                                                        <label class="form-check-label" for="bestMatchOnly">
+                                                            <span class="filter-badge badge-best-match">Best Matches Only</span>
+                                                        </label>
+                                                    </div>
+                                                    <div class="dropdown-divider"></div>
+                                                    
+                                                    <h6 class="dropdown-header">Product Attributes</h6>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input filter-check" type="checkbox"
+                                                            id="oemOnly" data-filter="badge" data-value="oem">
+                                                        <label class="form-check-label" for="oemOnly">
+                                                            <span class="filter-badge badge-oem">OEM Parts</span>
+                                                        </label>
+                                                    </div>
                                                     <div class="form-check">
                                                         <input class="form-check-input filter-check" type="checkbox"
                                                             id="newOnly" data-filter="condition" data-value="new">
-                                                        <label class="form-check-label" for="newOnly">New Only</label>
+                                                        <label class="form-check-label" for="newOnly">
+                                                            <span class="filter-badge badge-condition">New Only</span>
+                                                        </label>
                                                     </div>
                                                     <div class="form-check">
                                                         <input class="form-check-input filter-check" type="checkbox"
                                                             id="freeShipping" data-filter="shipping" data-value="free">
-                                                        <label class="form-check-label" for="freeShipping">Free
-                                                            Shipping</label>
+                                                        <label class="form-check-label" for="freeShipping">
+                                                            <span class="filter-badge badge-shipping">Free Shipping</span>
+                                                        </label>
                                                     </div>
                                                     <div class="form-check">
                                                         <input class="form-check-input filter-check" type="checkbox"
-                                                            id="bestMatchOnly" data-filter="relevance"
-                                                            data-value="high">
-                                                        <label class="form-check-label" for="bestMatchOnly">Best Matches
-                                                            Only</label>
+                                                            id="premiumBrand" data-filter="badge" data-value="brand">
+                                                        <label class="form-check-label" for="premiumBrand">
+                                                            <span class="filter-badge badge-brand">Premium Brand</span>
+                                                        </label>
                                                     </div>
+                                                    
                                                     <div class="dropdown-divider"></div>
                                                     <h6 class="dropdown-header">Sources</h6>
                                                     <div class="form-check">
@@ -583,6 +621,7 @@
     <script src="/static/js/modules/image-modal.js"></script>
 
     <!-- Core Application Scripts -->
+    <script src="/static/js/filter-manager.js"></script>
     <script src="/static/js/field-autocomplete.js"></script>
     <script src="/static/js/updated_products.js"></script>
     <script src="/static/js/main.js"></script>

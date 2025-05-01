@@ -1,0 +1,64 @@
+/**
+ * Filter badges styling
+ */
+
+/* Style badges in filter menu to match product badges */
+.filter-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Applied filters display */
+.applied-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 15px;
+}
+
+.applied-filter-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background-color: #f8f9fa;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid #dee2e6;
+  transition: all 0.2s ease;
+}
+
+.applied-filter-tag:hover {
+  background-color: #e9ecef;
+}
+
+.applied-filter-tag i {
+  margin-left: 6px;
+  cursor: pointer;
+}
+
+/* Active state for filter checkboxes */
+.filter-check:checked + label .filter-badge {
+  box-shadow: 0 0 0 1px #fff, 0 0 0 3px var(--autoxpress-red);
+}
+
+/* Badge counts for filter options */
+.badge-count {
+  font-size: 0.7rem;
+  background-color: #f0f0f0;
+  color: #555;
+  border-radius: 10px;
+  padding: 1px 5px;
+  margin-left: 5px;
+  display: inline-block;
+}
+
+/* Make the filter dropdown scrollable if it gets too long */
+.dropdown-menu[aria-labelledby="filterDropdown"] {
+  max-height: 80vh;
+  overflow-y: auto;
+}
