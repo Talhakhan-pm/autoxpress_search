@@ -672,6 +672,9 @@ document.addEventListener('DOMContentLoaded', function () {
         attachFavoriteButtonListeners();
         // Add event listeners to the image containers
         attachImagePreviewListeners();
+        
+        // Trigger a custom event to notify that products were displayed
+        document.dispatchEvent(new CustomEvent('productsDisplayed'));
         // Add event listeners to the notes textareas
         attachNotesListeners();
     }
@@ -1212,6 +1215,9 @@ document.addEventListener('DOMContentLoaded', function () {
         attachFavoriteButtonListeners();
         // Add event listeners to the image containers
         attachImagePreviewListeners();
+        
+        // Trigger a custom event to notify that products were displayed
+        document.dispatchEvent(new CustomEvent('productsDisplayed'));
         
         // Update product count badges
         const productCountBadge = document.getElementById('products-count');

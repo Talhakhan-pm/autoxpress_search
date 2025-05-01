@@ -61,6 +61,8 @@ const ImageModal = (function() {
   function openModal(imgSrc) {
     if (!imageModal || !modalImage) return;
     
+    console.log('Opening modal with image:', imgSrc);
+    
     // Try to get a higher-quality version of the image
     const highQualityImg = getHighQualityImageUrl(imgSrc);
     
@@ -96,7 +98,7 @@ const ImageModal = (function() {
     img.src = highQualityImg;
     
     // Show the modal
-    imageModal.style.display = 'block';
+    imageModal.style.display = 'flex';
   }
   
   function closeModal() {
@@ -143,19 +145,23 @@ const ImageModal = (function() {
   
   // Attach event listeners to image containers
   function attachImagePreviewListeners() {
+    console.log('Attaching image preview listeners');
     const containers = document.querySelectorAll('.product-image-container');
     
     containers.forEach(container => {
-      container.style.cursor = 'pointer';
+      if (container.getAttribute('data-has-preview-listener') === 'true') {
+        return; // Skip if already has listener
+      }
       
-      // Remove existing listeners to prevent duplicates
-      const clone = container.cloneNode(true);
-      container.parentNode.replaceChild(clone, container);
+      container.style.cursor = 'pointer';
+      container.setAttribute('data-has-preview-listener', 'true');
       
       // Add click listener
-      clone.addEventListener('click', function(e) {
+      container.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
+        
+        console.log('Image container clicked');
         
         const imgSrc = this.dataset.image || 
                        this.querySelector('img')?.src || 
@@ -178,6 +184,16 @@ const ImageModal = (function() {
 // Initialize and export globally
 document.addEventListener('DOMContentLoaded', function() {
   ImageModal.init();
+  
+  // Automatically attach listeners to any image containers on page load
+  setTimeout(() => {
+    ImageModal.attachImagePreviewListeners();
+  }, 500);
+  
+  // Listen for custom event when products are displayed
+  document.addEventListener('productsDisplayed', function() {
+    ImageModal.attachImagePreviewListeners();
+  });
 });
 
 // Expose globally 

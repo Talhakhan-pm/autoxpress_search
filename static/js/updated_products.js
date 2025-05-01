@@ -387,6 +387,9 @@ function displayProductsPage() {
 
   // Update product counts
   updateProductCounts();
+  
+  // Trigger a custom event to notify that products were displayed
+  document.dispatchEvent(new CustomEvent('productsDisplayed'));
 }
 
 /**

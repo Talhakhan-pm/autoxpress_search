@@ -120,6 +120,10 @@ function displayProducts(listings) {
   if (productCountBadge) {
     productCountBadge.textContent = listings.length;
   }
+  
+  // Trigger a custom event to notify that products were displayed
+  // This helps other modules (like the image modal) know when to attach handlers
+  document.dispatchEvent(new CustomEvent('productsDisplayed'));
 }
 
 // Make globally available
