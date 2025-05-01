@@ -1243,6 +1243,15 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Add event listener to auto-capitalize VIN input
+    const vinInput = document.getElementById('vin');
+    if (vinInput) {
+        vinInput.addEventListener('input', function() {
+            // Convert to uppercase as they type
+            this.value = this.value.toUpperCase();
+        });
+    }
+    
     // VIN form submission
     if (vinForm) {
         vinForm.addEventListener('submit', async function (e) {
@@ -1268,17 +1277,18 @@ document.addEventListener('DOMContentLoaded', function () {
             vinButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Decoding...';
 
             try {
+                const formData = new FormData();
+                formData.append('vin', vinValue);
+                
                 const response = await fetch('/api/vin-decode', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        'vin': vinValue
-                    })
+                    body: formData
                 });
 
                 const data = await response.json();
+                
+                // Debug output
+                console.log("VIN decode response:", data);
 
                 // Hide loading
                 vinLoading.classList.add('d-none');
@@ -1395,35 +1405,68 @@ document.addEventListener('DOMContentLoaded', function () {
     // Function to display VIN data
     function displayVinData(data) {
         vinData.innerHTML = '';
+        
+        // Safety check - make sure we have data
+        if (!data || typeof data !== 'object') {
+            vinError.textContent = "Invalid data received from VIN decoder";
+            vinError.classList.remove('d-none');
+            return;
+        }
+        
+        // Check for API error response
+        if (data.error) {
+            vinError.textContent = data.error;
+            vinError.classList.remove('d-none');
+            return;
+        }
 
         // Create primary info card
         const primaryInfoCard = document.createElement('div');
         primaryInfoCard.className = 'col-md-6 mb-4';
+        
+        // Handle the API property format - check if data has Results array (API format) or direct properties
+        // Add robust fallbacks and console logging for debugging
+        let vehicleData;
+        
+        if (data.Results && Array.isArray(data.Results) && data.Results.length > 0) {
+            console.log("Using Results[0] for VIN data");
+            vehicleData = data.Results[0];
+        } else if (data.Count && data.Count > 0 && data.Results) {
+            console.log("Data has Count but Results not usable, data:", data);
+            vehicleData = data;
+        } else {
+            console.log("Using direct properties for VIN data");
+            vehicleData = data;
+        }
+        
+        // Log the vehicle data we're using
+        console.log("Vehicle data to display:", vehicleData);
+        
         primaryInfoCard.innerHTML = `
             <div class="card h-100">
                 <div class="card-header bg-primary text-white">Vehicle Information</div>
                 <div class="card-body">
-                    <h5>${data.ModelYear} ${data.Make} ${data.Model} ${data.Trim || ''}</h5>
+                    <h5>${vehicleData.ModelYear || 'Unknown'} ${vehicleData.Make || 'Unknown'} ${vehicleData.Model || 'Unknown'} ${vehicleData.Trim || ''}</h5>
                     <table class="table table-sm">
                         <tr>
                             <th>Engine:</th>
-                            <td>${data.DisplacementL ? data.DisplacementL + 'L' : ''} ${data.EngineConfiguration || ''} ${data.EngineCylinders ? data.EngineCylinders + '-cyl' : ''}</td>
+                            <td>${vehicleData.DisplacementL ? vehicleData.DisplacementL + 'L' : ''} ${vehicleData.EngineConfiguration || ''} ${vehicleData.EngineCylinders ? vehicleData.EngineCylinders + '-cyl' : ''}</td>
                         </tr>
                         <tr>
                             <th>Transmission:</th>
-                            <td>${data.TransmissionStyle || 'N/A'}</td>
+                            <td>${vehicleData.TransmissionStyle || 'N/A'}</td>
                         </tr>
                         <tr>
                             <th>Drive Type:</th>
-                            <td>${data.DriveType || 'N/A'}</td>
+                            <td>${vehicleData.DriveType || 'N/A'}</td>
                         </tr>
                         <tr>
                             <th>Body Style:</th>
-                            <td>${data.BodyClass || 'N/A'}</td>
+                            <td>${vehicleData.BodyClass || 'N/A'}</td>
                         </tr>
                         <tr>
                             <th>Fuel Type:</th>
-                            <td>${data.FuelTypePrimary || 'N/A'}</td>
+                            <td>${vehicleData.FuelTypePrimary || 'N/A'}</td>
                         </tr>
                     </table>
                 </div>
@@ -1441,23 +1484,23 @@ document.addEventListener('DOMContentLoaded', function () {
                     <table class="table table-sm">
                         <tr>
                             <th>VIN:</th>
-                            <td>${data.VIN || 'N/A'}</td>
+                            <td>${vehicleData.VIN || 'N/A'}</td>
                         </tr>
                         <tr>
                             <th>Plant:</th>
-                            <td>${data.PlantCity ? data.PlantCity + ', ' + data.PlantCountry : 'N/A'}</td>
+                            <td>${vehicleData.PlantCity ? vehicleData.PlantCity + ', ' + vehicleData.PlantCountry : 'N/A'}</td>
                         </tr>
                         <tr>
                             <th>Series:</th>
-                            <td>${data.Series || 'N/A'}</td>
+                            <td>${vehicleData.Series || 'N/A'}</td>
                         </tr>
                         <tr>
                             <th>Vehicle Type:</th>
-                            <td>${data.VehicleType || 'N/A'}</td>
+                            <td>${vehicleData.VehicleType || 'N/A'}</td>
                         </tr>
                         <tr>
                             <th>GVWR:</th>
-                            <td>${data.GVWR || 'N/A'}</td>
+                            <td>${vehicleData.GVWR || 'N/A'}</td>
                         </tr>
                     </table>
                     <button class="btn btn-primary mt-2" id="search-this-vehicle">
@@ -1477,10 +1520,10 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             // Fill in the fields
-            yearField.value = data.ModelYear || '';
-            makeField.value = data.Make || '';
-            modelField.value = data.Model || '';
-            engineField.value = data.DisplacementL ? data.DisplacementL + 'L' : '';
+            yearField.value = vehicleData.ModelYear || '';
+            makeField.value = vehicleData.Make || '';
+            modelField.value = vehicleData.Model || '';
+            engineField.value = vehicleData.DisplacementL ? vehicleData.DisplacementL + 'L' : '';
 
             // Focus on the part field
             partField.value = '';

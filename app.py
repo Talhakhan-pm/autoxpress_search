@@ -192,11 +192,16 @@ def decode_vin(vin):
         if data and data.get('Results') and len(data['Results']) > 0:
             result = data['Results'][0]
             if result.get('Make') and result.get('ModelYear'):
-                return result
+                # For debugging
+                print(f"VIN data retrieved successfully: {result.get('ModelYear')} {result.get('Make')} {result.get('Model')}")
+                # Return the whole API response to let client handle the data format
+                return data
             else:
                 print(f"Invalid VIN data received: Missing Make or ModelYear for VIN {vin}")
+                print(f"API returned: {data}")
         else:
             print(f"No results found for VIN {vin}")
+            print(f"API returned: {data}")
     except requests.exceptions.RequestException as e:
         print(f"VIN decode request error: {e}")
     except ValueError as e:
@@ -1297,12 +1302,10 @@ def search_products():
             "error": "An error occurred while searching for products. Please try again."
         })
 
-# This function is only needed for backward compatibility
-# The primary implementation is now in JavaScript (main.js)
+# Enhanced product listing function used by API endpoints
 def enhanceProductListings(listings, query, vehicleInfo):
     """
     Server-side product enhancement with basic year matching
-    Note: This is a lightweight version - the main implementation is in JavaScript
     """
     if not listings or not isinstance(listings, list):
         return []
@@ -1401,6 +1404,11 @@ def search_api():
 # AJAX endpoint for VIN decoding
 @app.route("/api/vin-decode", methods=["POST"])
 def vin_decode_api():
+    # Log all form data for debugging
+    print(f"VIN decode API request form data: {request.form}")
+    print(f"VIN decode API request data: {request.data}")
+    print(f"VIN decode API content type: {request.content_type}")
+    
     vin = sanitize_input(request.form.get("vin", ""))
     
     if not vin:
@@ -1414,19 +1422,44 @@ def vin_decode_api():
         print(f"Decoding VIN: {vin}")
         vin_info = decode_vin(vin)
         
-        if not vin_info or not vin_info.get('Make'):
-            print(f"VIN decode failed - no Make found in result: {vin_info}")
+        if not vin_info:
+            print(f"VIN decode failed - empty result")
             return jsonify({"error": "Could not decode VIN. Please check the VIN and try again."})
+            
+        # Check if we have Results in the format expected from NHTSA API
+        if vin_info.get('Results') and len(vin_info['Results']) > 0:
+            result = vin_info['Results'][0]
+            if not result.get('Make') or not result.get('ModelYear'):
+                print(f"VIN decode failed - no Make or ModelYear found in result")
+                return jsonify({"error": "Could not decode VIN. Please check the VIN and try again."})
+        else:
+            # For backward compatibility, check direct properties too
+            if not vin_info.get('Make'):
+                print(f"VIN decode failed - no Make found in result: {vin_info}")
+                return jsonify({"error": "Could not decode VIN. Please check the VIN and try again."})
         
-        # Return the VIN information as JSON
-        print(f"VIN decode successful for {vin}")
+        # Ensure we have a consistent format for the frontend
+        if vin_info.get('Results') and isinstance(vin_info['Results'], list) and len(vin_info['Results']) > 0:
+            result = vin_info['Results'][0]
+            print(f"VIN decode successful for {vin}: {result.get('Make')} {result.get('Model')}")
+            
+            # Check if we have the essential fields
+            if not (result.get('Make') and result.get('Model') and result.get('ModelYear')):
+                print(f"VIN data incomplete - Missing essential fields")
+                return jsonify({"error": "VIN decoded but returned incomplete vehicle information."})
+        else:
+            # Non-standard response format (shouldn't happen with normal API)
+            print(f"VIN decode format unexpected: {vin_info}")
+            return jsonify({"error": "Unexpected response format from VIN decoder."})
+        
+        # Return the complete API response for the frontend to handle
         return jsonify(vin_info)
     except Exception as e:
         # Log the error but don't expose details to the client
         print(f"VIN decode error: {e}")
         return jsonify({"error": "An error occurred while decoding the VIN. Please try again later."})
 
-# For backward compatibility - redirect old routes to the API endpoints
+# Important - keeping this route for backward compatibility with existing clients
 @app.route("/vin-decode", methods=["POST"])
 def vin_decode():
     return vin_decode_api()
