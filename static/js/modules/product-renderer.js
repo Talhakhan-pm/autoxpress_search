@@ -39,23 +39,15 @@ function renderProductCard(product, isExactMatch, isCompatible) {
   const favorites = loadFavorites();
   const isFavorite = favorites[productId] !== undefined;
 
-  // Build card classes
+  // Build card classes - removed badge classes
   let cardClasses = "product-card";
-  if (isExactMatch) {
-    cardClasses += " exact-year-match";
-  }
 
   // Create the product card element
   const productCard = document.createElement('div');
   productCard.className = 'col-md-4 col-lg-3 mb-3';
 
-  // Build badge HTML
+  // Badge HTML removed as part of badge strategy redesign
   let badgeHtml = '';
-  if (isExactMatch) {
-    badgeHtml = '<div class="exact-match-badge">Exact Year Match</div>';
-  } else if (isCompatible && product.compatibleRange) {
-    badgeHtml = `<div class="compatible-badge">Compatible ${product.compatibleRange}</div>`;
-  }
 
   // Build the card HTML
   productCard.innerHTML = `
@@ -108,70 +100,10 @@ function displayProducts(listings) {
   // Extract the year we searched for (from query or structured form)
   const searchYear = getSearchYear();
 
-  // Group by match type if we have exact year matches
-  const exactMatches = listings.filter(item => item.exactYearMatch);
-  const compatibleMatches = listings.filter(item => item.compatibleRange && !item.exactYearMatch);
-  const otherMatches = listings.filter(item => !item.exactYearMatch && !item.compatibleRange);
-
-  // Show headers for each section if we have exact matches
-  if (exactMatches.length > 0) {
-    // Create exact match section header
-    const exactMatchHeader = document.createElement('div');
-    exactMatchHeader.className = 'col-12';
-    exactMatchHeader.innerHTML = `
-      <div class="results-section-title">
-        <i class="fas fa-check-circle text-success me-2"></i>
-        Exact Year Matches (${exactMatches.length})
-      </div>
-    `;
-    productsContainer.appendChild(exactMatchHeader);
-
-    // Display exact matches
-    exactMatches.forEach(item => {
-      renderProductCard(item, true);
-    });
-
-    // Show compatible matches if any
-    if (compatibleMatches.length > 0) {
-      const compatibleHeader = document.createElement('div');
-      compatibleHeader.className = 'col-12 mt-4';
-      compatibleHeader.innerHTML = `
-        <div class="results-section-title">
-          <i class="fas fa-calendar-alt text-primary me-2"></i>
-          Compatible Year Range Matches (${compatibleMatches.length})
-        </div>
-      `;
-      productsContainer.appendChild(compatibleHeader);
-
-      // Display compatible matches
-      compatibleMatches.forEach(item => {
-        renderProductCard(item, false, true);
-      });
-    }
-
-    // Show other matches if any
-    if (otherMatches.length > 0) {
-      const otherHeader = document.createElement('div');
-      otherHeader.className = 'col-12 mt-4';
-      otherHeader.innerHTML = `
-        <div class="results-section-title">
-          <i class="fas fa-search me-2"></i>
-          Other Matches (${otherMatches.length})
-        </div>
-      `;
-      productsContainer.appendChild(otherHeader);
-
-      // Display other matches
-      otherMatches.forEach(item => {
-        renderProductCard(item, false, false);
-      });
-    }
-  } else {
-    // No exact matches - just show all listings without sections
-    listings.forEach(item => {
-      renderProductCard(item, false, !!item.compatibleRange);
-    });
-  }
+  // Simplified display without categorization - removed badges
+  listings.forEach(item => {
+    renderProductCard(item, false, false);
+  });
 
   // Add event listeners to the favorite buttons
   if (typeof attachFavoriteButtonListeners === 'function') {

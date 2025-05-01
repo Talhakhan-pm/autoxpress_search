@@ -441,10 +441,11 @@ function createGridViewProduct(product, productId, sourceClass, exactMatchClass,
     tags += `<span class="product-tag tag-free-shipping">Free Shipping</span>`;
   }
 
-  const relevanceBadge = exactMatchClass ? `<div class="relevance-badge">Best Match</div>` : '';
+  // Badge removed as part of badge strategy redesign
+  const relevanceBadge = '';
 
   return `
-      <div class="product-card ${exactMatchClass}">
+      <div class="product-card">
         <div class="product-source ${sourceClass}">${product.source}</div>
         ${relevanceBadge}
         <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-product-id="${productId}">
@@ -520,10 +521,11 @@ function createListViewProduct(product, productId, sourceClass, exactMatchClass,
     tags += `<span class="product-tag tag-free-shipping">Free Shipping</span>`;
   }
 
-  const relevanceBadge = exactMatchClass ? `<div class="relevance-badge">Best Match</div>` : '';
+  // Badge removed as part of badge strategy redesign
+  const relevanceBadge = '';
 
   return `
-      <div class="product-card ${exactMatchClass}">
+      <div class="product-card">
         <div class="product-source ${sourceClass}">${product.source}</div>
         ${relevanceBadge}
         <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-product-id="${productId}">
