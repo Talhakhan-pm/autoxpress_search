@@ -477,12 +477,7 @@ function createGridViewProduct(product, productId, sourceClass, exactMatchClass,
     }
   }
 
-  // Add product badge support
-  let relevanceBadge = '';
-  if (window.ProductBadges && product.primaryBadge) {
-    const badges = window.ProductBadges.renderBadges(product);
-    relevanceBadge = badges.primary;
-  }
+  // We're not using primary badges anymore, just secondary badges in tags
 
   // Add relevance class from ranking system
   const relevanceClass = product.relevanceScore >= 80 ? 'product-relevance-high' : 
@@ -491,7 +486,6 @@ function createGridViewProduct(product, productId, sourceClass, exactMatchClass,
   return `
       <div class="product-card ${relevanceClass}" data-product-id="${productId}">
         <div class="product-source ${sourceClass}">${product.source}</div>
-        ${relevanceBadge}
         <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-product-id="${productId}">
           <i class="fas fa-heart"></i>
         </button>
@@ -598,12 +592,7 @@ function createListViewProduct(product, productId, sourceClass, exactMatchClass,
     }
   }
 
-  // Add product badge support
-  let relevanceBadge = '';
-  if (window.ProductBadges && product.primaryBadge) {
-    const badges = window.ProductBadges.renderBadges(product);
-    relevanceBadge = badges.primary;
-  }
+  // We're not using primary badges anymore, just secondary badges in tags
 
   // Add relevance class from ranking system
   const relevanceClass = product.relevanceScore >= 80 ? 'product-relevance-high' : 
@@ -612,7 +601,6 @@ function createListViewProduct(product, productId, sourceClass, exactMatchClass,
   return `
       <div class="product-card ${relevanceClass}" data-product-id="${productId}">
         <div class="product-source ${sourceClass}">${product.source}</div>
-        ${relevanceBadge}
         <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-product-id="${productId}">
           <i class="fas fa-heart"></i>
         </button>

@@ -110,17 +110,7 @@ const ProductDisplayAdapter = (function() {
       // Get badges HTML
       const badges = window.ProductBadges.renderBadges(product);
       
-      // Create badge element
-      if (badges.primary) {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = badges.primary;
-        const badgeElement = tempDiv.firstElementChild;
-        
-        if (badgeElement) {
-          // Insert after source element
-          sourceElement.after(badgeElement);
-        }
-      }
+      // Skip creating primary badges since they're not being used
       
       // Add secondary badges to tags if present
       if (badges.secondary) {

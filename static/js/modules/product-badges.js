@@ -127,19 +127,30 @@ const ProductBadges = (function() {
   /**
    * Render all badges for a product
    * @param {Object} product - Product with badge data
-   * @return {Object} HTML strings for primary and secondary badges
+   * @return {Object} HTML strings for secondary badges only (primary badges excluded)
    */
   function renderBadges(product) {
     if (!product) return { primary: '', secondary: '' };
     
-    const primaryBadge = product.primaryBadge ? 
-      renderPrimaryBadge(product.primaryBadge) : '';
-      
-    const secondaryBadges = product.secondaryBadges ? 
-      renderSecondaryBadges(product.secondaryBadges) : '';
+    // Create a combined list of all badges - convert primary to secondary
+    const allBadges = [];
+    
+    // Add primary badge as a secondary badge if present
+    if (product.primaryBadge) {
+      allBadges.push(product.primaryBadge);
+    }
+    
+    // Add all secondary badges
+    if (product.secondaryBadges && Array.isArray(product.secondaryBadges)) {
+      allBadges.push(...product.secondaryBadges);
+    }
+    
+    // Render all badges as secondary badges
+    const secondaryBadges = allBadges.length > 0 ? 
+      renderSecondaryBadges(allBadges) : '';
     
     return {
-      primary: primaryBadge,
+      primary: '',  // Never return primary badges
       secondary: secondaryBadges
     };
   }
