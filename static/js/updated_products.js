@@ -1,6 +1,8 @@
 /**
  * Product display and filtering functionality
  * This file should be imported in the main HTML after main.js
+ * 
+ * UPDATED: Now exposes key functions globally for better code reuse
  */
 
 // Creates a unique ID for a product
@@ -20,6 +22,10 @@ function loadFavorites() {
   const favoritesJson = localStorage.getItem('autoxpress_favorites');
   return favoritesJson ? JSON.parse(favoritesJson) : {};
 }
+
+// Make these functions globally available
+window.generateProductId = generateProductId;
+window.loadFavorites = loadFavorites;
 
 // Empty placeholder functions that do nothing - we don't need their actual functionality
 function attachFavoriteButtonListeners() {

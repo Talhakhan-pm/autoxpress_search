@@ -421,10 +421,11 @@ document.addEventListener('DOMContentLoaded', function () {
     // Favorites system
     const FAVORITES_STORAGE_KEY = 'autoxpress_favorites';
 
-    // Load favorites from localStorage
+    // Load favorites from localStorage - using the function from updated_products.js
     function loadFavorites() {
-        const favoritesJson = localStorage.getItem(FAVORITES_STORAGE_KEY);
-        return favoritesJson ? JSON.parse(favoritesJson) : {};
+        return window.loadFavorites ? window.loadFavorites() : 
+            // Fallback if function not available
+            JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || '{}');
     }
 
     // Save favorites to localStorage
@@ -740,16 +741,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Generate a unique ID for a product
+    // Generate a unique ID for a product - using the function from updated_products.js
     function generateProductId(product) {
-        // Create a unique ID based on title and price, handling non-ASCII characters
-        try {
-            return btoa(product.title.substring(0, 30) + product.price).replace(/[^a-zA-Z0-9]/g, '');
-        } catch (e) {
-            // Handle non-ASCII characters by using encodeURIComponent
-            const safeString = encodeURIComponent(product.title.substring(0, 30) + product.price);
-            return btoa(safeString).replace(/[^a-zA-Z0-9]/g, '');
-        }
+        // This is now just calling the implementation in updated_products.js
+        return window.generateProductId ? window.generateProductId(product) : 
+            // Fallback if function not available (should never happen)
+            btoa(product.title.substring(0, 30) + product.price).replace(/[^a-zA-Z0-9]/g, '');
     }
 
     // Attach event listeners to favorite buttons
@@ -839,125 +836,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Global image modal functions - made available to window so they can be called from anywhere
-    window.openImageModal = function (imgSrc) {
-        if (!imageModal || !modalImage) {
-            return;
-        }
-        
-        // Try to get a higher-quality version of the image if available
-        const highQualityImg = getHighQualityImageUrl(imgSrc);
-        
-        // Set the image source with a loading indicator
-        modalImage.src = '/static/placeholder.png'; // Use a placeholder while loading
-        modalImage.style.opacity = '0.5';
-        
-        // Create a new image object to preload the high-quality image
-        const img = new Image();
-        img.onload = function() {
-            // Once loaded, update the modal image and fade it in
-            modalImage.src = this.src;
-            modalImage.style.opacity = '1';
-        };
-        img.onerror = function() {
-            // On error, fall back to the original image
-            console.log('Failed to load high-quality image, falling back to original');
-            modalImage.src = imgSrc;
-            modalImage.style.opacity = '1';
-        };
-        img.src = highQualityImg;
-        
-        // Show the modal
-        imageModal.style.display = 'block';
-    };
-    
-    // Function to attempt to get a higher quality version of an image
-    function getHighQualityImageUrl(url) {
-        if (!url) return url;
-        
-        try {
-            // For eBay images, try to modify the URL to get a higher quality version
-            // Example: https://i.ebayimg.com/thumbs/images/g/XYZ/s-l225.jpg → https://i.ebayimg.com/images/g/XYZ/s-l1600.jpg
-            if (url.includes('ebayimg.com')) {
-                // Step 1: Extract the unique identifier from the URL
-                const imgId = url.match(/\/g\/([^/]+)\//);
-                if (imgId && imgId[1]) {
-                    // We found the image identifier, reconstruct the URL with high quality
-                    return `https://i.ebayimg.com/images/g/${imgId[1]}/s-l1600.jpg`;
-                }
-                
-                // Fall back to simple replacement if pattern matching fails
-                return url.replace('/thumbs', '')
-                         .replace('s-l225', 's-l1600')
-                         .replace('s-l300', 's-l1600')
-                         .replace('s-l400', 's-l1600');
-            }
-            
-            // For Amazon images
-            if (url.includes('amazon.com') || url.includes('images-amazon.com')) {
-                // Replace thumbnail size indicators with larger ones
-                return url.replace(/_SL\d+_/, '_SL1500_')
-                         .replace(/_SS\d+_/, '_SL1500_');
-            }
-            
-            // For Walmart images
-            if (url.includes('walmart.com') || url.includes('walmartimages.com')) {
-                // Remove size limitations
-                return url.replace(/[?&]odnHeight=\d+/, '')
-                         .replace(/[?&]odnWidth=\d+/, '')
-                         .replace(/[?&]odnBg=\w+/, '');
-            }
-            
-            // For Google Shopping images, no specific pattern to upgrade, return as is
-            return url;
-        } catch (e) {
-            console.error('Error processing image URL:', e);
-            return url;
-        }
-    };
+    // Image modal functionality has been moved to the ImageModal module in modules/image-modal.js
+    // This creates cleaner separation of concerns and avoids the issues with the modal showing unexpectedly
 
-    window.closeImageModal = function () {
-        if (!imageModal) {
-            return;
-        }
-        imageModal.style.display = 'none';
-    };
-
-    // Attach event listeners to image containers
-    function attachImagePreviewListeners() {
-        const containers = document.querySelectorAll('.product-image-container');
-
-        containers.forEach(container => {
-            container.style.cursor = 'pointer'; // Visual feedback that it's clickable
-
-            // Remove any existing listeners to prevent duplicates
-            const clone = container.cloneNode(true);
-            container.parentNode.replaceChild(clone, container);
-
-            // Add new click listener
-            clone.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const imgSrc = this.dataset.image || this.querySelector('img')?.src || '/static/placeholder.png';
-                window.openImageModal(imgSrc);
-            });
-        });
-    }
-
-    // Set up modal close handlers
-    if (closeModal) {
-        closeModal.addEventListener('click', function () {
-            window.closeImageModal();
-        });
-    }
-
-    // Close modal when clicking outside the image
-    window.addEventListener('click', function (event) {
-        if (event.target === imageModal) {
-            window.closeImageModal();
-        }
-    });
+    // Modal event handlers have been moved to the ImageModal module
 
     // Tab Navigation
     if (favoritesNavLink && favoritesTab) {
@@ -1243,383 +1125,145 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Add event listener to auto-capitalize VIN input
-    const vinInput = document.getElementById('vin');
-    if (vinInput) {
-        vinInput.addEventListener('input', function() {
-            // Convert to uppercase as they type
-            this.value = this.value.toUpperCase();
-        });
-    }
-    
-    // VIN form submission
-    if (vinForm) {
-        vinForm.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const vinValue = document.getElementById('vin').value.trim();
-            const vinButton = document.getElementById('vin-button');
-
-            if (!vinValue) {
-                alert('Please enter a VIN.');
-                return;
-            }
-
-            // Reset UI for VIN results
-            vinError.classList.add('d-none');
-            vinData.innerHTML = '';
-            vinResultContainer.classList.remove('d-none');
-
-            // Show loading
-            vinLoading.classList.remove('d-none');
-            
-            // Disable the button during request
-            vinButton.disabled = true;
-            vinButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Decoding...';
-
-            try {
-                const formData = new FormData();
-                formData.append('vin', vinValue);
-                
-                const response = await fetch('/api/vin-decode', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-                
-                // Debug output
-                console.log("VIN decode response:", data);
-
-                // Hide loading
-                vinLoading.classList.add('d-none');
-
-                if (data.error) {
-                    vinError.textContent = data.error;
-                    vinError.classList.remove('d-none');
-                    return;
-                }
-
-                // Display VIN data
-                displayVinData(data);
-
-            } catch (error) {
-                console.error('Error:', error);
-                vinLoading.classList.add('d-none');
-                vinError.textContent = 'A network error occurred. Please try again later.';
-                vinError.classList.remove('d-none');
-            } finally {
-                // Re-enable the button
-                vinButton.disabled = false;
-                vinButton.innerHTML = '<i class="fas fa-search me-1" style="font-size: 0.9rem;"></i> Decode VIN';
-            }
-        });
-    }
+    // VIN functionality has been moved to the VinDecoder module in modules/vin-decoder.js
 
     // Function to display products
     function displayProducts(listings) {
-        // If we have a productDisplay module, use it
+        // Process and enhance listings
+        const enhancedListings = enhanceProductListings(listings, lastQuery,
+            queryParseData && queryParseData.vehicle_info ?
+                queryParseData.vehicle_info :
+                extractVehicleInfo(lastQuery));
+
+        // Save current listings
+        currentListings = enhancedListings;
+        
+        // If we have a productDisplay module, use it (preferred method)
         if (window.productDisplay) {
-            // Process and enhance listings
-            const enhancedListings = enhanceProductListings(listings, lastQuery,
-                queryParseData && queryParseData.vehicle_info ?
-                    queryParseData.vehicle_info :
-                    extractVehicleInfo(lastQuery));
-
-            // Save current listings and set them in the display system
-            currentListings = enhancedListings;
             window.productDisplay.setProducts(enhancedListings);
-        } else {
-            // Original displayProducts code (for backward compatibility)
-            productsContainer.innerHTML = '';
-
-            if (!listings || listings.length === 0) {
-                productsContainer.innerHTML = '<div class="col-12 text-center"><p>No products found. Try a different search term.</p></div>';
-                return;
+            
+            // Update product count badge
+            const productCountBadge = document.getElementById('products-count');
+            if (productCountBadge) {
+                productCountBadge.textContent = enhancedListings.length;
             }
+            
+            return; // Exit early - display handled by productDisplay module
+        }
+        
+        // If we have the modularized displayProducts function, use it
+        if (window.displayProducts && window.displayProducts !== displayProducts) {
+            window.displayProducts(enhancedListings);
+            return; // Exit early - display handled by the module
+        }
+        
+        // Fallback implementation if neither module is available
+        productsContainer.innerHTML = '';
 
-            listings.forEach(item => {
-                const productId = generateProductId(item);
-                const sourceClass = item.source === 'eBay' ? 'source-ebay' : 'source-google';
-                const conditionClass = item.condition.toLowerCase().includes('new') ? 'condition-new' : 'condition-used';
-                const shippingClass = item.shipping.toLowerCase().includes('free') ? 'free-shipping' : '';
-
-                // Check if this product is a favorite
-                const favorites = loadFavorites();
-                const isFavorite = favorites[productId] !== undefined;
-
-                const productCard = document.createElement('div');
-                productCard.className = 'col-md-4 col-lg-3 mb-3';
-                productCard.innerHTML = `
-                  <div class="product-card">
-                      <div class="product-source ${sourceClass}">${item.source}</div>
-                      <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-product-id="${productId}">
-                          <i class="fas fa-heart"></i>
-                      </button>
-                      <div class="product-image-container" data-image="${item.image || '/static/placeholder.png'}">
-                          <img src="${item.image || '/static/placeholder.png'}" class="product-image" alt="${item.title}">
-                      </div>
-                      <div class="p-3">
-                          <div class="product-title mb-2">${item.title}</div>
-                          <div class="d-flex justify-content-between mb-1">
-                              <span>Condition:</span>
-                              <span class="${conditionClass}">${item.condition}</span>
-                          </div>
-                          <div class="d-flex justify-content-between mb-1">
-                              <span>Price:</span>
-                              <span class="product-price">${item.price}</span>
-                          </div>
-                          <div class="d-flex justify-content-between mb-3">
-                              <span>Shipping:</span>
-                              <span class="${shippingClass}">${item.shipping}</span>
-                          </div>
-                          <a href="${item.link}" target="_blank" class="btn btn-primary btn-sm w-100">View Details</a>
-                      </div>
-                  </div>
-              `;
-
-                productsContainer.appendChild(productCard);
-            });
-
-            // Add event listeners to the favorite buttons
-            attachFavoriteButtonListeners();
-            // Add event listeners to the image containers
-            attachImagePreviewListeners();
+        if (!enhancedListings || enhancedListings.length === 0) {
+            productsContainer.innerHTML = '<div class="col-12 text-center"><p>No products found. Try a different search term.</p></div>';
+            return;
         }
 
+        enhancedListings.forEach(item => {
+            const productId = generateProductId(item);
+            const sourceClass = item.source === 'eBay' ? 'source-ebay' : 'source-google';
+            const conditionClass = item.condition.toLowerCase().includes('new') ? 'condition-new' : 'condition-used';
+            const shippingClass = item.shipping.toLowerCase().includes('free') ? 'free-shipping' : '';
+
+            // Check if this product is a favorite
+            const favorites = loadFavorites();
+            const isFavorite = favorites[productId] !== undefined;
+
+            const productCard = document.createElement('div');
+            productCard.className = 'col-md-4 col-lg-3 mb-3';
+            productCard.innerHTML = `
+              <div class="product-card">
+                  <div class="product-source ${sourceClass}">${item.source}</div>
+                  <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-product-id="${productId}">
+                      <i class="fas fa-heart"></i>
+                  </button>
+                  <div class="product-image-container" data-image="${item.image || '/static/placeholder.png'}">
+                      <img src="${item.image || '/static/placeholder.png'}" class="product-image" alt="${item.title}">
+                  </div>
+                  <div class="p-3">
+                      <div class="product-title mb-2">${item.title}</div>
+                      <div class="d-flex justify-content-between mb-1">
+                          <span>Condition:</span>
+                          <span class="${conditionClass}">${item.condition}</span>
+                      </div>
+                      <div class="d-flex justify-content-between mb-1">
+                          <span>Price:</span>
+                          <span class="product-price">${item.price}</span>
+                      </div>
+                      <div class="d-flex justify-content-between mb-3">
+                          <span>Shipping:</span>
+                          <span class="${shippingClass}">${item.shipping}</span>
+                      </div>
+                      <a href="${item.link}" target="_blank" class="btn btn-danger btn-sm w-100">View Details</a>
+                  </div>
+              </div>
+          `;
+
+            productsContainer.appendChild(productCard);
+        });
+
+        // Add event listeners to the favorite buttons
+        attachFavoriteButtonListeners();
+        // Add event listeners to the image containers
+        attachImagePreviewListeners();
+        
         // Update product count badges
         const productCountBadge = document.getElementById('products-count');
         if (productCountBadge) {
-            productCountBadge.textContent = listings.length;
-        }
-
-        // Update "Products" tab badge to show count
-        const productsTab = document.getElementById('products-tab');
-        if (productsTab) {
-            // Auto-switch to products tab if we have products
-            if (listings.length > 0) {
-                productsTab.click();
-            }
+            productCountBadge.textContent = enhancedListings.length;
         }
     }
 
-    // Function to display VIN data
-    function displayVinData(data) {
-        vinData.innerHTML = '';
-        
-        // Safety check - make sure we have data
-        if (!data || typeof data !== 'object') {
-            vinError.textContent = "Invalid data received from VIN decoder";
-            vinError.classList.remove('d-none');
-            return;
-        }
-        
-        // Check for API error response
-        if (data.error) {
-            vinError.textContent = data.error;
-            vinError.classList.remove('d-none');
-            return;
-        }
 
-        // Create primary info card
-        const primaryInfoCard = document.createElement('div');
-        primaryInfoCard.className = 'col-md-6 mb-4';
-        
-        // Handle the API property format - check if data has Results array (API format) or direct properties
-        // Add robust fallbacks and console logging for debugging
-        let vehicleData;
-        
-        if (data.Results && Array.isArray(data.Results) && data.Results.length > 0) {
-            console.log("Using Results[0] for VIN data");
-            vehicleData = data.Results[0];
-        } else if (data.Count && data.Count > 0 && data.Results) {
-            console.log("Data has Count but Results not usable, data:", data);
-            vehicleData = data;
-        } else {
-            console.log("Using direct properties for VIN data");
-            vehicleData = data;
-        }
-        
-        // Log the vehicle data we're using
-        console.log("Vehicle data to display:", vehicleData);
-        
-        primaryInfoCard.innerHTML = `
-            <div class="card h-100">
-                <div class="card-header bg-primary text-white">Vehicle Information</div>
-                <div class="card-body">
-                    <h5>${vehicleData.ModelYear || 'Unknown'} ${vehicleData.Make || 'Unknown'} ${vehicleData.Model || 'Unknown'} ${vehicleData.Trim || ''}</h5>
-                    <table class="table table-sm">
-                        <tr>
-                            <th>Engine:</th>
-                            <td>${vehicleData.DisplacementL ? vehicleData.DisplacementL + 'L' : ''} ${vehicleData.EngineConfiguration || ''} ${vehicleData.EngineCylinders ? vehicleData.EngineCylinders + '-cyl' : ''}</td>
-                        </tr>
-                        <tr>
-                            <th>Transmission:</th>
-                            <td>${vehicleData.TransmissionStyle || 'N/A'}</td>
-                        </tr>
-                        <tr>
-                            <th>Drive Type:</th>
-                            <td>${vehicleData.DriveType || 'N/A'}</td>
-                        </tr>
-                        <tr>
-                            <th>Body Style:</th>
-                            <td>${vehicleData.BodyClass || 'N/A'}</td>
-                        </tr>
-                        <tr>
-                            <th>Fuel Type:</th>
-                            <td>${vehicleData.FuelTypePrimary || 'N/A'}</td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-        `;
-        vinData.appendChild(primaryInfoCard);
-
-        // Create additional info card
-        const additionalInfoCard = document.createElement('div');
-        additionalInfoCard.className = 'col-md-6 mb-4';
-        additionalInfoCard.innerHTML = `
-            <div class="card h-100">
-                <div class="card-header bg-secondary text-white">Additional Details</div>
-                <div class="card-body">
-                    <table class="table table-sm">
-                        <tr>
-                            <th>VIN:</th>
-                            <td>${vehicleData.VIN || 'N/A'}</td>
-                        </tr>
-                        <tr>
-                            <th>Plant:</th>
-                            <td>${vehicleData.PlantCity ? vehicleData.PlantCity + ', ' + vehicleData.PlantCountry : 'N/A'}</td>
-                        </tr>
-                        <tr>
-                            <th>Series:</th>
-                            <td>${vehicleData.Series || 'N/A'}</td>
-                        </tr>
-                        <tr>
-                            <th>Vehicle Type:</th>
-                            <td>${vehicleData.VehicleType || 'N/A'}</td>
-                        </tr>
-                        <tr>
-                            <th>GVWR:</th>
-                            <td>${vehicleData.GVWR || 'N/A'}</td>
-                        </tr>
-                    </table>
-                    <button class="btn btn-primary mt-2" id="search-this-vehicle">
-                        <i class="fas fa-search me-1"></i> Search Parts for This Vehicle
-                    </button>
-                </div>
-            </div>
-        `;
-        vinData.appendChild(additionalInfoCard);
-
-        // Add event listener to the "Search Parts for This Vehicle" button
-        document.getElementById('search-this-vehicle').addEventListener('click', function () {
-            // Populate the multi-field form with VIN data
-            if (!document.getElementById('single-field-container').classList.contains('d-none')) {
-                // If in single field mode, switch to multi-field
-                document.getElementById('multi-field-toggle').click();
-            }
-
-            // Fill in the fields
-            yearField.value = vehicleData.ModelYear || '';
-            makeField.value = vehicleData.Make || '';
-            modelField.value = vehicleData.Model || '';
-            engineField.value = vehicleData.DisplacementL ? vehicleData.DisplacementL + 'L' : '';
-
-            // Focus on the part field
-            partField.value = '';
-            partField.focus();
-
-            // Switch to search tab
-            document.getElementById('search-tab').click();
-        });
-    }
+    // VIN data display has been moved to the VinDecoder module in modules/vin-decoder.js
 
     // Initialize favorites display
     displayFavorites();
 
-    // Directly attach a click handler for product images at the document level
-    document.addEventListener('click', function (e) {
-        // Find if we clicked on a product image container or one of its children
-        const imageContainer = e.target.closest('.product-image-container');
-        if (!imageContainer) return;
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        // Get the image source from data attribute or img element
-        const imgSrc = imageContainer.dataset.image ||
-            imageContainer.querySelector('img')?.src ||
-            '/static/placeholder.png';
-
-        window.openImageModal(imgSrc);
-    });
-
-    // Also update the modal content styling in the CSS
-    if (imageModal && modalImage) {
-        // Add CSS classes for consistent styling
-        modalImage.classList.add('modal-content');
-        
-        // Add a loading indicator to the modal
-        const loadingSpinner = document.createElement('div');
-        loadingSpinner.className = 'image-loading';
-        loadingSpinner.id = 'image-loading';
-        imageModal.appendChild(loadingSpinner);
-        
-        // Center the modal
-        imageModal.style.display = 'none';
-        imageModal.style.alignItems = 'center';
-        imageModal.style.justifyContent = 'center';
-        
-        // Update the openImageModal function to show/hide the spinner
-        const originalOpen = window.openImageModal;
-        window.openImageModal = function(imgSrc) {
-            // Show the loading spinner
-            document.getElementById('image-loading').style.display = 'block';
-            
-            // Call the original function
-            originalOpen(imgSrc);
-            
-            // Hide the spinner when the image is loaded
-            modalImage.onload = function() {
-                document.getElementById('image-loading').style.display = 'none';
-            };
-        };
-    }
+    // Image modal click handling has been moved to the ImageModal module
 
 });
 
 /**
- * This code replaces the button color override section at the end of main.js
- * Remove these lines from the original file and use the class-based approach instead
+ * Button styling enhancements
+ * This helps maintain consistent brand styling even for dynamically added buttons
  */
+document.addEventListener('DOMContentLoaded', function() {
+    // Style adjustment for UI consistency
+    function styleButtons() {
+        // Find Parts buttons - change from primary to danger class
+        const findPartsButtons = document.querySelectorAll('#find-parts-btn, [id$="find-parts"], button[type="submit"]');
+        findPartsButtons.forEach(button => {
+            if (button.classList.contains('btn-primary')) {
+                button.classList.remove('btn-primary');
+                button.classList.add('btn-danger');
+            }
+        });
 
-document.addEventListener('DOMContentLoaded', function () {
-    // Remove any direct style overrides for buttons
-    // Instead of manually styling buttons in JavaScript, we'll let CSS handle it through proper classes
+        // View Details buttons - ensure consistent styling
+        const viewDetailsButtons = document.querySelectorAll('.view-details, .product-card .btn, .product-actions .btn');
+        viewDetailsButtons.forEach(button => {
+            if (button.classList.contains('btn-primary')) {
+                button.classList.remove('btn-primary');
+                button.classList.add('btn-danger');
+            }
+        });
+    }
 
-    // Ensure all "Find Parts" buttons have the btn-danger class instead of btn-primary
-    const findPartsButtons = document.querySelectorAll('#find-parts-btn, [id$="find-parts"], button[type="submit"]');
-    findPartsButtons.forEach(button => {
-        if (button.classList.contains('btn-primary')) {
-            button.classList.remove('btn-primary');
-            button.classList.add('btn-danger');
-        }
-    });
+    // Run the initial button styling
+    styleButtons();
 
-    // Make sure that View Details buttons have the correct classes
-    const viewDetailsButtons = document.querySelectorAll('.view-details, .product-card .btn, .product-actions .btn');
-    viewDetailsButtons.forEach(button => {
-        if (button.classList.contains('btn-primary')) {
-            button.classList.remove('btn-primary');
-            button.classList.add('btn-danger');
-        }
-    });
-
-    // Use MutationObserver to handle dynamically added buttons
-    const observer = new MutationObserver(function (mutations) {
-        mutations.forEach(function (mutation) {
+    // Set up observer for dynamically added buttons
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
             if (mutation.addedNodes && mutation.addedNodes.length > 0) {
-                mutation.addedNodes.forEach(function (node) {
+                mutation.addedNodes.forEach(function(node) {
                     if (node.nodeType === 1) { // ELEMENT_NODE
                         // Find new buttons inside the added node
                         const newButtons = node.querySelectorAll('.btn-primary, .view-details, .product-card .btn');
@@ -1641,182 +1285,6 @@ document.addEventListener('DOMContentLoaded', function () {
         subtree: true
     });
 });
-// Add this to your main.js file to integrate the exact year matching improvements
+// The enhanced displayProducts function has been moved to modules/product-renderer.js
 
-/**
- * Enhanced function to display products with exact year highlighting
- */
-function displayProducts(listings) {
-    // Clear the container
-    productsContainer.innerHTML = '';
-
-    if (!listings || listings.length === 0) {
-        productsContainer.innerHTML = '<div class="col-12 text-center"><p>No products found. Try a different search term.</p></div>';
-        return;
-    }
-
-    // Extract the year we searched for (from query or structured form)
-    const searchYear = getSearchYear();
-
-    // Group by match type if we have exact year matches
-    const exactMatches = listings.filter(item => item.exactYearMatch);
-    const compatibleMatches = listings.filter(item => item.compatibleRange && !item.exactYearMatch);
-    const otherMatches = listings.filter(item => !item.exactYearMatch && !item.compatibleRange);
-
-    // Show headers for each section if we have exact matches
-    if (exactMatches.length > 0) {
-        // Create exact match section header
-        const exactMatchHeader = document.createElement('div');
-        exactMatchHeader.className = 'col-12';
-        exactMatchHeader.innerHTML = `
-            <div class="results-section-title">
-                <i class="fas fa-check-circle text-success me-2"></i>
-                Exact Year Matches (${exactMatches.length})
-            </div>
-        `;
-        productsContainer.appendChild(exactMatchHeader);
-
-        // Display exact matches
-        exactMatches.forEach(item => {
-            renderProductCard(item, true);
-        });
-
-        // Show compatible matches if any
-        if (compatibleMatches.length > 0) {
-            const compatibleHeader = document.createElement('div');
-            compatibleHeader.className = 'col-12 mt-4';
-            compatibleHeader.innerHTML = `
-                <div class="results-section-title">
-                    <i class="fas fa-calendar-alt text-primary me-2"></i>
-                    Compatible Year Range Matches (${compatibleMatches.length})
-                </div>
-            `;
-            productsContainer.appendChild(compatibleHeader);
-
-            // Display compatible matches
-            compatibleMatches.forEach(item => {
-                renderProductCard(item, false, true);
-            });
-        }
-
-        // Show other matches if any
-        if (otherMatches.length > 0) {
-            const otherHeader = document.createElement('div');
-            otherHeader.className = 'col-12 mt-4';
-            otherHeader.innerHTML = `
-                <div class="results-section-title">
-                    <i class="fas fa-search me-2"></i>
-                    Other Matches (${otherMatches.length})
-                </div>
-            `;
-            productsContainer.appendChild(otherHeader);
-
-            // Display other matches
-            otherMatches.forEach(item => {
-                renderProductCard(item, false, false);
-            });
-        }
-    } else {
-        // No exact matches - just show all listings without sections
-        listings.forEach(item => {
-            renderProductCard(item, false, !!item.compatibleRange);
-        });
-    }
-
-    // Add event listeners to the favorite buttons
-    attachFavoriteButtonListeners();
-    // Add event listeners to the image containers
-    attachImagePreviewListeners();
-
-    // Update product count badges
-    const productCountBadge = document.getElementById('products-count');
-    if (productCountBadge) {
-        productCountBadge.textContent = listings.length;
-    }
-}
-
-/**
- * Helper function to get the search year
- */
-function getSearchYear() {
-    // Try multi-field first
-    const yearField = document.getElementById('year-field');
-    if (yearField && yearField.value) {
-        return yearField.value.trim();
-    }
-
-    // Try single field prompt - extract year with regex
-    const promptField = document.getElementById('prompt');
-    if (promptField && promptField.value) {
-        const yearMatch = promptField.value.match(/\b(19|20)\d{2}\b/);
-        if (yearMatch) {
-            return yearMatch[0];
-        }
-    }
-
-    return null;
-}
-
-/**
- * Helper function to render a product card with appropriate styling
- */
-function renderProductCard(product, isExactMatch, isCompatible) {
-    const productId = generateProductId(product);
-    const sourceClass = product.source === 'eBay' ? 'source-ebay' : 'source-google';
-    const conditionClass = product.condition.toLowerCase().includes('new') ? 'condition-new' : 'condition-used';
-    const shippingClass = product.shipping.toLowerCase().includes('free') ? 'free-shipping' : '';
-
-    // Check if this product is a favorite
-    const favorites = loadFavorites();
-    const isFavorite = favorites[productId] !== undefined;
-
-    // Build card classes
-    let cardClasses = "product-card";
-    if (isExactMatch) {
-        cardClasses += " exact-year-match";
-    }
-
-    // Create the product card element
-    const productCard = document.createElement('div');
-    productCard.className = 'col-md-4 col-lg-3 mb-3';
-
-    // Build badge HTML
-    let badgeHtml = '';
-    if (isExactMatch) {
-        badgeHtml = '<div class="exact-match-badge">Exact Year Match</div>';
-    } else if (isCompatible && product.compatibleRange) {
-        badgeHtml = `<div class="compatible-badge">Compatible ${product.compatibleRange}</div>`;
-    }
-
-    // Build the card HTML
-    productCard.innerHTML = `
-        <div class="${cardClasses}">
-            <div class="product-source ${sourceClass}">${product.source}</div>
-            ${badgeHtml}
-            <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-product-id="${productId}">
-                <i class="fas fa-heart"></i>
-            </button>
-            <div class="product-image-container" data-image="${product.image || '/static/placeholder.png'}">
-                <img src="${product.image || '/static/placeholder.png'}" class="product-image" alt="${product.title}">
-            </div>
-            <div class="p-3">
-                <div class="product-title mb-2">${product.title}</div>
-                <div class="d-flex justify-content-between mb-1">
-                    <span>Condition:</span>
-                    <span class="${conditionClass}">${product.condition}</span>
-                </div>
-                <div class="d-flex justify-content-between mb-1">
-                    <span>Price:</span>
-                    <span class="product-price">${product.price}</span>
-                </div>
-                <div class="d-flex justify-content-between mb-3">
-                    <span>Shipping:</span>
-                    <span class="${shippingClass}">${product.shipping}</span>
-                </div>
-                <a href="${product.link}" target="_blank" class="btn btn-danger btn-sm w-100">View Details</a>
-            </div>
-        </div>
-    `;
-
-    productsContainer.appendChild(productCard);
-}
+// Helper functions have been moved to the modules/product-renderer.js file

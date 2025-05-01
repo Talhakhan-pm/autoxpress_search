@@ -7,8 +7,11 @@
     <title>AutoXpress Smart Assistant | Your Auto Parts Search AI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <!-- Add the autocomplete CSS file -->
+    <!-- CSS Variables for design system -->
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <!-- Application CSS -->
     <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/favorites-actions.css">
     <!-- No inline styles here anymore - all styles are in the CSS file -->
 </head>
 
@@ -422,11 +425,17 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Feature Modules -->
+    <script src="/static/js/modules/vin-decoder.js"></script>
+    <script src="/static/js/modules/product-renderer.js"></script>
+    <script src="/static/js/modules/image-modal.js"></script>
+    
+    <!-- Core Application Scripts -->
     <script src="/static/js/field-autocomplete.js"></script>
-    <script src="/static/js/main.js"></script>
     <script src="/static/js/updated_products.js"></script>
+    <script src="/static/js/main.js"></script>
     <script src="/static/js/favorites-actions.js"></script>
-    <link rel="stylesheet" href="/static/css/favorites-actions.css">
 </body>
 
 </html>
