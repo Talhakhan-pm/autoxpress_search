@@ -403,6 +403,35 @@ function displayProductsPage() {
  * Creates HTML for a product in grid view with proper condition and shipping styling
  */
 function createGridViewProduct(product, productId, sourceClass, exactMatchClass, isFavorite) {
+  // Process with ranking system if not already processed
+  if (window.ProductRanking && !product.relevanceScore) {
+    const vehicleInfo = {
+      make: document.getElementById('make-field')?.value || '',
+      model: document.getElementById('model-field')?.value || '',
+      year: document.getElementById('year-field')?.value || '',
+      part: document.getElementById('part-field')?.value || ''
+    };
+    product = window.ProductRanking.rankProduct(product, vehicleInfo);
+  }
+  
+  // Add additional badges if they weren't added by ranking system
+  if (window.ProductBadges) {
+    if (!product.primaryBadge && !product.secondaryBadges) {
+      product.secondaryBadges = [];
+      
+      // Add condition badge if not present
+      const conditionBadge = window.ProductBadges.mapConditionToBadge(product.condition);
+      if (conditionBadge) {
+        product.secondaryBadges.push(conditionBadge);
+      }
+      
+      // Add shipping badge if not present
+      const shippingBadge = window.ProductBadges.mapShippingToBadge(product.shipping);
+      if (shippingBadge) {
+        product.secondaryBadges.push(shippingBadge);
+      }
+    }
+  }
   // Determine condition class based on product condition
   let conditionClass = 'condition-unknown';
   let conditionValueClass = '';
@@ -431,24 +460,36 @@ function createGridViewProduct(product, productId, sourceClass, exactMatchClass,
     shippingValueClass = 'paid-shipping';
   }
 
-  // Create tags
+  // Skip creating redundant tags - these will be handled by the badge system
   let tags = '';
-  if (product.condition.toLowerCase().includes('new')) {
-    tags += `<span class="product-tag tag-new">New</span>`;
-  } else if (product.condition.toLowerCase().includes('used') ||
-    product.condition.toLowerCase().includes('pre-owned')) {
-    tags += `<span class="product-tag tag-used">Pre-Owned</span>`;
+  
+  // Only create basic tags if badge system isn't available
+  if (!window.ProductBadges) {
+    if (product.condition.toLowerCase().includes('new')) {
+      tags += `<span class="product-tag tag-new">New</span>`;
+    } else if (product.condition.toLowerCase().includes('used') ||
+      product.condition.toLowerCase().includes('pre-owned')) {
+      tags += `<span class="product-tag tag-used">Pre-Owned</span>`;
+    }
+
+    if (product.shipping.toLowerCase().includes('free')) {
+      tags += `<span class="product-tag tag-free-shipping">Free Shipping</span>`;
+    }
   }
 
-  if (product.shipping.toLowerCase().includes('free')) {
-    tags += `<span class="product-tag tag-free-shipping">Free Shipping</span>`;
+  // Add product badge support
+  let relevanceBadge = '';
+  if (window.ProductBadges && product.primaryBadge) {
+    const badges = window.ProductBadges.renderBadges(product);
+    relevanceBadge = badges.primary;
   }
 
-  // Badge removed as part of badge strategy redesign
-  const relevanceBadge = '';
-
+  // Add relevance class from ranking system
+  const relevanceClass = product.relevanceScore >= 80 ? 'product-relevance-high' : 
+                       product.relevanceScore >= 50 ? 'product-relevance-medium' : '';
+  
   return `
-      <div class="product-card">
+      <div class="product-card ${relevanceClass}" data-product-id="${productId}">
         <div class="product-source ${sourceClass}">${product.source}</div>
         ${relevanceBadge}
         <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-product-id="${productId}">
@@ -483,6 +524,35 @@ function createGridViewProduct(product, productId, sourceClass, exactMatchClass,
  * Creates HTML for a product in list view with proper condition and shipping styling
  */
 function createListViewProduct(product, productId, sourceClass, exactMatchClass, isFavorite) {
+  // Process with ranking system if not already processed
+  if (window.ProductRanking && !product.relevanceScore) {
+    const vehicleInfo = {
+      make: document.getElementById('make-field')?.value || '',
+      model: document.getElementById('model-field')?.value || '',
+      year: document.getElementById('year-field')?.value || '',
+      part: document.getElementById('part-field')?.value || ''
+    };
+    product = window.ProductRanking.rankProduct(product, vehicleInfo);
+  }
+  
+  // Add additional badges if they weren't added by ranking system
+  if (window.ProductBadges) {
+    if (!product.primaryBadge && !product.secondaryBadges) {
+      product.secondaryBadges = [];
+      
+      // Add condition badge if not present
+      const conditionBadge = window.ProductBadges.mapConditionToBadge(product.condition);
+      if (conditionBadge) {
+        product.secondaryBadges.push(conditionBadge);
+      }
+      
+      // Add shipping badge if not present
+      const shippingBadge = window.ProductBadges.mapShippingToBadge(product.shipping);
+      if (shippingBadge) {
+        product.secondaryBadges.push(shippingBadge);
+      }
+    }
+  }
   // Determine condition class based on product condition
   let conditionClass = 'condition-unknown';
   let conditionValueClass = '';
@@ -511,24 +581,36 @@ function createListViewProduct(product, productId, sourceClass, exactMatchClass,
     shippingValueClass = 'paid-shipping';
   }
 
-  // Create tags
+  // Skip creating redundant tags - these will be handled by the badge system
   let tags = '';
-  if (product.condition.toLowerCase().includes('new')) {
-    tags += `<span class="product-tag tag-new">New</span>`;
-  } else if (product.condition.toLowerCase().includes('used') ||
-    product.condition.toLowerCase().includes('pre-owned')) {
-    tags += `<span class="product-tag tag-used">Pre-Owned</span>`;
+  
+  // Only create basic tags if badge system isn't available
+  if (!window.ProductBadges) {
+    if (product.condition.toLowerCase().includes('new')) {
+      tags += `<span class="product-tag tag-new">New</span>`;
+    } else if (product.condition.toLowerCase().includes('used') ||
+      product.condition.toLowerCase().includes('pre-owned')) {
+      tags += `<span class="product-tag tag-used">Pre-Owned</span>`;
+    }
+
+    if (product.shipping.toLowerCase().includes('free')) {
+      tags += `<span class="product-tag tag-free-shipping">Free Shipping</span>`;
+    }
   }
 
-  if (product.shipping.toLowerCase().includes('free')) {
-    tags += `<span class="product-tag tag-free-shipping">Free Shipping</span>`;
+  // Add product badge support
+  let relevanceBadge = '';
+  if (window.ProductBadges && product.primaryBadge) {
+    const badges = window.ProductBadges.renderBadges(product);
+    relevanceBadge = badges.primary;
   }
 
-  // Badge removed as part of badge strategy redesign
-  const relevanceBadge = '';
-
+  // Add relevance class from ranking system
+  const relevanceClass = product.relevanceScore >= 80 ? 'product-relevance-high' : 
+                       product.relevanceScore >= 50 ? 'product-relevance-medium' : '';
+  
   return `
-      <div class="product-card">
+      <div class="product-card ${relevanceClass}" data-product-id="${productId}">
         <div class="product-source ${sourceClass}">${product.source}</div>
         ${relevanceBadge}
         <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-product-id="${productId}">
@@ -582,6 +664,17 @@ function loadMoreProducts() {
 function setProducts(products) {
   if (!products || !Array.isArray(products)) {
     return;
+  }
+  
+  // Process products through ranking system if available
+  if (window.ProductRanking) {
+    const vehicleInfo = {
+      make: document.getElementById('make-field')?.value || '',
+      model: document.getElementById('model-field')?.value || '',
+      year: document.getElementById('year-field')?.value || '',
+      part: document.getElementById('part-field')?.value || ''
+    };
+    products = window.ProductRanking.rankProducts(products, vehicleInfo);
   }
 
   // Save products to state
@@ -647,5 +740,9 @@ window.productDisplay = {
   loadMoreProducts,
   resetFilters,
   updateViewMode,
-  sortAndDisplayProducts
+  sortAndDisplayProducts,
+  // Provide access to the product data
+  getProducts: function() {
+    return productConfig.allProducts || [];
+  }
 };

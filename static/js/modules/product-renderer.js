@@ -1,132 +1,163 @@
 /**
  * Product Renderer Module
- * Handles rendering product cards and displaying products in different views
+ * Handles the rendering of product cards with badge support
  */
 
-// Helper function to get the search year
-function getSearchYear() {
-  // Try multi-field first
-  const yearField = document.getElementById('year-field');
-  if (yearField && yearField.value) {
-    return yearField.value.trim();
+const ProductRenderer = (function() {
+  
+  /**
+   * Renders a single product card
+   * @param {Object} product - Product data with ranking data
+   * @returns {string} HTML for the product card
+   */
+  function renderProductCard(product) {
+    // Get relevance class based on score
+    const relevanceClass = product.relevanceScore >= 80 ? 'product-relevance-high' : 
+                          product.relevanceScore >= 50 ? 'product-relevance-medium' : '';
+    
+    // Generate unique product ID
+    const productId = typeof generateProductId === 'function' ? 
+                     generateProductId(product) : 
+                     product.id || btoa(product.title + product.price);
+    
+    // Determine if product is favorite
+    const favorites = typeof loadFavorites === 'function' ? loadFavorites() : {};
+    const isFavorite = favorites[productId] !== undefined;
+    
+    // Render badges using ProductBadges if available
+    const badgesHTML = window.ProductBadges ? renderBadgesHTML(product) : '';
+    
+    return `
+      <div class="col-md-4 mb-4">
+        <div class="card product-card h-100 ${relevanceClass}" data-product-id="${productId}">
+          <div class="card-header">
+            <div class="product-title">${product.title}</div>
+            ${badgesHTML}
+          </div>
+          <div class="card-img-container">
+            <img src="${product.image}" class="card-img-top product-image" 
+                 alt="${product.title}" data-full-img="${product.fullImage || product.image}">
+          </div>
+          <div class="card-body">
+            <p class="card-text">
+              <strong>Brand:</strong> ${product.brand || 'N/A'}<br>
+              <strong>Part Type:</strong> ${product.partType || 'N/A'}<br>
+              <strong>Condition:</strong> ${product.condition || 'N/A'}<br>
+              <strong>Price:</strong> ${typeof product.price === 'number' ? 
+                                       '$' + product.price.toFixed(2) : 
+                                       product.price}
+            </p>
+          </div>
+          <div class="card-footer">
+            <div class="btn-group w-100">
+              <button class="btn btn-primary view-details-btn" data-product-id="${productId}">
+                <i class="fas fa-info-circle"></i> Details
+              </button>
+              <button class="btn btn-outline-primary add-favorite-btn" data-product-id="${productId}">
+                <i class="${isFavorite ? 'fas' : 'far'} fa-heart"></i>
+              </button>
+              <button class="btn btn-success add-to-cart-btn" data-product-id="${productId}">
+                <i class="fas fa-shopping-cart"></i> Add
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
   }
-
-  // Try single field prompt - extract year with regex
-  const promptField = document.getElementById('prompt');
-  if (promptField && promptField.value) {
-    const yearMatch = promptField.value.match(/\b(19|20)\d{2}\b/);
-    if (yearMatch) {
-      return yearMatch[0];
+  
+  /**
+   * Renders badges HTML using ProductBadges module
+   * @param {Object} product - Ranked product with badge data
+   * @returns {string} HTML for badges
+   */
+  function renderBadgesHTML(product) {
+    if (!window.ProductBadges) return '';
+    
+    const badges = window.ProductBadges.renderBadges(product);
+    return `
+      <div class="product-badges-container">
+        ${badges.primary}
+        <div class="product-secondary-badges">
+          ${badges.secondary}
+        </div>
+      </div>
+    `;
+  }
+  
+  /**
+   * Renders a list of products
+   * @param {Array} products - Array of already ranked product data objects
+   * @param {HTMLElement} container - DOM element to render products into
+   */
+  function renderProductList(products, container) {
+    // Clear the container and add products
+    container.innerHTML = '';
+    
+    if (!products || products.length === 0) {
+      container.innerHTML = '<div class="col-12"><div class="alert alert-info">No products found matching your criteria.</div></div>';
+      return;
     }
-  }
-
-  return null;
-}
-
-/**
- * Helper function to render a product card with appropriate styling
- */
-function renderProductCard(product, isExactMatch, isCompatible) {
-  const productsContainer = document.getElementById('products-container');
-  if (!productsContainer) return;
-
-  const productId = generateProductId(product);
-  const sourceClass = product.source === 'eBay' ? 'source-ebay' : 'source-google';
-  const conditionClass = product.condition.toLowerCase().includes('new') ? 'condition-new' : 'condition-used';
-  const shippingClass = product.shipping.toLowerCase().includes('free') ? 'free-shipping' : '';
-
-  // Check if this product is a favorite
-  const favorites = loadFavorites();
-  const isFavorite = favorites[productId] !== undefined;
-
-  // Build card classes - removed badge classes
-  let cardClasses = "product-card";
-
-  // Create the product card element
-  const productCard = document.createElement('div');
-  productCard.className = 'col-md-4 col-lg-3 mb-3';
-
-  // Badge HTML removed as part of badge strategy redesign
-  let badgeHtml = '';
-
-  // Build the card HTML
-  productCard.innerHTML = `
-    <div class="${cardClasses}">
-      <div class="product-source ${sourceClass}">${product.source}</div>
-      ${badgeHtml}
-      <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-product-id="${productId}">
-        <i class="fas fa-heart"></i>
-      </button>
-      <div class="product-image-container" data-image="${product.image || '/static/placeholder.png'}">
-        <img src="${product.image || '/static/placeholder.png'}" class="product-image" alt="${product.title}">
-      </div>
-      <div class="p-3">
-        <div class="product-title mb-2">${product.title}</div>
-        <div class="d-flex justify-content-between mb-1">
-          <span>Condition:</span>
-          <span class="${conditionClass}">${product.condition}</span>
-        </div>
-        <div class="d-flex justify-content-between mb-1">
-          <span>Price:</span>
-          <span class="product-price">${product.price}</span>
-        </div>
-        <div class="d-flex justify-content-between mb-3">
-          <span>Shipping:</span>
-          <span class="${shippingClass}">${product.shipping}</span>
-        </div>
-        <a href="${product.link}" target="_blank" class="btn btn-danger btn-sm w-100">View Details</a>
-      </div>
-    </div>
-  `;
-
-  productsContainer.appendChild(productCard);
-}
-
-/**
- * Displays products with exact year highlighting
- */
-function displayProducts(listings) {
-  const productsContainer = document.getElementById('products-container');
-  if (!productsContainer) return;
-  
-  // Clear the container
-  productsContainer.innerHTML = '';
-
-  if (!listings || listings.length === 0) {
-    productsContainer.innerHTML = '<div class="col-12 text-center"><p>No products found. Try a different search term.</p></div>';
-    return;
-  }
-
-  // Extract the year we searched for (from query or structured form)
-  const searchYear = getSearchYear();
-
-  // Simplified display without categorization - removed badges
-  listings.forEach(item => {
-    renderProductCard(item, false, false);
-  });
-
-  // Add event listeners to the favorite buttons
-  if (typeof attachFavoriteButtonListeners === 'function') {
-    attachFavoriteButtonListeners();
+    
+    const row = document.createElement('div');
+    row.className = 'row product-grid';
+    
+    products.forEach(product => {
+      row.innerHTML += renderProductCard(product);
+    });
+    
+    container.appendChild(row);
+    
+    // Dispatch an event indicating products have been rendered
+    container.dispatchEvent(new CustomEvent('products-rendered', {
+      detail: { products: products }
+    }));
   }
   
-  // Add event listeners to the image containers
-  if (typeof attachImagePreviewListeners === 'function') {
-    attachImagePreviewListeners();
-  }
-
-  // Update product count badges
-  const productCountBadge = document.getElementById('products-count');
-  if (productCountBadge) {
-    productCountBadge.textContent = listings.length;
+  /**
+   * Updates existing product cards with new ranking data
+   * @param {Array} products - Array of ranked product data objects
+   */
+  function updateProductCards(products) {
+    if (!products || !Array.isArray(products)) return;
+    
+    products.forEach(product => {
+      const productId = typeof generateProductId === 'function' ? 
+                       generateProductId(product) : product.id;
+      
+      const card = document.querySelector(`.product-card[data-product-id="${productId}"]`);
+      if (!card) return;
+      
+      // Update relevance class
+      card.classList.remove('product-relevance-high', 'product-relevance-medium');
+      if (product.relevanceScore >= 80) {
+        card.classList.add('product-relevance-high');
+      } else if (product.relevanceScore >= 50) {
+        card.classList.add('product-relevance-medium');
+      }
+      
+      // Update badges
+      if (window.ProductBadges) {
+        const badgeContainer = card.querySelector('.product-badges-container');
+        if (badgeContainer) {
+          badgeContainer.outerHTML = renderBadgesHTML(product);
+        }
+      }
+    });
+    
+    // Dispatch update event
+    document.dispatchEvent(new CustomEvent('products-updated', {
+      detail: { products: products }
+    }));
   }
   
-  // Trigger a custom event to notify that products were displayed
-  // This helps other modules (like the image modal) know when to attach handlers
-  document.dispatchEvent(new CustomEvent('productsDisplayed'));
-}
+  // Public API
+  return {
+    renderProductCard,
+    renderProductList,
+    updateProductCards
+  };
+})();
 
-// Make globally available
-window.renderProductCard = renderProductCard;
-window.getSearchYear = getSearchYear;
-window.displayProducts = displayProducts;
+// Export globally
+window.ProductRenderer = ProductRenderer;

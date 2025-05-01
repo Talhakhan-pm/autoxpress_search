@@ -1,0 +1,120 @@
+/**
+ * Product Badges Styling
+ */
+
+/* Primary badge styles */
+.product-primary-badge {
+  display: none;
+  align-items: center;
+  padding: 4px 8px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  position: absolute;
+  top: 32px;
+  right: 8px;
+  z-index: 2;
+}
+
+/* Secondary badge/tag styles */
+.product-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  margin-right: 4px;
+  margin-bottom: 4px;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+
+/* Hover effect for tags */
+.product-tag:hover {
+  opacity: 0.9;
+}
+
+/* Badge specific styles */
+.badge-best-match,
+.badge-relevance {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.badge-exact-year {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.badge-compatible {
+  background-color: #cce5ff;
+  color: #004085;
+}
+
+.badge-part-match {
+  background-color: #e2e3e5;
+  color: #383d41;
+}
+
+.badge-oem {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.badge-condition {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.badge-shipping {
+  background-color: #cff4fc;
+  color: #055160;
+}
+
+.badge-brand {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Badge icon spacing */
+.product-primary-badge i,
+.product-tag i {
+  margin-right: 4px;
+}
+
+/* Badge container */
+.product-badges-container {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+
+.product-secondary-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Make sure badges are visible on all view modes */
+.list-view .product-primary-badge {
+  display: none;
+  top: 10px;
+  right: 10px;
+}
+
+.compact-view .product-primary-badge {
+  display: none;
+  top: 8px;
+  right: 5px;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+}
+
+/* Fix for product tags container */
+.product-tags {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
