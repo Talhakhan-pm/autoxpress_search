@@ -1,0 +1,140 @@
+/**
+ * Source Filter Styles
+ */
+
+/* Source filter badges */
+.source-badge {
+  display: flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.source-badge i {
+  margin-right: 0.25rem;
+}
+
+.source-badge-count {
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #333;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 10px;
+  margin-left: 0.25rem;
+}
+
+/* eBay specific styling */
+.source-ebay-badge {
+  background-color: #e53238;
+  color: white;
+}
+
+.source-ebay-check:checked + .form-check-label {
+  color: #e53238;
+  font-weight: 600;
+}
+
+/* Google Shopping specific styling */
+.source-google-badge {
+  background-color: #4285F4;
+  color: white;
+}
+
+.source-google-check:checked + .form-check-label {
+  color: #4285F4;
+  font-weight: 600;
+}
+
+/* Empty source selection warning */
+.empty-source-warning {
+  color: #e74c3c;
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  margin-top: 0.5rem;
+  background-color: #fef5f5;
+  border-radius: 4px;
+  display: none;
+}
+
+.empty-source-warning.visible {
+  display: block;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Source data visualization */
+.source-stats {
+  display: flex;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.source-stat-bar {
+  height: 6px;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.source-ebay-bar {
+  background-color: #e53238;
+}
+
+.source-google-bar {
+  background-color: #4285F4;
+}
+
+/* Source icon in product card */
+.product-source.source-ebay {
+  background-color: #e53238;
+}
+
+.product-source.source-google {
+  background-color: #4285F4;
+}
+
+/* Source filters in the sidebar */
+.source-filter-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.source-filter-item .icon {
+  width: 16px;
+  margin-right: 0.5rem;
+  text-align: center;
+}
+
+.source-filter-item .label {
+  flex-grow: 1;
+}
+
+.source-filter-item .count {
+  background-color: #f0f0f0;
+  color: #333;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767.98px) {
+  .source-filter-item {
+    margin-bottom: 0.75rem;
+  }
+  
+  .source-filter-item .label {
+    font-size: 0.9rem;
+  }
+}

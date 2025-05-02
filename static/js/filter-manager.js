@@ -87,10 +87,35 @@ const FilterManager = (function() {
       
       if (!Array.isArray(values) || values.length === 0) return;
       
-      // Skip source if all sources are selected
-      if (filterType === 'source' && 
-          values.includes('eBay') && values.includes('Google Shopping')) {
-        return;
+      // Handle source filters using SourceManager if available
+      if (filterType === 'source') {
+        if (window.SourceManager) {
+          // Use SourceManager to create badges for sources
+          const sourceBadges = window.SourceManager.createSourceBadges(values);
+          if (sourceBadges) {
+            const sourceTagsContainer = document.createElement('div');
+            sourceTagsContainer.className = 'source-badges-container';
+            sourceTagsContainer.innerHTML = sourceBadges;
+            
+            // Add click handlers to remove source filters
+            sourceTagsContainer.querySelectorAll('.remove-filter').forEach(removeBtn => {
+              removeBtn.addEventListener('click', function() {
+                const sourceValue = this.closest('.source-badge').dataset.value;
+                removeFilter('source', sourceValue);
+              });
+            });
+            
+            appliedFiltersContainer.appendChild(sourceTagsContainer);
+          }
+          return;
+        }
+        
+        // Fall back to default behavior if SourceManager isn't available
+        // Skip source if all sources are selected
+        const allSources = window.productConfig?.availableSources?.map(s => s.id) || ['eBay', 'Google Shopping'];
+        if (allSources.every(source => values.includes(source))) {
+          return;
+        }
       }
       
       values.forEach(value => {
@@ -174,6 +199,12 @@ const FilterManager = (function() {
       source: { 'eBay': 0, 'Google Shopping': 0 }
     };
     
+    // If SourceManager is available, let it handle source counts and display
+    if (window.SourceManager) {
+      // Update source display information
+      window.SourceManager.updateSourceDisplay();
+    }
+    
     // Count matches in products
     products.forEach(product => {
       // Count condition
@@ -186,8 +217,8 @@ const FilterManager = (function() {
         counts.shipping.free++;
       }
       
-      // Count source
-      if (counts.source[product.source] !== undefined) {
+      // Count source (only when SourceManager not available)
+      if (!window.SourceManager && counts.source[product.source] !== undefined) {
         counts.source[product.source]++;
       }
       

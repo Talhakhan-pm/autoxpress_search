@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="/static/css/filter-badges.css">
     <link rel="stylesheet" href="/static/css/lazy-loading.css">
     <link rel="stylesheet" href="/static/css/error-handler.css">
+    <link rel="stylesheet" href="/static/css/source-filters.css">
     <!-- No inline styles here anymore - all styles are in the CSS file -->
 </head>
 
@@ -479,18 +480,28 @@
                                                     
                                                     <div class="dropdown-divider"></div>
                                                     <h6 class="dropdown-header">Sources</h6>
+                                                    <div class="source-stats mb-2" id="source-distribution"></div>
                                                     <div class="form-check">
-                                                        <input class="form-check-input filter-check" type="checkbox"
+                                                        <input class="form-check-input filter-check source-ebay-check" type="checkbox"
                                                             id="ebaySource" data-filter="source" data-value="eBay"
                                                             checked>
-                                                        <label class="form-check-label" for="ebaySource">eBay</label>
+                                                        <label class="form-check-label" for="ebaySource">
+                                                            <i class="fab fa-ebay"></i> eBay 
+                                                            <span class="source-count" id="ebay-count"></span>
+                                                        </label>
                                                     </div>
                                                     <div class="form-check">
-                                                        <input class="form-check-input filter-check" type="checkbox"
+                                                        <input class="form-check-input filter-check source-google-check" type="checkbox"
                                                             id="googleSource" data-filter="source"
                                                             data-value="Google Shopping" checked>
-                                                        <label class="form-check-label" for="googleSource">Google
-                                                            Shopping</label>
+                                                        <label class="form-check-label" for="googleSource">
+                                                            <i class="fab fa-google"></i> Google Shopping
+                                                            <span class="source-count" id="google-count"></span>
+                                                        </label>
+                                                    </div>
+                                                    <div class="empty-source-warning" id="empty-source-warning">
+                                                        <i class="fas fa-exclamation-triangle"></i> 
+                                                        Please select at least one source to view products.
                                                     </div>
                                                     <div class="dropdown-divider"></div>
                                                     <button id="resetFilters"
@@ -633,6 +644,7 @@
     <script src="/static/js/filter-manager.js"></script>
     <script src="/static/js/field-autocomplete.js"></script>
     <script src="/static/js/updated_products.js"></script>
+    <script src="/static/js/source-manager.js"></script>
     <script src="/static/js/main.js"></script>
     <script src="/static/js/favorites-actions.js"></script>
     <script src="/static/js/location-lookup.js"></script>

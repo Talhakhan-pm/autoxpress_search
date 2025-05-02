@@ -70,6 +70,13 @@ const productConfig = {
     relevance: [],
     badge: []  // Filter by badge types
   },
+  // Available data sources - makes it easier to add new sources in the future
+  availableSources: [
+    { id: 'eBay', name: 'eBay', icon: 'fab fa-ebay', color: '#e53238' },
+    { id: 'Google Shopping', name: 'Google Shopping', icon: 'fab fa-google', color: '#4285F4' }
+    // Add more sources here in the future, like:
+    // { id: 'Amazon', name: 'Amazon', icon: 'fab fa-amazon', color: '#FF9900' }
+  ],
   allProducts: [], // All products returned from API
   displayedProducts: [], // Products currently shown (after filtering)
   currentPage: 1
@@ -224,7 +231,7 @@ function resetFilters() {
   productConfig.activeFilters = {
     condition: [],
     shipping: [],
-    source: ['eBay', 'Google Shopping'],
+    source: productConfig.availableSources.map(source => source.id), // Use available sources
     relevance: [],
     badge: []  // New filter for badge types
   };
@@ -289,6 +296,12 @@ function applyFilters() {
       filteredProducts = filteredProducts.filter(product =>
         productConfig.activeFilters.source.includes(product.source)
       );
+    } else {
+      // If no sources are selected, show warning but don't filter out everything
+      const emptyWarningElement = document.getElementById('empty-source-warning');
+      if (emptyWarningElement) {
+        emptyWarningElement.classList.add('visible');
+      }
     }
 
     // Apply relevance filter
@@ -1026,6 +1039,28 @@ function getVehicleInfo() {
 }
 
 // Export the API
+/**
+ * Gets product counts by source
+ * @returns {Object} Counts by source ID
+ */
+function getSourceCounts() {
+  const counts = {};
+  
+  // Initialize with zeros
+  productConfig.availableSources.forEach(source => {
+    counts[source.id] = 0;
+  });
+  
+  // Count products by source
+  productConfig.allProducts.forEach(product => {
+    if (product.source && counts[product.source] !== undefined) {
+      counts[product.source]++;
+    }
+  });
+  
+  return counts;
+}
+
 window.productDisplay = {
   setProducts,
   loadMoreProducts,
@@ -1043,6 +1078,11 @@ window.productDisplay = {
   },
   // Helper for badge filtering
   hasSpecificBadge,
+  // Source information and statistics
+  getSourceCounts,
+  getSources: function() {
+    return productConfig.availableSources;
+  },
   // Expose vehicle info getter
   getVehicleInfo
 };
