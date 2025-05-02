@@ -297,7 +297,7 @@ def fetch_ebay_results(query_type, query, timestamp=None, part_type=None):
     
     # Note: timestamp is ignored - the get_serpapi_cached function handles TTL internally
     results = get_serpapi_cached("ebay", query, query_type, **params)
-    return process_ebay_results(results, query, max_items=20)
+    return process_ebay_results(results, query, max_items=100)
 
 def get_ebay_category_id(part_type):
     """Get the appropriate eBay category ID for auto parts"""
@@ -439,13 +439,22 @@ def post_process_search_results(listings, vehicle_info):
     # Return prioritized results: exact matches first, then compatible, then others
     return exact_matches + compatible_matches + other_matches
 
-def process_ebay_results(results, query, max_items=20):
+def process_ebay_results(results, query, max_items=100):
     """
     Helper function to process eBay results with improved filtering.
-    Uses strict matching from the original version for better relevance.
+    Now uses less restrictive matching similar to Google Shopping.
     """
-    print(f"eBay raw results count: {len(results.get('organic_results', []))}")
+    raw_count = len(results.get('organic_results', []))
+    print(f"eBay raw results count: {raw_count}")
     processed_items = []
+    
+    # Debugging counters
+    debug_filter_counts = {
+        "bumper_guard_filtered": 0,
+        "must_match_filtered": 0,
+        "total_considered": 0,
+        "total_accepted": 0
+    }
     
     # Extract vehicle info for better filtering
     vehicle_info = extract_vehicle_info_from_query(query)
@@ -453,6 +462,9 @@ def process_ebay_results(results, query, max_items=20):
     make = vehicle_info.get("make")
     model = vehicle_info.get("model")
     part = vehicle_info.get("part")
+    
+    # Debug output vehicle info
+    print(f"eBay search - Vehicle info: Year: {year}, Make: {make}, Model: {model}, Part: {part}")
     
     # Create a set of must-match terms for more accurate results
     must_match = set()
@@ -469,6 +481,9 @@ def process_ebay_results(results, query, max_items=20):
     if model and len(model) > 2:
         must_match.add(model.lower())
     
+    # Debug output the must-match terms
+    print(f"eBay search - Must match terms: {must_match}")
+    
     # Check if the query is for a bumper assembly
     is_bumper_query = any(term in query.lower() for term in ["bumper", "front end"])
     
@@ -477,17 +492,32 @@ def process_ebay_results(results, query, max_items=20):
         if len(processed_items) >= max_items:
             break
             
+        debug_filter_counts["total_considered"] += 1
         title = item.get("title", "").lower()
+        
+        # Debug: show what we're processing
+        if debug_filter_counts["total_considered"] < 5:  # Only show first few for brevity
+            print(f"eBay processing item: {title}")
         
         # Skip items that don't match our criteria
         if is_bumper_query and any(x in title for x in ["guard", "protector", "pad", "cover only", "bracket only"]):
             # Skip bumper guards/pads when looking for full bumpers
             if not any(x in title for x in ["assembly", "complete", "front end", "whole bumper"]):
+                debug_filter_counts["bumper_guard_filtered"] += 1
                 continue
         
-        # Check if all must-match terms are in the title - USING STRICT MATCHING FROM ORIGINAL
-        if must_match and not all(term in title for term in must_match):
-            continue
+        # Skip items that don't match any must-match terms (less restrictive - like Google Shopping)
+        if must_match:
+            matching_terms = sum(1 for term in must_match if term in title)
+            required_matches = max(1, len(must_match) / 4)  # At least 1 or 25% of terms
+            
+            # Debug: show matching terms for first few items
+            if debug_filter_counts["total_considered"] < 5:
+                print(f"  - Matching terms: {matching_terms}/{len(must_match)} (need {required_matches})")
+                
+            if matching_terms < required_matches:
+                debug_filter_counts["must_match_filtered"] += 1
+                continue
             
         # Extract price
         price = "Price not available"
@@ -518,8 +548,18 @@ def process_ebay_results(results, query, max_items=20):
             "source": "eBay",
             "image": thumbnail
         })
+        
+        debug_filter_counts["total_accepted"] += 1
     
+    # Print debug summary
+    print(f"eBay filtering summary:")
+    print(f"  - Total raw results: {raw_count}")
+    print(f"  - Total considered: {debug_filter_counts['total_considered']}")
+    print(f"  - Bumper guard filtered: {debug_filter_counts['bumper_guard_filtered']}")
+    print(f"  - Must-match filtered: {debug_filter_counts['must_match_filtered']}")
+    print(f"  - Total accepted: {debug_filter_counts['total_accepted']}")
     print(f"eBay processed results count: {len(processed_items)}")
+    
     return processed_items
 
 def get_google_shopping_results(query, part_type=None):

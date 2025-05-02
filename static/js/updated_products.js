@@ -476,10 +476,12 @@ function createGridViewProduct(product, productId, sourceClass, exactMatchClass,
   let shippingClass = '';
   let shippingValueClass = '';
 
-  if (product.shipping.toLowerCase().includes('free')) {
+  // Handle shipping safely with null/undefined check
+  const shippingText = (product.shipping || '').toLowerCase();
+  if (shippingText.includes('free')) {
     shippingClass = 'free-shipping';
     shippingValueClass = 'free-item';
-  } else if (product.shipping.toLowerCase().includes('$')) {
+  } else if (shippingText.includes('$')) {
     shippingValueClass = 'paid-shipping';
   }
 
@@ -492,7 +494,7 @@ function createGridViewProduct(product, productId, sourceClass, exactMatchClass,
     tags += `<span class="product-tag tag-used">Pre-Owned</span>`;
   }
 
-  if (product.shipping.toLowerCase().includes('free')) {
+  if ((product.shipping || '').toLowerCase().includes('free')) {
     tags += `<span class="product-tag tag-free-shipping">Free Shipping</span>`;
   }
 
@@ -556,10 +558,12 @@ function createListViewProduct(product, productId, sourceClass, exactMatchClass,
   let shippingClass = '';
   let shippingValueClass = '';
 
-  if (product.shipping.toLowerCase().includes('free')) {
+  // Handle shipping safely with null/undefined check
+  const shippingText = (product.shipping || '').toLowerCase();
+  if (shippingText.includes('free')) {
     shippingClass = 'free-shipping';
     shippingValueClass = 'free-item';
-  } else if (product.shipping.toLowerCase().includes('$')) {
+  } else if (shippingText.includes('$')) {
     shippingValueClass = 'paid-shipping';
   }
 
@@ -572,7 +576,7 @@ function createListViewProduct(product, productId, sourceClass, exactMatchClass,
     tags += `<span class="product-tag tag-used">Pre-Owned</span>`;
   }
 
-  if (product.shipping.toLowerCase().includes('free')) {
+  if ((product.shipping || '').toLowerCase().includes('free')) {
     tags += `<span class="product-tag tag-free-shipping">Free Shipping</span>`;
   }
 
