@@ -1,0 +1,88 @@
+/**
+ * Lazy Loading Styles
+ */
+
+/* Base lazyload placeholder */
+.lazy-loading {
+  opacity: 0.25;
+  transition: opacity 0.3s ease-in-out;
+  background-color: #f0f0f0;
+}
+
+/* Image successfully loaded */
+.lazy-loaded {
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* Image loading failed */
+.lazy-error {
+  opacity: 1;
+  background-color: #f8d7da;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23dc3545" width="24px" height="24px"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>') !important;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 32px;
+}
+
+/* Optimize rendering for product images */
+.product-image-container {
+  overflow: hidden;
+  position: relative;
+}
+
+.product-image-container::before {
+  content: "";
+  display: block;
+  padding-top: 75%; /* 4:3 aspect ratio */
+}
+
+.product-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Shimmering placeholder effect */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.lazy-loading:not(.lazy-loaded):not(.lazy-error) {
+  background-image: linear-gradient(
+    to right,
+    #f0f0f0 0%,
+    #e0e0e0 20%,
+    #f0f0f0 40%,
+    #f0f0f0 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+/* Compact view optimizations */
+.compact-view .product-image-container {
+  height: 150px;
+}
+
+.compact-view .product-image-container::before {
+  padding-top: 100%; /* 1:1 aspect ratio for compact view */
+}
+
+/* List view optimizations */
+.list-view .product-image-container {
+  height: 120px;
+  max-width: 180px;
+}
+
+.list-view .product-image-container::before {
+  padding-top: 66.67%; /* 3:2 aspect ratio for list view */
+}

@@ -1,0 +1,105 @@
+/**
+ * Error Handler Styles
+ */
+
+.error-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  max-width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.error-notification {
+  display: flex;
+  align-items: center;
+  background-color: white;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slide-in 0.3s ease-out forwards;
+  border-left: 5px solid #e53238;
+  max-width: 100%;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.error-icon {
+  font-size: 1.5rem;
+  margin-right: 15px;
+  color: #e53238;
+  flex-shrink: 0;
+}
+
+.error-message {
+  flex-grow: 1;
+  font-size: 0.95rem;
+  color: #333;
+  line-height: 1.4;
+}
+
+.error-close {
+  font-size: 1.5rem;
+  color: #aaa;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 10px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.error-close:hover {
+  color: #666;
+}
+
+/* Error type variations */
+.error-network {
+  border-left-color: #e67e22;
+}
+.error-network .error-icon {
+  color: #e67e22;
+}
+
+.error-data {
+  border-left-color: #3498db;
+}
+.error-data .error-icon {
+  color: #3498db;
+}
+
+.error-rendering {
+  border-left-color: #9b59b6;
+}
+.error-rendering .error-icon {
+  color: #9b59b6;
+}
+
+.error-module {
+  border-left-color: #e74c3c;
+}
+.error-module .error-icon {
+  color: #e74c3c;
+}
+
+.error-initialization {
+  border-left-color: #f39c12;
+}
+.error-initialization .error-icon {
+  color: #f39c12;
+}
