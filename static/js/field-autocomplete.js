@@ -65,7 +65,25 @@ const vehicleData = {
 
   "McLaren": ["720S", "765LT", "570S", "GT", "Artura", "Senna", "P1", "MP4-12C", "Elva"],
 
-  "Mercedes-Benz": ["C-Class", "E-Class", "S-Class", "A-Class", "GLC", "GLE", "GLS", "G-Class", "CLA", "CLS", "SL", "SLK", "AMG GT", "EQS", "EQE", "C300", "E350", "S500", "GLC300", "GLE350", "GLE450", "G550", "C43 AMG", "E63 AMG", "S63 AMG", "C63 AMG", "GLC43 AMG", "ML350", "ML550", "GL450", "GL550", "GLA", "GLB", "SLC", "CLK", "Sprinter", "Metris", "SLK230", "SLK320", "SLK350", "SLK55 AMG", "C230", "C240", "C250", "C280", "C320", "C350", "C400", "C450", "E300", "E320", "E400", "E420", "E430", "E500", "E550", "S320", "S350", "S400", "S420", "S430", "S550", "S600", "S65 AMG", "CL500", "CL550", "CL600", "CL63 AMG", "CL65 AMG", "CLK320", "CLK350", "CLK430", "CLK500", "CLK55 AMG", "CLK550", "CLK63 AMG", "SL320", "SL350", "SL500", "SL550", "SL55 AMG", "SL63 AMG", "SL65 AMG", "SLR", "SLS", "GLK350", "ML320", "ML430", "ML500", "ML55 AMG", "ML63 AMG", "GL320", "GL350", "GL500", "GL63 AMG", "G500", "G55 AMG", "G63 AMG", "G65 AMG", "GLA250", "GLA35 AMG", "GLA45 AMG", "GLB250", "GLC43", "GLC63", "GLE43", "GLE53", "GLE63", "GLS450", "GLS550", "GLS580", "GLS63", "Maybach S560", "Maybach S580", "Maybach S600", "Maybach S650", "Maybach GLS600", "R350", "R500", "CLA250", "CLA35 AMG", "CLA45 AMG", "CLS400", "CLS500", "CLS550", "CLS55 AMG", "CLS63 AMG", "S550e", "EQB", "EQC", "EQA", "190E", "300E", "300CE", "300TE", "400E", "500E"],
+  "Mercedes-Benz": ["C-Class", "E-Class", "S-Class", "A-Class", "GLC", "GLE", "GLS", "G-Class", "CLA", "CLS", "SL", "SLK", "AMG GT", "EQS", "EQE", "C300", "E350", "S500", "GLC300", "GLE350", "GLE450", "G550", "C43 AMG", "E63 AMG", "S63 AMG", "C63 AMG", "GLC43 AMG", "ML350", "ML550", "GL450", "GL550", "GLA", "GLB", "SLC", "CLK", "Sprinter", "Metris", 
+  // C-Class specific models
+  "C180", "C200", "C220", "C230", "C240", "C250", "C270", "C280", "C300", "C320", "C350", "C400", "C450", "C55 AMG", "C32 AMG", "C36 AMG", "C43 AMG", "C63 AMG", 
+  // E-Class specific models
+  "E220", "E240", "E250", "E280", "E300", "E320", "E350", "E400", "E420", "E430", "E500", "E550", "E55 AMG", "E63 AMG",
+  // S-Class specific models  
+  "S320", "S350", "S400", "S420", "S430", "S500", "S550", "S560", "S580", "S600", "S63 AMG", "S65 AMG",
+  // SLK/SL models
+  "SLK230", "SLK320", "SLK350", "SLK55 AMG", "SL320", "SL350", "SL500", "SL550", "SL55 AMG", "SL63 AMG", "SL65 AMG", "SLR", "SLS", 
+  // CL models
+  "CL500", "CL550", "CL600", "CL63 AMG", "CL65 AMG", 
+  // CLK models
+  "CLK320", "CLK350", "CLK430", "CLK500", "CLK55 AMG", "CLK550", "CLK63 AMG", 
+  // SUV/Crossover models
+  "GLK350", "ML320", "ML350", "ML430", "ML500", "ML55 AMG", "ML63 AMG", "GL320", "GL350", "GL450", "GL500", "GL550", "GL63 AMG", "G500", "G550", "G55 AMG", "G63 AMG", "G65 AMG", "GLA250", "GLA35 AMG", "GLA45 AMG", "GLB250", "GLC43", "GLC63", "GLE43", "GLE53", "GLE63", "GLS450", "GLS550", "GLS580", "GLS63", 
+  // Maybach models
+  "Maybach S560", "Maybach S580", "Maybach S600", "Maybach S650", "Maybach GLS600", 
+  // Other models
+  "R350", "R500", "CLA250", "CLA35 AMG", "CLA45 AMG", "CLS400", "CLS500", "CLS550", "CLS55 AMG", "CLS63 AMG", "S550e", "EQB", "EQC", "EQA", "190E", "300E", "300CE", "300TE", "400E", "500E"],
 
   "MINI": ["Cooper", "Countryman", "Clubman", "Paceman", "Coupe", "Roadster", "Cooper S", "John Cooper Works", "Cooper SE", "Hardtop", "Convertible"],
 
@@ -516,13 +534,74 @@ class EnhancedFieldAutocomplete {
     }
 
     const queryLower = query.toLowerCase();
+    
+    // Special handling for alphanumeric model variants (like C240, E350, 330i, X5, etc.)
+    if (
+      (normalizedMake === "Mercedes-Benz" && queryLower.match(/^[a-z][0-9]{2,3}$/i)) ||
+      (normalizedMake === "BMW" && (
+        queryLower.match(/^[0-9]{3}i$/i) || // 328i, 530i, etc
+        queryLower.match(/^[mx][0-9]$/i) || // X3, M3, etc
+        queryLower.match(/^[mx][0-9][0-9]?[a-z]?$/i) // X5M, M40i, etc
+      ))
+    ) {
+      // If user types something like "c240" or "330i", prioritize showing the exact model
+      const exactModelMatch = models.find(model => 
+        model.toLowerCase() === queryLower
+      );
+      
+      if (exactModelMatch) {
+        this.categorizedSuggestions['Exact Match'] = [exactModelMatch];
+        
+        // For Mercedes, add the appropriate class too
+        if (normalizedMake === "Mercedes-Benz" && queryLower.match(/^[a-z]/i)) {
+          const classLetter = queryLower.charAt(0).toUpperCase();
+          const className = classLetter + "-Class";
+          if (models.includes(className)) {
+            this.categorizedSuggestions['Model Classes'] = [className];
+          }
+        }
+        // For BMW, add the appropriate series
+        else if (normalizedMake === "BMW" && queryLower.match(/^[0-9]/i)) {
+          const seriesNumber = queryLower.charAt(0);
+          const seriesName = seriesNumber + "-Series";
+          if (models.includes(seriesName)) {
+            this.categorizedSuggestions['Model Series'] = [seriesName];
+          }
+        }
+        
+        return;
+      }
+    }
 
-    // Special case for single letters like "c" in "Crown"
+    // Get parent class pattern from query (like "C" from "C240")
+    let parentClass = null;
+    if (normalizedMake === "Mercedes-Benz" && queryLower.match(/^[a-z]/i)) {
+      // Extract the first letter as the class (C-Class, E-Class, etc)
+      parentClass = queryLower.charAt(0).toUpperCase() + "-Class";
+    }
+    
+    // Special case for single letters like "c" in "C-Class"
     if (query.length === 1) {
       // Sort all models by those that start with the letter first
       const startsWith = models.filter(model =>
         model.toLowerCase().startsWith(queryLower)
       );
+      
+      // If it's a Mercedes letter class (C, E, S, etc)
+      if (parentClass && normalizedMake === "Mercedes-Benz") {
+        // Find all models with that first letter
+        const classModels = models.filter(model => 
+          model.toLowerCase().startsWith(queryLower) && 
+          model.match(/^[a-z][0-9]{2,3}/i) // Match C123, E350 type patterns
+        );
+        
+        if (classModels.length > 0) {
+          this.categorizedSuggestions['Specific Models'] = classModels;
+        }
+        
+        // Always show the parent class as first option
+        this.categorizedSuggestions['Model Classes'] = [parentClass];
+      }
 
       const contains = models.filter(model =>
         !model.toLowerCase().startsWith(queryLower) &&

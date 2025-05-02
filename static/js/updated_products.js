@@ -88,6 +88,34 @@ function initializeDOMReferences() {
   analysisTab = document.getElementById('analysis-tab');
 }
 
+// Debugging helper function to inspect products
+function debugInspectProducts() {
+  console.group("Product Filtering Debug Information");
+  console.log("Total products:", productConfig.allProducts.length);
+  
+  // Check bestMatch property distribution
+  const bestMatchCount = productConfig.allProducts.filter(p => p.bestMatch === true).length;
+  console.log(`Products with bestMatch=true: ${bestMatchCount}`);
+  
+  // Check exact match property distribution
+  const exactMatchCount = productConfig.allProducts.filter(p => p.isExactMatch === true).length;
+  console.log(`Products with isExactMatch=true: ${exactMatchCount}`);
+  
+  // Check shipping property distribution
+  const freeShippingCount = productConfig.allProducts.filter(p => 
+    String(p.shipping || '').toLowerCase().includes('free')).length;
+  console.log(`Products with free shipping: ${freeShippingCount}`);
+  
+  // Sample of shipping texts
+  const shippingTexts = productConfig.allProducts
+    .map(p => p.shipping)
+    .filter((v, i, a) => a.indexOf(v) === i) // unique values
+    .slice(0, 10); // first 10
+  
+  console.log("Sample of shipping text values:", shippingTexts);
+  console.groupEnd();
+}
+
 // Initialize event listeners when the DOM is loaded
 document.addEventListener('DOMContentLoaded', function () {
   // Initialize DOM references
@@ -242,12 +270,25 @@ function applyFilters() {
 
   // Apply shipping filter
   if (productConfig.activeFilters.shipping.length > 0) {
+    // Log shipping values for debugging purposes
+    console.log("Filtering for free shipping among these values:", 
+      filteredProducts.map(p => p.shipping).slice(0, 5)); // Show first 5 for brevity
+      
     filteredProducts = filteredProducts.filter(product => {
       if (productConfig.activeFilters.shipping.includes('free')) {
-        return product.shipping.toLowerCase().includes('free');
+        // More robust check for free shipping
+        const shippingText = String(product.shipping || '').toLowerCase();
+        // Debug log for shipping values
+        if (shippingText.includes('free')) {
+          console.log("Found free shipping item:", product.title);
+        }
+        return shippingText.includes('free');
       }
       return true;
     });
+    
+    // Log how many products matched the free shipping filter
+    console.log(`Found ${filteredProducts.length} products with free shipping`);
   }
 
   // Apply source filter
@@ -257,11 +298,12 @@ function applyFilters() {
     );
   }
 
-  // Apply relevance filter
+  // Apply relevance filter (using bestMatch property)
   if (productConfig.activeFilters.relevance.length > 0) {
     filteredProducts = filteredProducts.filter(product => {
       if (productConfig.activeFilters.relevance.includes('high')) {
-        return product.relevanceScore && product.relevanceScore > 50;
+        // Check for bestMatch flag which is set in the backend
+        return product.bestMatch === true;
       }
       return true;
     });
@@ -347,7 +389,17 @@ function displayProductsPage() {
   productsToShow.forEach(product => {
     const productId = generateProductId(product);
     const sourceClass = product.source === 'eBay' ? 'source-ebay' : 'source-google';
-    const isHighRelevance = product.relevanceScore && product.relevanceScore > 50;
+    
+    // Use multiple properties to determine high relevance/exact match status
+    const isHighRelevance = product.bestMatch === true || 
+                           (product.relevanceScore && product.relevanceScore > 50) || 
+                           product.isExactMatch === true;
+    
+    // Add logging to understand which products are marked as bestMatch
+    if (product.bestMatch === true) {
+      console.log("Product marked as bestMatch:", product.title);
+    }
+    
     const exactMatchClass = isHighRelevance ? 'exact-match' : '';
 
     // Check if this product is a favorite
@@ -592,6 +644,9 @@ function setProducts(products) {
   // Make sure DOM references are initialized
   initializeDOMReferences();
 
+  // Run debug inspection
+  debugInspectProducts();
+  
   // Sort products and display first page
   sortAndDisplayProducts();
 
