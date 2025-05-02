@@ -1,0 +1,120 @@
+/**
+ * Source Error Styling
+ * Styles for source-specific error messages
+ */
+
+/* Error container */
+.source-error-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 300px;
+  max-width: 90vw;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Individual error message */
+.source-error {
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(30px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Error when visible */
+.source-error.source-error-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Error when hiding */
+.source-error.source-error-hiding {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+/* Error content wrapper */
+.source-error-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  position: relative;
+}
+
+/* Error icon styling */
+.source-error-content i:first-child {
+  margin-right: 8px;
+  font-size: 16px;
+  opacity: 0.8;
+}
+
+/* Error message text */
+.source-error-message {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Close button */
+.source-error-close {
+  background: none;
+  border: none;
+  color: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0;
+  margin-left: 8px;
+  line-height: 1;
+  transition: color 0.2s ease;
+}
+
+.source-error-close:hover {
+  color: rgba(0, 0, 0, 0.8);
+}
+
+/* Error levels */
+.source-error-info {
+  border-left: 4px solid #4285F4;
+}
+
+.source-error-warning {
+  border-left: 4px solid #FBBC05;
+}
+
+.source-error-error {
+  border-left: 4px solid #EA4335;
+}
+
+/* Source-specific colors */
+.source-ebay {
+  border-left: 4px solid #e53238;
+}
+
+.source-google-shopping {
+  border-left: 4px solid #4285F4;
+}
+
+/* Can add more source-specific colors here */
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .source-error-container {
+    right: 10px;
+    left: 10px;
+    width: auto;
+  }
+  
+  .source-error-content {
+    padding: 10px 12px;
+  }
+  
+  .source-error-message {
+    font-size: 13px;
+  }
+}

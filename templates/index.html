@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="/static/css/lazy-loading.css">
     <link rel="stylesheet" href="/static/css/error-handler.css">
     <link rel="stylesheet" href="/static/css/source-filters.css">
+    <link rel="stylesheet" href="/static/css/source-errors.css">
     <!-- No inline styles here anymore - all styles are in the CSS file -->
 </head>
 
@@ -499,6 +500,15 @@
                                                             <span class="source-count" id="google-count"></span>
                                                         </label>
                                                     </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input filter-check source-amazon-check" type="checkbox"
+                                                            id="amazonSource" data-filter="source"
+                                                            data-value="Amazon" checked>
+                                                        <label class="form-check-label" for="amazonSource">
+                                                            <i class="fab fa-amazon"></i> Amazon
+                                                            <span class="source-count" id="amazon-count"></span>
+                                                        </label>
+                                                    </div>
                                                     <div class="empty-source-warning" id="empty-source-warning">
                                                         <i class="fas fa-exclamation-triangle"></i> 
                                                         Please select at least one source to view products.
@@ -639,6 +649,16 @@
     <script src="/static/js/modules/product-renderer.js"></script>
     <script src="/static/js/modules/product-display-adapter.js"></script>
     <script src="/static/js/modules/image-modal.js"></script>
+
+    <!-- Source System Modules -->
+    <script src="/static/js/modules/sources/source-adapter.js"></script>
+    <script src="/static/js/modules/sources/registry.js"></script>
+    <script src="/static/js/modules/sources/source-error-handler.js"></script>
+    <script src="/static/js/modules/sources/existing/ebay-adapter.js"></script>
+    <script src="/static/js/modules/sources/existing/google-adapter.js"></script>
+    <script src="/static/js/modules/sources/new/amazon-adapter.js"></script>
+    <script src="/static/js/modules/sources/enhanced-source-manager.js"></script>
+    <script src="/static/js/modules/sources/source-integration.js"></script>
 
     <!-- Core Application Scripts -->
     <script src="/static/js/filter-manager.js"></script>

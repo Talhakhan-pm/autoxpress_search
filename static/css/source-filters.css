@@ -1,86 +1,101 @@
 /**
- * Source Filter Styles
+ * Source Filters Styling
+ * Styles for source-specific filters and badges
  */
 
-/* Source filter badges */
+/* Source badges container */
+.source-badges-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* Source badge base style */
 .source-badge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 0.875rem;
   font-weight: 500;
-  margin-right: 0.5rem;
-  margin-bottom: 0.5rem;
-  transition: all 0.2s ease;
-}
-
-.source-badge i {
-  margin-right: 0.25rem;
-}
-
-.source-badge-count {
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: #f5f5f5;
   color: #333;
-  font-size: 0.7rem;
-  padding: 0.1rem 0.3rem;
-  border-radius: 10px;
-  margin-left: 0.25rem;
+  transition: background-color 0.2s ease;
 }
 
-/* eBay specific styling */
+/* Source badge icon */
+.source-badge i:first-child {
+  margin-right: 6px;
+  font-size: 0.9rem;
+}
+
+/* Remove filter icon */
+.source-badge .remove-filter {
+  margin-left: 6px;
+  font-size: 0.75rem;
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.source-badge .remove-filter:hover {
+  opacity: 1;
+}
+
+/* Source-specific badge styles */
 .source-ebay-badge {
-  background-color: #e53238;
-  color: white;
-}
-
-.source-ebay-check:checked + .form-check-label {
+  background-color: #f8d6d6;
   color: #e53238;
-  font-weight: 600;
 }
 
-/* Google Shopping specific styling */
 .source-google-badge {
-  background-color: #4285F4;
-  color: white;
-}
-
-.source-google-check:checked + .form-check-label {
+  background-color: #d6e5ff;
   color: #4285F4;
-  font-weight: 600;
 }
 
-/* Empty source selection warning */
-.empty-source-warning {
-  color: #e74c3c;
-  font-size: 0.85rem;
-  padding: 0.5rem;
-  margin-top: 0.5rem;
-  background-color: #fef5f5;
-  border-radius: 4px;
+.source-amazon-badge {
+  background-color: #d6e9e1;
+  color: #232f3e;
+}
+
+/* Empty source warning */
+#empty-source-warning {
   display: none;
+  padding: 10px 15px;
+  margin-bottom: 15px;
+  background-color: #fff3cd;
+  border: 1px solid #ffeeba;
+  border-radius: 4px;
+  color: #856404;
 }
 
-.empty-source-warning.visible {
+#empty-source-warning.visible {
   display: block;
-  animation: fadeIn 0.3s ease-in-out;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+/* Source distribution visualization */
+.source-distribution-container {
+  margin: 15px 0;
 }
 
-/* Source data visualization */
-.source-stats {
+.source-distribution-label {
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+  color: #666;
+}
+
+#source-distribution {
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
   display: flex;
-  margin-top: 0.5rem;
-  margin-bottom: 1rem;
+  background-color: #f0f0f0;
 }
 
+/* Source-specific distribution bars */
 .source-stat-bar {
-  height: 6px;
-  border-radius: 3px;
+  height: 100%;
   transition: width 0.5s ease;
 }
 
@@ -88,53 +103,70 @@
   background-color: #e53238;
 }
 
-.source-google-bar {
+.source-google-shopping-bar {
   background-color: #4285F4;
 }
 
-/* Source icon in product card */
-.product-source.source-ebay {
-  background-color: #e53238;
+.source-amazon-bar {
+  background-color: #FF9900;
 }
 
-.product-source.source-google {
-  background-color: #4285F4;
+/* Source icon in product cards */
+.product-source {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 3px;
+  z-index: 1;
 }
 
-/* Source filters in the sidebar */
+.source-ebay {
+  background-color: rgba(229, 50, 56, 0.9);
+  color: white;
+}
+
+.source-google {
+  background-color: rgba(66, 133, 244, 0.9);
+  color: white;
+}
+
+.source-amazon {
+  background-color: rgba(255, 153, 0, 0.9);
+  color: white;
+}
+
+/* Source checkbox styling */
 .source-filter-item {
   display: flex;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: 10px;
 }
 
-.source-filter-item .icon {
-  width: 16px;
-  margin-right: 0.5rem;
-  text-align: center;
+.source-filter-item input[type="checkbox"] {
+  margin-right: 8px;
 }
 
-.source-filter-item .label {
-  flex-grow: 1;
+.source-filter-item.disabled {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
-.source-filter-item .count {
-  background-color: #f0f0f0;
-  color: #333;
-  font-size: 0.7rem;
-  padding: 0.1rem 0.3rem;
-  border-radius: 10px;
-  min-width: 20px;
-  text-align: center;
+.source-filter-item label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
 }
 
-/* Responsive adjustments */
-@media (max-width: 767.98px) {
-  .source-filter-item {
-    margin-bottom: 0.75rem;
-  }
-  
-  .source-filter-item .label {
-    font-size: 0.9rem;
-  }
+.source-filter-item i {
+  margin-right: 6px;
+  font-size: 0.9rem;
+}
+
+.source-filter-item .badge-count {
+  margin-left: 6px;
+  font-size: 0.75rem;
+  color: #666;
 }
