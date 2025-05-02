@@ -246,6 +246,7 @@ def get_serpapi_cached(engine, query, query_type=None, timestamp=None, **params)
             "engine": "google_shopping",
             "q": query,
             "google_domain": "google.com",
+            "num": 100,  # Request maximum number of results
             "api_key": serpapi_key
         }
         
@@ -556,9 +557,9 @@ def get_google_shopping_results(query, part_type=None):
     # Get cached results - the get_serpapi_cached function handles TTL internally
     results = get_serpapi_cached("google_shopping", query, **params)
     
-    return process_google_shopping_results(results, query, max_items=20)
+    return process_google_shopping_results(results, query, max_items=100)
 
-def process_google_shopping_results(results, query, max_items=20):
+def process_google_shopping_results(results, query, max_items=100):
     """Process Google Shopping results with improved filtering"""
     processed_items = []
     
@@ -596,23 +597,18 @@ def process_google_shopping_results(results, query, max_items=20):
             if not any(x in title for x in ["assembly", "complete", "front end", "whole bumper"]):
                 continue
         
-        # Skip items that don't match all must-match terms
+        # Skip items that don't match any must-match terms (less restrictive)
         if must_match:
-            # For Google Shopping, match if at least 50% of terms match
+            # For Google Shopping, match if at least 25% of terms match to include more results
             matching_terms = sum(1 for term in must_match if term in title)
-            required_matches = max(1, len(must_match) / 2)  # At least 1 or 50% of terms
+            required_matches = max(1, len(must_match) / 4)  # At least 1 or 25% of terms
             if matching_terms < required_matches:
                 continue
         
-        # If we have year/make/model, make sure they appear in the title
+        # If we have year/make/model, at least one should appear in the title (less restrictive)
         if year and make and model:
-            # At least make or model should appear in the title
-            if make.lower() not in title and model.lower() not in title:
-                continue
-            
-            # Year should be mentioned somewhere
-            if year not in title:
-                # Skip items without year match
+            # Accept results if any of year, make, or model appears in the title
+            if (year not in title) and (make.lower() not in title) and (model.lower() not in title):
                 continue
         
         # Extract and fix the link with improved error handling
@@ -1013,8 +1009,9 @@ def search_products():
             ebay_listings = ebay_future.result()
             google_listings = google_future.result()
             
-            all_listings.extend(ebay_listings)
+            # Prioritize Google listings by adding them first
             all_listings.extend(google_listings)
+            all_listings.extend(ebay_listings)
         
         # If we have too few Google Shopping results for certain parts, try again with a simpler term
         if part_type and len(google_listings) < 3 and ("bumper" in part_type.lower() or "engine" in part_type.lower()):
@@ -1081,15 +1078,15 @@ def search_products():
                 
                 print(f"Not enough results with original search. Trying simplified term: {simple_term}")
                 
-                # Try the simpler search term
+                # Try the simpler search term - prioritize Google Shopping
                 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-                    ebay_future = executor.submit(get_ebay_serpapi_results, simple_term, part_type)
                     google_future = executor.submit(get_google_shopping_results, simple_term, part_type)
+                    ebay_future = executor.submit(get_ebay_serpapi_results, simple_term, part_type)
                     
-                    ebay_listings = ebay_future.result()
                     google_listings = google_future.result()
+                    ebay_listings = ebay_future.result()
                     
-                    # Add only new unique listings with improved deduplication
+                    # Add only new unique listings with improved deduplication, adding Google results first
                     existing_keys = {}  # Track existing items by both title and source
                     for idx, item in enumerate(all_listings):
                         # Create a composite key of title + first words of title for fuzzy matching
@@ -1255,9 +1252,9 @@ def search_products():
                 if make_model in title:
                     score += 20
             
-            # Add points for source (prefer eBay for auto parts generally)
-            if item.get("source") == "eBay":
-                score += 5
+            # Add points for source (prefer Google Shopping to show more Google results)
+            if item.get("source") == "Google Shopping":
+                score += 10  # Higher score to prioritize Google Shopping results
             
             # Add points for condition (prefer new parts)
             if "new" in item.get("condition", "").lower():
