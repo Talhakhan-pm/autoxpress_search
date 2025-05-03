@@ -583,7 +583,10 @@ function createGridViewProduct(product, productId, sourceClass, exactMatchClass,
           <i class="fas fa-heart"></i>
         </button>
         <div class="product-image-container" data-image="${product.image || '/static/placeholder.png'}">
-          <img src="${product.image || '/static/placeholder.png'}" class="product-image" alt="${product.title}">
+          <img src="${product.image || '/static/placeholder.png'}" 
+               class="product-image" 
+               alt="${product.title || 'Product'}" 
+               onerror="this.src='/static/placeholder.png'; this.onerror=null;">
         </div>
         <div class="product-details">
           <div class="product-title">${product.title}</div>
@@ -600,7 +603,7 @@ function createGridViewProduct(product, productId, sourceClass, exactMatchClass,
             <span class="product-price">${product.price}</span>
           </div>
           <div class="product-actions">
-            <a href="${product.link}" target="_blank" class="btn btn-danger view-details" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">View Details</a>
+            <a href="${product.link || '#'}" target="_blank" class="btn btn-danger view-details" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">View Details</a>
           </div>
         </div>
       </div>
@@ -728,7 +731,10 @@ function createListViewProduct(product, productId, sourceClass, exactMatchClass,
           <i class="fas fa-heart"></i>
         </button>
         <div class="product-image-container" data-image="${product.image || '/static/placeholder.png'}">
-          <img src="${product.image || '/static/placeholder.png'}" class="product-image" alt="${product.title}">
+          <img src="${product.image || '/static/placeholder.png'}" 
+               class="product-image" 
+               alt="${product.title || 'Product'}" 
+               onerror="this.src='/static/placeholder.png'; this.onerror=null;">
         </div>
         <div class="product-details">
           <div class="product-title">${product.title}</div>
@@ -747,7 +753,7 @@ function createListViewProduct(product, productId, sourceClass, exactMatchClass,
             <span class="product-price">${product.price}</span>
           </div>
           <div class="product-actions mt-auto">
-            <a href="${product.link}" target="_blank" class="btn btn-danger view-details">View Details</a>
+            <a href="${product.link || '#'}" target="_blank" class="btn btn-danger view-details">View Details</a>
           </div>
         </div>
       </div>

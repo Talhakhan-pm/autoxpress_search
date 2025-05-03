@@ -81,7 +81,10 @@ function renderProductCard(product, isExactMatch, isCompatible) {
         <i class="fas fa-heart"></i>
       </button>
       <div class="product-image-container" data-image="${product.image || '/static/placeholder.png'}">
-        <img src="${product.image || '/static/placeholder.png'}" class="product-image" alt="${product.title}">
+        <img src="${product.image || '/static/placeholder.png'}" 
+             class="product-image" 
+             alt="${product.title || 'Product'}" 
+             onerror="this.src='/static/placeholder.png'; this.onerror=null;">
       </div>
       <div class="p-3">
         <div class="product-title mb-2">${highlightedTitle}</div>
@@ -97,7 +100,7 @@ function renderProductCard(product, isExactMatch, isCompatible) {
           <span>Shipping:</span>
           <span class="${shippingClass}">${product.shipping}</span>
         </div>
-        <a href="${product.link}" target="_blank" class="btn btn-danger btn-sm w-100">View Details</a>
+        <a href="${product.link || '#'}" target="_blank" class="btn btn-danger btn-sm w-100">View Details</a>
       </div>
     </div>
   `;
