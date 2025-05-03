@@ -204,54 +204,100 @@ class EnhancedFieldAutocomplete {
   }
 
   /**
- * This is the revised version of the updateContainerPosition function
- * Replace it in field-autocomplete.js to fix z-index issues with the autocomplete dropdown
+ * Optimized version of the updateContainerPosition function
+ * Improves performance by using CSS variables and throttling updates
  */
-
   updateContainerPosition() {
     if (!this.field) return;
 
     try {
       // Get the field position
       const fieldRect = this.field.getBoundingClientRect();
-
-      // Position the dropdown directly using fixed positioning
-      // This avoids issues with stacking contexts
-      this.suggestionsContainer.style.position = 'fixed';
-      this.suggestionsContainer.style.width = `${this.field.offsetWidth}px`;
-      this.suggestionsContainer.style.top = `${fieldRect.bottom}px`;
-      this.suggestionsContainer.style.left = `${fieldRect.left}px`;
-      this.suggestionsContainer.style.zIndex = '100000'; // Extremely high z-index
-
+      
+      // Use CSS variables for positioning - this improves performance
+      // by avoiding direct style manipulations and leveraging browser optimizations
+      this.suggestionsContainer.style.setProperty('--field-bottom', `${fieldRect.bottom}px`);
+      this.suggestionsContainer.style.setProperty('--field-left', `${fieldRect.left}px`);
+      this.suggestionsContainer.style.setProperty('--field-width', `${this.field.offsetWidth}px`);
+      
+      // Make sure the container is visible if suggestions are being shown
+      if (this.visible) {
+        this.suggestionsContainer.style.display = 'block';
+      }
     } catch (error) {
       console.error("Error positioning dropdown:", error);
     }
   }
 
   /**
-   * Also replace the styleContainer method with this version
+   * Optimized styleContainer method
+   * Uses a more efficient approach with CSS variables
    */
   styleContainer() {
-    // Create a completely clean styling approach
+    // Add a class for styling instead of inline styles
+    this.suggestionsContainer.classList.add('autocomplete-suggestions-container');
+    
+    // Set initial CSS variables
+    this.suggestionsContainer.style.setProperty('--field-width', `${this.field.offsetWidth}px`);
+    
+    // Only define the styles that can't be easily set in CSS
     Object.assign(this.suggestionsContainer.style, {
-      position: 'fixed',
-      width: `${this.field.offsetWidth}px`,
-      zIndex: '100000',
-      backgroundColor: 'white',
-      border: '1px solid #ddd',
-      borderRadius: '0 0 4px 4px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-      maxHeight: '350px',
-      overflowY: 'auto',
       display: 'none'
     });
+    
+    // Inject a stylesheet for better performance
+    if (!document.getElementById('autocomplete-styles')) {
+      const stylesheet = document.createElement('style');
+      stylesheet.id = 'autocomplete-styles';
+      
+      stylesheet.textContent = `
+        .autocomplete-suggestions-container {
+          position: fixed;
+          width: var(--field-width);
+          top: var(--field-bottom);
+          left: var(--field-left);
+          z-index: 1050; /* Use a reasonable z-index that doesn't break stacking contexts */
+          background-color: white;
+          border: 1px solid #ddd;
+          border-radius: 0 0 4px 4px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          max-height: 350px;
+          overflow-y: auto;
+        }
+        
+        /* Add transitions for smoother experience */
+        .autocomplete-item {
+          transition: background-color 0.15s ease;
+        }
+      `;
+      
+      document.head.appendChild(stylesheet);
+    }
 
     // Position under the input field
     this.updateContainerPosition();
 
-    // Add resize and scroll listeners to update position
-    window.addEventListener('resize', () => this.updateContainerPosition());
-    window.addEventListener('scroll', () => this.updateContainerPosition(), true);
+    // Add optimized event listeners with throttling
+    const throttledUpdate = this.throttle(() => this.updateContainerPosition(), 100);
+    window.addEventListener('resize', throttledUpdate);
+    window.addEventListener('scroll', throttledUpdate, true);
+  }
+  
+  /**
+   * Helper function to throttle frequent updates
+   * Improves performance by limiting how often a function can execute
+   */
+  throttle(func, limit) {
+    let inThrottle;
+    return function() {
+      const args = arguments;
+      const context = this;
+      if (!inThrottle) {
+        func.apply(context, args);
+        inThrottle = true;
+        setTimeout(() => inThrottle = false, limit);
+      }
+    };
   }
 
 

@@ -163,6 +163,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const filterType = this.dataset.filter;
         const filterValue = this.dataset.value;
 
+        // Ensure the filter type exists in activeFilters
+        if (!productConfig.activeFilters[filterType]) {
+          productConfig.activeFilters[filterType] = [];
+        }
+
         // Update active filters
         if (this.checked) {
           if (!productConfig.activeFilters[filterType].includes(filterValue)) {
@@ -503,6 +508,69 @@ function createGridViewProduct(product, productId, sourceClass, exactMatchClass,
   if ((product.shipping || '').toLowerCase().includes('free')) {
     tags += `<span class="product-tag tag-free-shipping">Free Shipping</span>`;
   }
+  
+  // Check for OEM parts
+  const productText = (product.title + ' ' + (product.description || '')).toLowerCase();
+  
+  // Log the product text for debugging
+  console.log('Product text for analysis:', product.title);
+  
+  if (productText.includes('oem') || 
+      productText.includes('original equipment') || 
+      productText.includes('original')) {
+    tags += `<span class="product-tag tag-oem">OEM</span>`;
+  }
+  
+  // Check for Premium parts with multiple detection approaches
+  // 1. Keyword-based detection
+  const isPremiumByKeywords = productText.includes('premium') || 
+      productText.includes('performance') || 
+      productText.includes('pro') || 
+      productText.includes('high quality') || 
+      productText.includes('elite') || 
+      productText.includes('advanced') || 
+      productText.includes('upgraded') ||
+      productText.includes('drilled') ||       // Drilled rotors are premium
+      productText.includes('slotted') ||       // Slotted rotors are premium
+      productText.includes('ceramic') ||       // Ceramic pads are premium
+      productText.includes('carbon ceramic') || // Carbon ceramic is high-end
+      productText.includes('semi-metallic') || // Semi-metallic is premium
+      productText.includes('semi metallic') || // Semi-metallic (alt spelling)
+      productText.includes('sport') ||         // Sport parts are premium
+      productText.includes('racing') ||        // Racing parts are premium
+      productText.includes('heavy duty');      // Heavy duty parts are premium
+      
+  // 2. Brand-based detection - list of premium brands
+  const premiumBrands = ['bosch', 'brembo', 'bilstein', 'koni', 'borla', 'kw', 'k&n', 'moog', 
+                         'akebono', 'stoptech', 'eibach', 'h&r', 'magnaflow', 'hawk', 'edelbrock',
+                         'detroit', 'apf', 'detroit diesel', 'detroit axle'];
+  
+  const isPremiumByBrand = premiumBrands.some(brand => productText.includes(brand));
+  
+  // Classify as premium if any detection method matches
+  if (isPremiumByKeywords || isPremiumByBrand) {
+    console.log('Found premium product by', 
+                isPremiumByKeywords ? 'keywords' : 'brand',
+                ':', product.title);
+    tags += `<span class="product-tag tag-premium">Premium</span>`;
+    
+    // Add a data attribute to the product card to mark it as premium
+    // This helps with persistence across redraws
+    setTimeout(() => {
+      try {
+        const productCards = document.querySelectorAll('.product-card');
+        productCards.forEach(card => {
+          if (card.querySelector('.product-title') && 
+              card.querySelector('.product-title').textContent === product.title) {
+            card.setAttribute('data-premium', 'true');
+            console.log('Marked product as premium with data attribute:', product.title);
+          }
+        });
+      } catch (e) {
+        console.error('Error setting premium data attribute:', e);
+      }
+    }, 100); // Small delay to ensure DOM is ready
+  }
 
   // Badge removed as part of badge strategy redesign
   const relevanceBadge = '';
@@ -585,6 +653,69 @@ function createListViewProduct(product, productId, sourceClass, exactMatchClass,
   if ((product.shipping || '').toLowerCase().includes('free')) {
     tags += `<span class="product-tag tag-free-shipping">Free Shipping</span>`;
   }
+  
+  // Check for OEM parts
+  const productText = (product.title + ' ' + (product.description || '')).toLowerCase();
+  
+  // Log the product text for debugging
+  console.log('Product text for analysis:', product.title);
+  
+  if (productText.includes('oem') || 
+      productText.includes('original equipment') || 
+      productText.includes('original')) {
+    tags += `<span class="product-tag tag-oem">OEM</span>`;
+  }
+  
+  // Check for Premium parts with multiple detection approaches
+  // 1. Keyword-based detection
+  const isPremiumByKeywords = productText.includes('premium') || 
+      productText.includes('performance') || 
+      productText.includes('pro') || 
+      productText.includes('high quality') || 
+      productText.includes('elite') || 
+      productText.includes('advanced') || 
+      productText.includes('upgraded') ||
+      productText.includes('drilled') ||       // Drilled rotors are premium
+      productText.includes('slotted') ||       // Slotted rotors are premium
+      productText.includes('ceramic') ||       // Ceramic pads are premium
+      productText.includes('carbon ceramic') || // Carbon ceramic is high-end
+      productText.includes('semi-metallic') || // Semi-metallic is premium
+      productText.includes('semi metallic') || // Semi-metallic (alt spelling)
+      productText.includes('sport') ||         // Sport parts are premium
+      productText.includes('racing') ||        // Racing parts are premium
+      productText.includes('heavy duty');      // Heavy duty parts are premium
+      
+  // 2. Brand-based detection - list of premium brands
+  const premiumBrands = ['bosch', 'brembo', 'bilstein', 'koni', 'borla', 'kw', 'k&n', 'moog', 
+                         'akebono', 'stoptech', 'eibach', 'h&r', 'magnaflow', 'hawk', 'edelbrock',
+                         'detroit', 'apf', 'detroit diesel', 'detroit axle'];
+  
+  const isPremiumByBrand = premiumBrands.some(brand => productText.includes(brand));
+  
+  // Classify as premium if any detection method matches
+  if (isPremiumByKeywords || isPremiumByBrand) {
+    console.log('Found premium product by', 
+                isPremiumByKeywords ? 'keywords' : 'brand',
+                ':', product.title);
+    tags += `<span class="product-tag tag-premium">Premium</span>`;
+    
+    // Add a data attribute to the product card to mark it as premium
+    // This helps with persistence across redraws
+    setTimeout(() => {
+      try {
+        const productCards = document.querySelectorAll('.product-card');
+        productCards.forEach(card => {
+          if (card.querySelector('.product-title') && 
+              card.querySelector('.product-title').textContent === product.title) {
+            card.setAttribute('data-premium', 'true');
+            console.log('Marked product as premium with data attribute:', product.title);
+          }
+        });
+      } catch (e) {
+        console.error('Error setting premium data attribute:', e);
+      }
+    }, 100); // Small delay to ensure DOM is ready
+  }
 
   // Badge removed as part of badge strategy redesign
   const relevanceBadge = '';
@@ -626,6 +757,7 @@ function createListViewProduct(product, productId, sourceClass, exactMatchClass,
  * Loads the next page of products
  */
 function loadMoreProducts() {
+  console.log("Loading more products...");
   productConfig.currentPage++;
   displayProductsPage();
 
@@ -636,6 +768,12 @@ function loadMoreProducts() {
       lastVisibleProduct.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }
+  
+  // Manually trigger the productsDisplayed event to ensure filters are reapplied
+  console.log("Triggering productsDisplayed event after loading more products");
+  setTimeout(() => {
+    document.dispatchEvent(new CustomEvent('productsDisplayed'));
+  }, 100);
 }
 
 /**
