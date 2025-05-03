@@ -66,8 +66,20 @@ Server with Python for backend processing
 Setup
 
 Include query_processor.py in your backend code
-Include field-autocomplete.js in your frontend code
+Include field-autocomplete.js and field-based-search.js in your frontend code
 Create the necessary HTML elements for the search interface
+
+## Field-Based Search
+
+This application includes a field-based search approach that builds targeted search queries from individual fields (year, make, model, part, engine) rather than trying to normalize a single search term.
+
+Key benefits of this approach:
+- More accurate part matching by prioritizing user-entered field values
+- Flexible search patterns that work even with partial information
+- Better handling of engine-specific parts when engine information is provided
+- Search terms are already structured, requiring less normalization
+
+For detailed documentation on the field-based search implementation, see [FIELD_BASED_SEARCH.md](FIELD_BASED_SEARCH.md).
 
 Basic Usage
 python# Backend

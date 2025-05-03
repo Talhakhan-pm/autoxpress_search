@@ -192,9 +192,15 @@ document.addEventListener('DOMContentLoaded', function () {
   // Event listener for product tab click
   if (productTab) {
     productTab.addEventListener('click', function () {
+      // Make sure we're using relevance sorting when showing products tab
+      if (productConfig.currentSort !== 'relevance') {
+        productConfig.currentSort = 'relevance';
+        if (sortLabel) sortLabel.textContent = 'Relevance';
+      }
+      
       // Re-render products when tab is shown
       if (productConfig.displayedProducts.length > 0) {
-        displayProductsPage();
+        sortAndDisplayProducts(); // Use sortAndDisplay instead of just displayProductsPage
       }
     });
   }
@@ -651,7 +657,9 @@ function setProducts(products) {
   // Run debug inspection
   debugInspectProducts();
   
-  // Sort products and display first page
+  // Explicitly set sort to relevance and apply sorting
+  productConfig.currentSort = 'relevance';
+  if (sortLabel) sortLabel.textContent = 'Relevance';
   sortAndDisplayProducts();
 
   // Show products tab if products exist

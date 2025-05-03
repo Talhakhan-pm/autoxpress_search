@@ -50,6 +50,14 @@ def clean_query(text):
     if not text:
         return ""
     
+    # Special case for multi-field form submissions or structued data formats
+    # If the text contains clear field markers (year, make, model, part format)
+    year_make_model_pattern = r'\b(19|20)\d{2}\s+[A-Za-z]+\s+[A-Za-z0-9-]+\s+'
+    if re.search(year_make_model_pattern, text):
+        # This looks like a structured query with year, make, model already in place
+        # Use it more directly with less normalization
+        return text
+    
     # Use the query processor to extract structured info
     result = query_processor.process_query(text)
     
@@ -283,7 +291,7 @@ def get_serpapi_cached(engine, query, query_type=None, timestamp=None, **params)
         else:
             return {"shopping_results": []}
 
-def fetch_ebay_results(query_type, query, timestamp=None, part_type=None):
+def fetch_ebay_results(query_type, query, timestamp=None, part_type=None, structured_data=None):
     """
     Function to fetch eBay results for concurrent execution.
     The timestamp parameter is kept for backward compatibility but no longer used.
@@ -291,13 +299,32 @@ def fetch_ebay_results(query_type, query, timestamp=None, part_type=None):
     # Get the appropriate eBay category based on part type
     category_id = get_ebay_category_id(part_type) if part_type else None
     
+    # Add debug logs to trace structured data
+    print(f"[DEBUG] fetch_ebay_results - query: {query}")
+    print(f"[DEBUG] fetch_ebay_results - structured_data: {structured_data}")
+    
+    # If we have structured data with a year, update the query string to make sure it's correct
+    if structured_data and isinstance(structured_data, dict) and structured_data.get('year'):
+        year = structured_data.get('year')
+        make = structured_data.get('make', '')
+        model = structured_data.get('model', '')
+        part = structured_data.get('part', '')
+        
+        # Only update the query if it seems to have the wrong year
+        if year not in query:
+            print(f"[DEBUG] fetch_ebay_results - Fixing query to include correct year {year}")
+            # Build an updated query with the correct year
+            updated_query = f"{year} {make} {model} {part}".replace("  ", " ").strip()
+            query = updated_query
+            print(f"[DEBUG] fetch_ebay_results - Updated query: {query}")
+    
     params = {}
     if category_id:
         params["category_id"] = category_id
     
     # Note: timestamp is ignored - the get_serpapi_cached function handles TTL internally
     results = get_serpapi_cached("ebay", query, query_type, **params)
-    return process_ebay_results(results, query, max_items=100)
+    return process_ebay_results(results, query, structured_data, max_items=100)
 
 def get_ebay_category_id(part_type):
     """Get the appropriate eBay category ID for auto parts"""
@@ -330,15 +357,20 @@ def get_ebay_category_id(part_type):
     
     return category_map["default"]
 
-def get_ebay_serpapi_results(query, part_type=None):
+def get_ebay_serpapi_results(query, part_type=None, structured_data=None):
     """
     Fetch eBay results using concurrent requests for new and used products.
     Uses part_type parameter to filter by auto parts category.
     """
+    # Debugging output to verify the structured data is being passed correctly
+    print(f"[DEBUG] eBay search - structured_data: {structured_data}")
+    if structured_data and isinstance(structured_data, dict):
+        print(f"[DEBUG] eBay search - Using Year from structured data: {structured_data.get('year')}")
+    
     # Define tasks for concurrent execution - new and used products
     tasks = [
-        ("new", query, None, part_type),  # timestamp parameter is now None but kept for API compatibility
-        ("used", query, None, part_type)
+        ("new", query, None, part_type, structured_data),  # timestamp parameter is now None but kept for API compatibility
+        ("used", query, None, part_type, structured_data)
     ]
     
     all_items = []
@@ -362,14 +394,65 @@ def get_ebay_serpapi_results(query, part_type=None):
     
     return all_items
 
-def extract_vehicle_info_from_query(query):
+def extract_vehicle_info_from_query(query, structured_data=None):
     """
     Extract vehicle information from a query string using the query processor
     
+    Args:
+        query: The search query text
+        structured_data: Optional dictionary with structured field data (from field-based search)
+        
     Returns a standardized dictionary with vehicle information that can be used
     for filtering and sorting product listings
     """
-    # Use the query processor to extract structured info
+    # If we have structured data from field-based search, prioritize it
+    if structured_data and isinstance(structured_data, dict):
+        # Directly use the structured field data as our primary source of truth
+        vehicle_info = {}
+        
+        # Copy all available fields from structured data
+        if structured_data.get('year'):
+            vehicle_info['year'] = structured_data['year']
+        if structured_data.get('make'):
+            vehicle_info['make'] = structured_data['make']
+        if structured_data.get('model'):
+            vehicle_info['model'] = structured_data['model']
+        
+        # Special handling for part field - preserve qualifiers like "front"
+        if structured_data.get('part'):
+            part = structured_data['part']
+            vehicle_info['part'] = part
+            
+            # Extract position from part if needed (e.g. "front bumper" -> position="front", part="bumper")
+            # But in field-based search we want to keep them together in the part field
+            position = []
+            for pos in ["front", "rear", "left", "right", "driver", "passenger"]:
+                if pos in part.lower().split():
+                    position.append(pos)
+            
+            vehicle_info['position'] = position
+        else:
+            vehicle_info['position'] = []
+            
+        # Handle engine specs
+        if structured_data.get('engine'):
+            vehicle_info['engine_specs'] = {
+                'raw': structured_data['engine']
+            }
+        else:
+            vehicle_info['engine_specs'] = {}
+            
+        return {
+            "year": vehicle_info.get("year"),
+            "make": vehicle_info.get("make"),
+            "model": vehicle_info.get("model"),
+            "part": vehicle_info.get("part"),
+            "position": vehicle_info.get("position"),
+            "engine_specs": vehicle_info.get("engine_specs"),
+            "confidence": 90  # High confidence for structured data
+        }
+    
+    # Otherwise fall back to query processor extraction
     processed = query_processor.process_query(query)
     vehicle_info = processed.get("vehicle_info", {})
     
@@ -439,10 +522,16 @@ def post_process_search_results(listings, vehicle_info):
     # Return prioritized results: exact matches first, then compatible, then others
     return exact_matches + compatible_matches + other_matches
 
-def process_ebay_results(results, query, max_items=100):
+def process_ebay_results(results, query, structured_data=None, max_items=100):
     """
     Helper function to process eBay results with improved filtering.
     Now uses less restrictive matching similar to Google Shopping.
+    
+    Args:
+        results: The raw results from SerpAPI
+        query: The search query text
+        structured_data: Optional structured field data (for field-based search)
+        max_items: Maximum number of items to return
     """
     raw_count = len(results.get('organic_results', []))
     print(f"eBay raw results count: {raw_count}")
@@ -456,12 +545,29 @@ def process_ebay_results(results, query, max_items=100):
         "total_accepted": 0
     }
     
-    # Extract vehicle info for better filtering
-    vehicle_info = extract_vehicle_info_from_query(query)
-    year = vehicle_info.get("year")
-    make = vehicle_info.get("make")
-    model = vehicle_info.get("model")
-    part = vehicle_info.get("part")
+    # Directly use structured data if available, especially the year
+    if structured_data and isinstance(structured_data, dict) and structured_data.get('year'):
+        print(f"[DEBUG] process_ebay_results - Using structured data directly: {structured_data}")
+        year = structured_data.get('year')
+        make = structured_data.get('make', '')
+        model = structured_data.get('model', '')
+        part = structured_data.get('part', '')
+        
+        vehicle_info = {
+            "year": year,
+            "make": make, 
+            "model": model,
+            "part": part
+        }
+        
+        print(f"[DEBUG] process_ebay_results - Prioritizing structured data: Year: {year}, Make: {make}, Model: {model}, Part: {part}")
+    else:
+        # Extract vehicle info for better filtering with structured data priority
+        vehicle_info = extract_vehicle_info_from_query(query, structured_data)
+        year = vehicle_info.get("year")
+        make = vehicle_info.get("make")
+        model = vehicle_info.get("model")
+        part = vehicle_info.get("part")
     
     # Debug output vehicle info
     print(f"eBay search - Vehicle info: Year: {year}, Make: {make}, Model: {model}, Part: {part}")
@@ -469,17 +575,227 @@ def process_ebay_results(results, query, max_items=100):
     # Create a set of must-match terms for more accurate results
     must_match = set()
     
-    # Add part terms as must-match
-    if part:
-        for part_word in part.lower().split():
-            if len(part_word) > 3:  # Only add meaningful words (skip 'for', 'the', etc.)
-                must_match.add(part_word)
+    # Position term mapping for handling various ways positions are described
+    position_mapping = {
+        # Left/Right variations
+        'left': ['left', 'driver', 'driver side', 'ds', 'lh', 'l/h', 'l/side'],
+        'right': ['right', 'passenger', 'passenger side', 'ps', 'rh', 'r/h', 'r/side'],
+        # Front/Rear variations
+        'front': ['front', 'forward', 'fr', 'f/'],
+        'rear': ['rear', 'back', 'rr', 'r/'],
+        # Combined positions
+        'front left': ['fl', 'front left', 'front driver', 'driver front', 'lf', 'left front'],
+        'front right': ['fr', 'front right', 'front passenger', 'passenger front', 'rf', 'right front'],
+        'rear left': ['rl', 'rear left', 'rear driver', 'driver rear', 'lr', 'left rear'],
+        'rear right': ['rr', 'rear right', 'rear passenger', 'passenger rear', 'rr', 'right rear']
+    }
     
-    # Add make/model as must-match if available
-    if make and len(make) > 2:
-        must_match.add(make.lower())
-    if model and len(model) > 2:
-        must_match.add(model.lower())
+    # Part term variations for common parts
+    part_variations = {
+        'caliper': ['caliper', 'brake caliper', 'disc caliper'],
+        'strut': ['strut', 'shock strut', 'strut assembly', 'shock absorber'],
+        'rotor': ['rotor', 'brake rotor', 'disc rotor', 'brake disc'],
+        'bumper': ['bumper', 'bumper cover', 'bumper assembly', 'front end'],
+        'headlight': ['headlight', 'head light', 'headlamp', 'head lamp']
+    }
+    
+    # Process part terms with position awareness
+    position_terms = []
+    part_terms = []
+    
+    if part:
+        part_lower = part.lower()
+        
+        # Check for position terms
+        for position, variations in position_mapping.items():
+            for var in variations:
+                if var in part_lower:
+                    print(f"Found position term: {var} → {position}")
+                    position_terms.append(position)
+                    # Remove this position term from the part text to avoid duplication
+                    part_lower = part_lower.replace(var, '')
+                    break
+        
+        # Process remaining part words
+        for part_word in part_lower.split():
+            if len(part_word) > 3 and part_word not in ["with", "for", "the", "and", "of", "a", "an"]:
+                # Check if this word is a known part term and add its variations
+                added = False
+                for base_part, variations in part_variations.items():
+                    if part_word in variations or any(var in part_word for var in variations):
+                        print(f"Found part variation: {part_word} → {base_part}")
+                        must_match.add(base_part)
+                        added = True
+                        break
+                
+                # If not a known variation, add as-is
+                if not added:
+                    must_match.add(part_word)
+        
+        # Add position terms
+        for position in position_terms:
+            print(f"Adding position term to must_match: {position}")
+            must_match.add(position)
+    
+    # For makes with compound names or common variants, add alternatives
+    make_alternatives = set()
+    if make:
+        make_lower = make.lower()
+        make_alternatives.add(make_lower)
+        
+        # Common make abbreviations and variations
+        make_variants = {
+            "mercedes-benz": ["mercedes", "benz", "mb"],
+            "mercedes benz": ["mercedes", "benz", "mb"],
+            "mercedes": ["mercedes-benz", "benz"],
+            "benz": ["mercedes-benz", "mercedes"],
+            
+            "chevrolet": ["chevy"],
+            "chevy": ["chevrolet"],
+            
+            "volkswagen": ["vw"],
+            "vw": ["volkswagen"],
+            
+            "oldsmobile": ["olds", "cutlass"],
+            "olds": ["oldsmobile"],
+            "cutlass": ["oldsmobile"],
+            
+            "pontiac": ["ponti", "firebird", "trans am"],
+            "firebird": ["pontiac"],
+            "trans am": ["pontiac"],
+            
+            "mercury": ["merc"],
+            "merc": ["mercury"],
+            
+            "chrysler": ["mopar"],
+            "mopar": ["chrysler"],
+            
+            "plymouth": ["plym", "barracuda", "roadrunner"],
+            "plym": ["plymouth"],
+            
+            "cadillac": ["caddy", "deville", "eldorado"],
+            "caddy": ["cadillac"],
+            "deville": ["cadillac"],
+            "eldorado": ["cadillac"],
+            
+            "bmw": ["bavarian"],
+            
+            "toyota": ["toy"],
+            
+            "mitsubishi": ["mitsu"],
+            
+            "ford": ["fd"],
+            
+            "general motors": ["gm"],
+            "gm": ["general motors"],
+            
+            "audi": ["aud"]
+        }
+        
+        # Add all relevant variants
+        for variant_key, variant_values in make_variants.items():
+            if variant_key in make_lower or any(part in make_lower for part in variant_key.split()):
+                for variant in variant_values:
+                    make_alternatives.add(variant)
+            
+    # Add model variations - this is important as sellers use different formats
+    model_alternatives = set()
+    if model:
+        model_lower = model.lower()
+        model_alternatives.add(model_lower)
+        
+        # Handle model variations (with/without dash)
+        if "-" in model_lower:
+            model_alternatives.add(model_lower.replace("-", ""))
+            model_alternatives.add(model_lower.replace("-", " "))
+        
+        # Special handling for model numbers with/without spaces
+        # E.g., 'F 150' vs 'F-150' vs 'F150'
+        if re.search(r'[a-z][0-9]', model_lower) or re.search(r'[a-z][ -][0-9]', model_lower):
+            # Extract letter and number components
+            match = re.search(r'([a-z]+)[ -]?([0-9]+)', model_lower)
+            if match:
+                letter, number = match.groups()
+                model_alternatives.add(f"{letter}{number}")  # F150
+                model_alternatives.add(f"{letter}-{number}")  # F-150
+                model_alternatives.add(f"{letter} {number}")  # F 150
+        
+        # Common model abbreviations and variations
+        if 'series' in model_lower and not model_lower.endswith('series'):
+            series_name = model_lower.replace('series', '').strip()
+            model_alternatives.add(series_name)
+        
+        # For Mercedes models like C240, also try C Class or C-Class
+        if model_lower.startswith("c") or model_lower.startswith("e") or model_lower.startswith("s"):
+            if any(char.isdigit() for char in model_lower):
+                class_letter = model_lower[0]
+                model_alternatives.add(f"{class_letter} class")
+                model_alternatives.add(f"{class_letter}-class")
+        
+        # For BMW models like 328i, 535i, add series variations
+        bmw_series_match = re.search(r'^([0-9])([0-9]{2}[a-z]?)', model_lower)
+        if bmw_series_match:
+            series_num = bmw_series_match.group(1)
+            model_alternatives.add(f"{series_num}-series")
+            model_alternatives.add(f"{series_num} series")
+        
+        # Specific model variations by make
+        if make:
+            make_lower = make.lower()
+            
+            # Ford trucks
+            if make_lower == "ford" and any(truck in model_lower for truck in ["f150", "f-150", "f 150"]):
+                model_alternatives.add("f150")
+                model_alternatives.add("f-150")
+                model_alternatives.add("f 150")
+                model_alternatives.add("f series")
+                model_alternatives.add("f-series")
+            
+            # Chevy/GMC trucks
+            if make_lower in ["chevrolet", "chevy", "gmc"] and "silverado" in model_lower:
+                model_alternatives.add("1500")
+                model_alternatives.add("2500")
+                model_alternatives.add("3500")
+                model_alternatives.add("silverado")
+            
+            # Toyota Camry/Corolla generations
+            if make_lower == "toyota" and model_lower == "camry":
+                model_alternatives.add("camry se")
+                model_alternatives.add("camry le")
+                model_alternatives.add("camry xle")
+            
+            # Add common trim levels for popular models
+            common_trims = {
+                "accord": ["lx", "ex", "exl", "touring"],
+                "civic": ["lx", "ex", "si", "type r"],
+                "camry": ["le", "se", "xle", "xse"],
+                "corolla": ["le", "se", "xle"],
+                "f-150": ["xl", "xlt", "lariat", "king ranch", "platinum"],
+                "silverado": ["lt", "ltz", "z71"],
+                "ram": ["1500", "2500", "3500"]
+            }
+            
+            # Add trim variations if applicable
+            for base_model, trims in common_trims.items():
+                if base_model in model_lower:
+                    for trim in trims:
+                        if not trim in model_lower:  # Only add if not already in model name
+                            model_alternatives.add(base_model)  # Add base model without trim
+                            model_alternatives.add(f"{base_model} {trim}")  # Add model with trim
+    
+    # Build must-match set based on what's available
+    # We'll require part term matches, but be more flexible with make/model
+    if make and model:
+        # If we have make and model, require at least one of each alternative sets, plus part
+        for part_term in must_match:
+            # The part term is required
+            break
+        else:
+            # If no part terms, we still need something
+            if len(part) > 3:
+                must_match.add(part.lower())
+    
+    # We'll use these alternatives for more flexible matching
     
     # Debug output the must-match terms
     print(f"eBay search - Must match terms: {must_match}")
@@ -506,18 +822,113 @@ def process_ebay_results(results, query, max_items=100):
                 debug_filter_counts["bumper_guard_filtered"] += 1
                 continue
         
-        # Skip items that don't match any must-match terms (less restrictive - like Google Shopping)
+        # Skip items that don't match required terms, but be more flexible
         if must_match:
-            matching_terms = sum(1 for term in must_match if term in title)
-            required_matches = max(1, len(must_match) / 4)  # At least 1 or 25% of terms
+            # First check for part terms with more flexible matching
+            part_term_matches = 0
+            title_lower = title.lower()
             
-            # Debug: show matching terms for first few items
-            if debug_filter_counts["total_considered"] < 5:
-                print(f"  - Matching terms: {matching_terms}/{len(must_match)} (need {required_matches})")
+            # Check each term in must_match
+            for term in must_match:
+                # Simple direct match
+                if term in title_lower:
+                    part_term_matches += 1
+                    
+                # Check for position term variations
+                elif term == "left" and any(x in title_lower for x in ["driver", "driver side", "driver's", "ds", "lh", "l/h", "l/s"]):
+                    part_term_matches += 1
+                elif term == "right" and any(x in title_lower for x in ["passenger", "passenger side", "passenger's", "ps", "rh", "r/h", "r/s"]):
+                    part_term_matches += 1
+                elif term == "front" and any(x in title_lower for x in ["forward", "fr", "f/", "front end"]):
+                    part_term_matches += 1
+                elif term == "rear" and any(x in title_lower for x in ["back", "rr", "r/", "rear end"]):
+                    part_term_matches += 1
+                    
+                # Check for combined position terms
+                elif term == "front left" and any(x in title_lower for x in ["fl", "lf", "front driver", "driver front"]):
+                    part_term_matches += 1
+                elif term == "front right" and any(x in title_lower for x in ["fr", "rf", "front passenger", "passenger front"]):
+                    part_term_matches += 1
+                elif term == "rear left" and any(x in title_lower for x in ["rl", "lr", "rear driver", "driver rear"]):
+                    part_term_matches += 1
+                elif term == "rear right" and any(x in title_lower for x in ["rr", "rear passenger", "passenger rear"]):
+                    part_term_matches += 1
                 
-            if matching_terms < required_matches:
-                debug_filter_counts["must_match_filtered"] += 1
-                continue
+                # Check for common part term variations
+                elif term == "caliper" and any(x in title_lower for x in ["brake caliper", "disc caliper", "brake system"]):
+                    part_term_matches += 1
+                elif term == "rotor" and any(x in title_lower for x in ["brake rotor", "disc rotor", "brake disc", "disc brake"]):
+                    part_term_matches += 1
+                elif term == "strut" and any(x in title_lower for x in ["shock", "shock absorber", "strut assembly", "suspension"]):
+                    part_term_matches += 1
+                elif term == "bumper" and any(x in title_lower for x in ["fascia", "front end", "bumper cover", "bumper assembly"]):
+                    part_term_matches += 1
+                elif term == "headlight" and any(x in title_lower for x in ["head lamp", "headlamp", "head light", "light assembly"]):
+                    part_term_matches += 1
+                    
+            # Then check for make alternatives - we only need at least one to match
+            make_match = any(make_alt in title_lower for make_alt in make_alternatives) if make_alternatives else True
+            
+            # Also check for model alternatives - we only need at least one to match
+            model_match = any(model_alt in title_lower for model_alt in model_alternatives) if model_alternatives else True
+            
+            # For year, check if it's in the title OR in a range that includes our year
+            year_match = False
+            if year:
+                if year in title:
+                    year_match = True
+                else:
+                    # Check for year ranges (e.g., 2001-2007, 01-07, etc.)
+                    year_ranges = re.findall(r'(\d{4})\s*[-–—]\s*(\d{4})', title)
+                    for start_year, end_year in year_ranges:
+                        if int(start_year) <= int(year) <= int(end_year):
+                            year_match = True
+                            break
+                    
+                    # Also check shortened year formats (e.g., 01-07 for 2001-2007)
+                    short_ranges = re.findall(r'(\d{2})\s*[-–—]\s*(\d{2})', title)
+                    for start_yr, end_yr in short_ranges:
+                        # Convert to full year (assuming 21st or 20th century)
+                        start_full = int("20" + start_yr if int(start_yr) < 50 else "19" + start_yr)
+                        end_full = int("20" + end_yr if int(end_yr) < 50 else "19" + end_yr)
+                        if start_full <= int(year) <= end_full:
+                            year_match = True
+                            break
+            else:
+                year_match = True  # No year specified, so any match
+            
+            # Much more lenient part term matching - require only 25% of terms to match
+            # For example, if we have 4 part terms, require only 1 to match
+            min_required_part_matches = max(1, len(must_match) // 4)
+            
+            # Debug: show more detailed matching information for first few items
+            if debug_filter_counts["total_considered"] < 5:
+                print(f"  - Product title: {title}")
+                print(f"  - Must match terms: {must_match}")
+                print(f"  - Part matches: {part_term_matches}, Make match: {make_match}, Model match: {model_match}, Year match: {year_match}")
+                print(f"  - Min required part matches: {min_required_part_matches}")
+                
+                # Show which position terms were recognized, if any
+                position_terms = [term for term in must_match if term in ["front", "rear", "left", "right", "front left", "front right", "rear left", "rear right"]]
+                if position_terms:
+                    print(f"  - Position terms: {position_terms}")
+            
+            # Define what makes a good match based on what's available - much more flexible now
+            if part_term_matches >= min_required_part_matches:
+                # If we have enough matching part terms, require at least one of: year, make, or model
+                if not (year_match or make_match or model_match):
+                    debug_filter_counts["must_match_filtered"] += 1
+                    continue
+            else:
+                # If very few part matches, we require at least two of: year, make, model
+                matches_count = sum([year_match, make_match, model_match])
+                if matches_count < 2:
+                    debug_filter_counts["must_match_filtered"] += 1
+                    continue
+                
+            # Debug: show matching details for first few items
+            if debug_filter_counts["total_considered"] < 5:
+                print(f"  - Part matches: {part_term_matches}, Make match: {make_match}, Model match: {model_match}, Year match: {year_match}")
             
         # Extract price
         price = "Price not available"
@@ -562,15 +973,41 @@ def process_ebay_results(results, query, max_items=100):
     
     return processed_items
 
-def get_google_shopping_results(query, part_type=None):
+def get_google_shopping_results(query, part_type=None, structured_data=None):
     """
     Fetch Google Shopping results with improved category filtering.
+    Now accepts structured_data parameter directly to ensure consistency.
     """
+    # Debug log for structured data
+    print(f"[DEBUG] get_google_shopping_results - query: {query}")
+    print(f"[DEBUG] get_google_shopping_results - structured_data passed in: {structured_data}")
+    
     # Map part types to Google product categories
     product_category = None
     
-    # Extract vehicle info for search enhancement
-    vehicle_info = extract_vehicle_info_from_query(query)
+    # If structured_data wasn't passed directly, try to get it from the request
+    if not structured_data:
+        structured_data_json = request.form.get("structured_data", "") if hasattr(request, 'form') else None
+        if structured_data_json:
+            try:
+                structured_data = json.loads(structured_data_json)
+                print(f"[DEBUG] get_google_shopping_results - structured_data from form: {structured_data}")
+            except:
+                pass
+    
+    # If we have structured data with a year but the query doesn't have it, update the query
+    if structured_data and isinstance(structured_data, dict) and structured_data.get('year'):
+        year = structured_data.get('year')
+        if year not in query:
+            print(f"[DEBUG] get_google_shopping_results - Fixing query to include correct year {year}")
+            make = structured_data.get('make', '')
+            model = structured_data.get('model', '') 
+            part = structured_data.get('part', '')
+            updated_query = f"{year} {make} {model} {part}".replace("  ", " ").strip()
+            query = updated_query
+            print(f"[DEBUG] get_google_shopping_results - Updated query: {query}")
+    
+    vehicle_info = extract_vehicle_info_from_query(query, structured_data)
     
     # Special handling for bumpers
     if part_type and "bumper" in part_type.lower():
@@ -582,10 +1019,49 @@ def get_google_shopping_results(query, part_type=None):
             year = vehicle_info.get("year")
             make = vehicle_info.get("make")
             model = vehicle_info.get("model")
-            bumper_query = f"{year} {make} {model} front bumper"
+            
+            # Simplify make name for better search results
+            simple_make = make
+            if "mercedes" in make.lower():
+                simple_make = "Mercedes"
+            elif "chevrolet" in make.lower():
+                simple_make = "Chevy"  
+            elif "volkswagen" in make.lower():
+                simple_make = "VW"
+            
+            # Simplify model for better matches (e.g., C240 -> C)
+            simple_model = model
+            if any(char.isdigit() for char in model):
+                # For Mercedes models like C240, E350, etc.
+                if "mercedes" in make.lower() and len(model) <= 4 and (model[0].lower() in 'cels'):
+                    # Extract just the letter prefix (C, E, S, etc.)
+                    prefix = model[0]
+                    if prefix:
+                        simple_model = prefix
+                # For BMW models like 328i, 535i, etc.
+                elif "bmw" in make.lower() and model[0].isdigit():
+                    # Keep first digit (3, 5, 7, etc.)
+                    simple_model = model[0] + " series"
+            
+            # Check if we already have position information in the part_type (e.g. "front bumper")
+            position_prefix = ""
+            if "front" in part_type.lower():
+                position_prefix = "front "
+            elif "rear" in part_type.lower():
+                position_prefix = "rear "
+                
+            # Use position-specific bumper query if we have position info, or default to front bumper
+            if position_prefix:
+                bumper_query = f"{year} {simple_make} {simple_model} {position_prefix}bumper complete assembly"
+            else:
+                bumper_query = f"{year} {simple_make} {simple_model} front bumper complete assembly"  # Default to front if unspecified
             
             # Use this more precise query instead
-            print(f"Using specialized Google bumper query: {bumper_query}")
+            print(f"[DEBUG] Specialized bumper query: {bumper_query}")
+            print(f"[DEBUG]   - Using year: {year}")
+            print(f"[DEBUG]   - Using make: {make} (simplified to: {simple_make})")
+            print(f"[DEBUG]   - Using model: {model} (simplified to: {simple_model})")
+            print(f"[DEBUG]   - Using position: {position_prefix.strip() if position_prefix else 'default front'}")
             query = bumper_query
     elif part_type and "engine" in part_type.lower():
         product_category = "5613"  # Vehicle Parts & Accessories
@@ -616,10 +1092,15 @@ def process_google_shopping_results(results, query, max_items=100):
     # Create a set of must-match terms for more accurate results
     must_match = set()
     
-    # Add part terms as must-match
+    # Add part terms as must-match with better filtering
     if part:
-        for part_word in part.lower().split():
-            if len(part_word) > 3:  # Only add meaningful words (skip 'for', 'the', etc.)
+        part_lower = part.lower()
+        
+        # Skip common stop words and keep only meaningful terms
+        stop_words = ["with", "for", "the", "and", "of", "a", "an", "to", "in", "on", "at"]
+        
+        for part_word in part_lower.split():
+            if len(part_word) > 3 and part_word not in stop_words:
                 must_match.add(part_word)
     
     # Check if the query is for a bumper assembly
@@ -766,15 +1247,76 @@ def analyze_query():
     """Analyze the query using GPT-4 and return optimized search terms"""
     query = sanitize_input(request.form.get("prompt", ""))
     parsed_data_json = request.form.get("parsed_data", "")
+    structured_data_json = request.form.get("structured_data", "")
     
-    # Try to parse the JSON if provided
+    # Try to parse the JSON if provided - first check parsed_data, then structured_data
     processed_result = None
+    
+    # Try parsing parsed_data first (from original format)
     if parsed_data_json:
         try:
             processed_result = json.loads(parsed_data_json)
         except:
             # If parsing fails, we'll process it again
             pass
+            
+    # If no parsed_data or parsing failed, try structured_data (from field-based search)
+    if not processed_result and structured_data_json:
+        try:
+            structured_data = json.loads(structured_data_json)
+            
+            # If we have structured field data, use it to enhance the query
+            if structured_data and isinstance(structured_data, dict):
+                # If we have year/make/model/part, format it directly
+                if structured_data.get('year') and structured_data.get('part'):
+                    # This is a valid field-based search, format our query to prioritize what matters
+                    vehicle_info = {}
+                    
+                    # Extract all fields with validation
+                    if structured_data.get('year'):
+                        vehicle_info['year'] = structured_data['year']
+                    if structured_data.get('make'):
+                        vehicle_info['make'] = structured_data['make']
+                    if structured_data.get('model'):
+                        vehicle_info['model'] = structured_data['model']
+                    if structured_data.get('part'):
+                        vehicle_info['part'] = structured_data['part']
+                    
+                    # Add empty position array for compatibility
+                    vehicle_info['position'] = []
+                    
+                    # Handle engine specs
+                    if structured_data.get('engine'):
+                        vehicle_info['engine_specs'] = {'raw': structured_data['engine']}
+                        
+                    # Build search terms from structured data
+                    search_terms = []
+                    
+                    # First priority: year + make + model + part + engine (if all available)
+                    if all(k in vehicle_info for k in ['year', 'make', 'model', 'part']) and 'engine_specs' in vehicle_info:
+                        full_term = f"{vehicle_info['year']} {vehicle_info['make']} {vehicle_info['model']} {vehicle_info['part']} {vehicle_info['engine_specs']['raw']}"
+                        search_terms.append(full_term)
+                    
+                    # Second priority: year + make + model + part (without engine)
+                    if all(k in vehicle_info for k in ['year', 'make', 'model', 'part']):
+                        simple_term = f"{vehicle_info['year']} {vehicle_info['make']} {vehicle_info['model']} {vehicle_info['part']}"
+                        if simple_term not in search_terms:
+                            search_terms.append(simple_term)
+                            
+                    # Add fallback term if needed
+                    if not search_terms and 'year' in vehicle_info and 'part' in vehicle_info:
+                        fallback_term = f"{vehicle_info['year']} {vehicle_info.get('make', '')} {vehicle_info.get('model', '')} {vehicle_info['part']}".replace('  ', ' ').strip()
+                        search_terms.append(fallback_term)
+                    
+                    # Create a complete result structure
+                    processed_result = {
+                        "search_terms": search_terms,
+                        "vehicle_info": vehicle_info,
+                        "confidence": 90  # High confidence for structured input
+                    }
+        except Exception as e:
+            print(f"Error parsing structured data: {e}")
+            # Continue with normal query processing
     
     if not query:
         return jsonify({
@@ -797,8 +1339,8 @@ def analyze_query():
 
     # Extract model for prompt
     model_info = ""
-    if processed_result["vehicle_info"]["model"]:
-        model_info = f"Model: {processed_result['vehicle_info']['model'] or 'not specified'}"
+    if processed_result.get("vehicle_info") and processed_result["vehicle_info"].get("model"):
+        model_info = f"Model: {processed_result['vehicle_info']['model']}"
 
     prompt = f"""
 You are an auto parts fitment expert working for a US-based parts sourcing company. The goal is to help human agents quickly identify the correct OEM part for a customer's vehicle.
@@ -834,11 +1376,11 @@ Your job is to:
    - Example 2: "🔎 2020 – 2022 honda civic ex oem bumper cover"
 
 Here's some additional information that might help you:
-Year: {processed_result["vehicle_info"]["year"] or "not specified"}
-Make: {processed_result["vehicle_info"]["make"] or "not specified"}
+Year: {processed_result["vehicle_info"].get("year") or "not specified"}
+Make: {processed_result["vehicle_info"].get("make") or "not specified"}
 {model_info}
-Part: {processed_result["vehicle_info"]["part"] or "not specified"}
-Position: {processed_result["vehicle_info"]["position"] or "not specified"}
+Part: {processed_result["vehicle_info"].get("part") or "not specified"}
+Position: {processed_result["vehicle_info"].get("position", "not specified")}
 """
 
     try:
@@ -857,13 +1399,31 @@ Position: {processed_result["vehicle_info"]["position"] or "not specified"}
             # Extract the search term without the emoji
             search_term_raw = search_lines[0].replace("🔎", "").strip()
             
+            # Remove any added "Fits" or year ranges that GPT might add
+            search_term_raw = re.sub(r'\(Fits \d{4}-\d{4}\)', '', search_term_raw).strip()
+            
+            # Remove OEM since it's making the search terms too restrictive for eBay
+            search_term_raw = search_term_raw.replace(" oem ", " ").replace(" OEM ", " ")
+            
+            # Remove "complete assembly" since we add it later for specific parts
+            search_term_raw = search_term_raw.replace(" complete assembly", "").replace(" assembly", "")
+            
+            # Clean up any excessive spaces
+            search_term_raw = re.sub(r'\s+', ' ', search_term_raw).strip()
+            
             # Clean and optimize the search term
             search_term = clean_query(search_term_raw)
             
             # If there's a second search term, use it as a fallback
             fallback_term = None
             if len(search_lines) > 1:
-                fallback_term = clean_query(search_lines[1].replace("🔎", "").strip())
+                fallback_raw = search_lines[1].replace("🔎", "").strip()
+                # Apply the same cleaning to the fallback term
+                fallback_raw = re.sub(r'\(Fits \d{4}-\d{4}\)', '', fallback_raw).strip()
+                fallback_raw = fallback_raw.replace(" oem ", " ").replace(" OEM ", " ")
+                fallback_raw = fallback_raw.replace(" complete assembly", "").replace(" assembly", "")
+                fallback_raw = re.sub(r'\s+', ' ', fallback_raw).strip()
+                fallback_term = clean_query(fallback_raw)
         else:
             # Fallback to processor's search terms if no GPT search term
             if processed_result["search_terms"]:
@@ -1012,9 +1572,38 @@ def search_products():
         })
     
     try:
-        # Extract vehicle info for filtering
-        vehicle_info = extract_vehicle_info_from_query(original_query or search_term)
+        # Parse structured data if provided
+        structured_data = None
+        structured_data_json = request.form.get("structured_data", "")
+        
+        if structured_data_json:
+            try:
+                structured_data = json.loads(structured_data_json)
+                print(f"[DEBUG] search_products - Received structured data: {structured_data}")
+                
+                # Validate and ensure all fields are properly formatted
+                if structured_data and isinstance(structured_data, dict):
+                    # Ensure year is a string
+                    if 'year' in structured_data and structured_data['year']:
+                        structured_data['year'] = str(structured_data['year']).strip()
+                        print(f"[DEBUG] search_products - Validated year: {structured_data['year']}")
+                    
+                    # Ensure other fields are strings
+                    for field in ['make', 'model', 'part', 'engine']:
+                        if field in structured_data and structured_data[field]:
+                            structured_data[field] = str(structured_data[field]).strip()
+                
+            except Exception as e:
+                print(f"Error parsing structured data in search-products: {e}")
+                # Continue with regular processing
+        
+        # Extract vehicle info for filtering with structured data priority
+        vehicle_info = extract_vehicle_info_from_query(original_query or search_term, structured_data)
         part_type = vehicle_info.get("part")
+        
+        # Debug output for testing our vehicle info extraction
+        print(f"[DEBUG] Field-based search: Using structured data: {structured_data is not None}")
+        print(f"[DEBUG] Vehicle info extracted: Year: {vehicle_info.get('year')}, Make: {vehicle_info.get('make')}, Model: {vehicle_info.get('model')}, Part: {vehicle_info.get('part')}")
         
         # Add special case handling for engines and other major parts
         if part_type:
@@ -1024,27 +1613,190 @@ def search_products():
                     year = vehicle_info.get("year")
                     make = vehicle_info.get("make")
                     model = vehicle_info.get("model")
-                    engine_term = f"{year} {make} {model} complete engine motor assembly"
+                    
+                    # Simplify make name for better search results
+                    simple_make = make
+                    if "mercedes" in make.lower():
+                        simple_make = "Mercedes"
+                    elif "chevrolet" in make.lower():
+                        simple_make = "Chevy"  
+                    elif "volkswagen" in make.lower():
+                        simple_make = "VW"
+                    
+                    # Simplify model for better matches (e.g., C240 -> C)
+                    simple_model = model
+                    if any(char.isdigit() for char in model):
+                        # For Mercedes models like C240, E350, etc.
+                        if "mercedes" in make.lower() and len(model) <= 4 and (model[0].lower() in 'cels'):
+                            # Extract just the letter prefix (C, E, S, etc.)
+                            prefix = model[0]
+                            if prefix:
+                                simple_model = prefix
+                        # For BMW models like 328i, 535i, etc.
+                        elif "bmw" in make.lower() and model[0].isdigit():
+                            # Keep first digit (3, 5, 7, etc.)
+                            simple_model = model[0] + " series"
+                    
+                    engine_term = f"{year} {simple_make} {simple_model} complete engine motor assembly"
                     print(f"Using engine-specific search term: {engine_term}")
+                    print(f"   - Using simplified make: {simple_make}")
+                    print(f"   - Using simplified model: {simple_model}")
                     search_term = engine_term
             elif "bumper" in part_type.lower() and "assembly" not in part_type.lower():
                 # For bumpers, ensure we're searching for complete assemblies
-                bumper_term = f"{search_term} complete assembly"
+                # Preserve any position qualifiers from the part_type
+                position_prefix = ""
+                if "front" in part_type.lower():
+                    position_prefix = "front "
+                elif "rear" in part_type.lower():
+                    position_prefix = "rear "
+                
+                # Get year, make, model from vehicle_info
+                year_val = vehicle_info.get("year")
+                make_val = vehicle_info.get("make")
+                model_val = vehicle_info.get("model")
+                
+                # Simplify make name for better search results
+                simple_make = make_val
+                if make_val and "mercedes" in make_val.lower():
+                    simple_make = "Mercedes"
+                elif make_val and "chevrolet" in make_val.lower():
+                    simple_make = "Chevy"  
+                elif make_val and "volkswagen" in make_val.lower():
+                    simple_make = "VW"
+                
+                # Simplify model for better matches (e.g., C240 -> C)
+                simple_model = model_val
+                if model_val and any(char.isdigit() for char in model_val):
+                    # For Mercedes models like C240, E350, etc.
+                    if make_val and "mercedes" in make_val.lower() and len(model_val) <= 4 and (model_val[0].lower() in 'cels'):
+                        # Extract just the letter prefix (C, E, S, etc.)
+                        prefix = model_val[0]
+                        if prefix:
+                            simple_model = prefix
+                    # For BMW models like 328i, 535i, etc.
+                    elif make_val and "bmw" in make_val.lower() and model_val[0].isdigit():
+                        # Keep first digit (3, 5, 7, etc.)
+                        simple_model = model_val[0] + " series"
+                
+                if year_val and simple_make and simple_model:
+                    # If we have complete vehicle info, create an optimized bumper query
+                    bumper_term = f"{year_val} {simple_make} {simple_model} {position_prefix}bumper complete assembly"
+                    print(f"   - Using simplified make: {simple_make}")
+                    print(f"   - Using simplified model: {simple_model}")
+                else:
+                    # Otherwise enhance the search term
+                    bumper_term = f"{search_term} complete assembly"
+                
                 print(f"Using bumper-specific search term: {bumper_term}")
                 search_term = bumper_term
             elif any(x in part_type.lower() for x in ["transmission", "gearbox"]):
                 # For transmissions
-                trans_term = f"{search_term} complete assembly"
-                print(f"Using transmission-specific search term: {trans_term}")
+                # Get year, make, model from vehicle_info
+                year_val = vehicle_info.get("year")
+                make_val = vehicle_info.get("make")
+                model_val = vehicle_info.get("model")
+                
+                # Simplify make name for better search results
+                simple_make = make_val
+                if make_val and "mercedes" in make_val.lower():
+                    simple_make = "Mercedes"
+                elif make_val and "chevrolet" in make_val.lower():
+                    simple_make = "Chevy"  
+                elif make_val and "volkswagen" in make_val.lower():
+                    simple_make = "VW"
+                
+                # Simplify model for better matches (e.g., C240 -> C)
+                simple_model = model_val
+                if model_val and any(char.isdigit() for char in model_val):
+                    # For Mercedes models like C240, E350, etc.
+                    if make_val and "mercedes" in make_val.lower() and len(model_val) <= 4 and (model_val[0].lower() in 'cels'):
+                        # Extract just the letter prefix (C, E, S, etc.)
+                        prefix = model_val[0]
+                        if prefix:
+                            simple_model = prefix
+                    # For BMW models like 328i, 535i, etc.
+                    elif make_val and "bmw" in make_val.lower() and model_val[0].isdigit():
+                        # Keep first digit (3, 5, 7, etc.)
+                        simple_model = model_val[0] + " series"
+                
+                if year_val and simple_make and simple_model:
+                    # If we have complete vehicle info, create an optimized transmission query
+                    trans_term = f"{year_val} {simple_make} {simple_model} transmission complete assembly"
+                    print(f"Using transmission-specific search term: {trans_term}")
+                    print(f"   - Using simplified make: {simple_make}")
+                    print(f"   - Using simplified model: {simple_model}")
+                else:
+                    # Otherwise enhance the search term
+                    trans_term = f"{search_term} complete assembly"
+                    print(f"Using transmission-specific search term: {trans_term}")
+                
                 search_term = trans_term
         
         # Try multiple search strategies (fallbacks if needed)
         all_listings = []
         
-        # Strategy 1: Direct search with original term
+        # Determine if this is a field-based search with specific fields
+        is_field_search = False
+        cleaner_search_term = search_term
+        
+        # Parse original query for vehicle info if available
+        if original_query:
+            vehicle_info = extract_vehicle_info_from_query(original_query, structured_data)
+            year = vehicle_info.get("year")
+            make = vehicle_info.get("make")
+            model = vehicle_info.get("model")
+            part = vehicle_info.get("part")
+        else:
+            # When no original_query, try extracting from search_term
+            vehicle_info = extract_vehicle_info_from_query(search_term, structured_data)
+            year = vehicle_info.get("year")
+            make = vehicle_info.get("make")
+            model = vehicle_info.get("model")
+            part = vehicle_info.get("part")
+            
+            # If we have fairly complete vehicle info, assume it's a field-based search
+            if year and part and (make or model):
+                is_field_search = True
+                # Create a simpler search term for eBay based on what we have
+                if year and model and part and make:
+                    # For Mercedes-Benz, simplify to just Mercedes
+                    if "mercedes" in make.lower():
+                        simple_make = "Mercedes"
+                    else:
+                        simple_make = make
+                        
+                    # For model, just use the base part without numbers for better matches
+                    # Examples: "C240" -> "C", "F-150" -> "F"
+                    simple_model = model
+                    if any(char.isdigit() for char in model):
+                        # Extract just the letter prefix (C, E, S, F, etc.)
+                        prefix = ''.join(c for c in model if not c.isdigit() and c != '-').strip()
+                        if prefix:
+                            simple_model = prefix
+                    
+                    simple_term = f"{year} {simple_make} {simple_model} {part}".replace("  ", " ").strip()
+                elif year and part:
+                    # Year + Part fallback (sometimes works better)
+                    simple_term = f"{year} {part}"
+                else:
+                    simple_term = f"{year} {make} {model} {part}".replace("  ", " ").strip()
+                    
+                print(f"Using simpler search term for eBay: {simple_term}")
+                cleaner_search_term = simple_term
+                
+        # Strategy 1: Direct search with term
+        # Debug log for field-based search
+        print(f"[DEBUG] search_products - Using search terms:")
+        print(f"[DEBUG]   - cleaner_search_term: {cleaner_search_term}")
+        print(f"[DEBUG]   - search_term: {search_term}")
+        print(f"[DEBUG]   - structured_data: {structured_data}")
+        
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            ebay_future = executor.submit(get_ebay_serpapi_results, search_term, part_type)
-            google_future = executor.submit(get_google_shopping_results, search_term, part_type)
+            # For eBay, use the cleaner search term without special characters/formatting
+            # Always pass structured_data to ensure correct year is used
+            ebay_future = executor.submit(get_ebay_serpapi_results, cleaner_search_term, part_type, structured_data)
+            google_future = executor.submit(get_google_shopping_results, search_term, part_type, structured_data)
             
             ebay_listings = ebay_future.result()
             google_listings = google_future.result()
@@ -1119,9 +1871,12 @@ def search_products():
                 print(f"Not enough results with original search. Trying simplified term: {simple_term}")
                 
                 # Try the simpler search term - prioritize Google Shopping
+                print(f"[DEBUG] search_products - Fallback using simpler term: {simple_term}")
+                print(f"[DEBUG] search_products - Fallback still using original structured data: {structured_data}")
+                
                 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-                    google_future = executor.submit(get_google_shopping_results, simple_term, part_type)
-                    ebay_future = executor.submit(get_ebay_serpapi_results, simple_term, part_type)
+                    google_future = executor.submit(get_google_shopping_results, simple_term, part_type, structured_data)
+                    ebay_future = executor.submit(get_ebay_serpapi_results, simple_term, part_type, structured_data)
                     
                     google_listings = google_future.result()
                     ebay_listings = ebay_future.result()
@@ -1168,8 +1923,12 @@ def search_products():
                 print(f"Trying specialized classic vehicle search: {direct_term}")
                 
                 # Add another specialized search for older vehicles - search directly on eBay
+                # Make sure we still pass structured data even for specialized searches
+                print(f"[DEBUG] search_products - Specialized classic vehicle search: {direct_term}")
+                print(f"[DEBUG] search_products - Still using original structured data: {structured_data}")
+                
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                    ebay_future = executor.submit(get_ebay_serpapi_results, direct_term, "bumper")
+                    ebay_future = executor.submit(get_ebay_serpapi_results, direct_term, "bumper", structured_data)
                     ebay_listings = ebay_future.result()
                     
                     # Create a map of existing items
@@ -1232,8 +1991,11 @@ def search_products():
                 print(f"Trying direct bumper search term: {direct_term}")
                 
                 # Try the direct search term
+                print(f"[DEBUG] search_products - Direct bumper search term: {direct_term}")
+                print(f"[DEBUG] search_products - Still using original structured data: {structured_data}")
+                
                 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-                    ebay_future = executor.submit(get_ebay_serpapi_results, direct_term, "bumper")
+                    ebay_future = executor.submit(get_ebay_serpapi_results, direct_term, "bumper", structured_data)
                     
                     ebay_listings = ebay_future.result()
                     
