@@ -404,6 +404,9 @@ def extract_vehicle_info_from_query(query, structured_data=None):
         
     Returns a standardized dictionary with vehicle information that can be used
     for filtering and sorting product listings
+    
+    NOTE: For single-field search, this function now better handles position terms like
+    "front", "rear", "left", "right" and their combinations/abbreviations.
     """
     # If we have structured data from field-based search, prioritize it
     if structured_data and isinstance(structured_data, dict):
@@ -1564,6 +1567,10 @@ def search_products():
     original_query = sanitize_input(request.form.get("original_query", ""))
     page = int(request.form.get("page", "1"))
     page_size = int(request.form.get("page_size", "24"))  # Default to 24 products per page
+    
+    # Debug logs for identifying field vs single field search
+    print(f"[DEBUG] search_products - search_term: {search_term}")
+    print(f"[DEBUG] search_products - original_query: {original_query}")
     
     if not search_term:
         return jsonify({

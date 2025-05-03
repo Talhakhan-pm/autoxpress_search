@@ -38,21 +38,47 @@ document.addEventListener('DOMContentLoaded', function () {
         searchForm.addEventListener('submit', async function (e) {
             e.preventDefault();
             
-            // Validate fields - require at least year/make and part
-            const year = yearField.value.trim();
-            const make = makeField.value.trim();
-            const model = modelField.value.trim();
-            const part = partField.value.trim();
-            const engine = engineField.value.trim();
+            // Check if we're in single-field mode
+            const singleFieldContainer = document.getElementById('single-field-container');
+            const isSingleFieldMode = !singleFieldContainer.classList.contains('d-none');
             
-            if (!part) {
-                showValidationError("Please enter the part you're looking for.");
-                return;
-            }
+            // Handle different field modes
+            let year, make, model, part, engine, fieldPrompt;
             
-            if (!year && !make) {
-                showValidationError("Please enter at least the vehicle year or make.");
-                return;
+            if (isSingleFieldMode) {
+                // Single-field mode - get the single query
+                const singleFieldQuery = document.getElementById('prompt').value.trim();
+                
+                if (!singleFieldQuery) {
+                    showValidationError("Please enter your search query.");
+                    return;
+                }
+                
+                // For single-field search, we'll skip the part validation
+                // but still need variables for the API call
+                year = "";
+                make = "";
+                model = "";
+                part = "auto part"; // Set a dummy value to bypass validation
+                engine = "";
+                fieldPrompt = singleFieldQuery;
+            } else {
+                // Multi-field mode - get values from individual fields
+                year = yearField.value.trim();
+                make = makeField.value.trim();
+                model = modelField.value.trim();
+                part = partField.value.trim();
+                engine = engineField.value.trim();
+                
+                if (!part) {
+                    showValidationError("Please enter the part you're looking for.");
+                    return;
+                }
+                
+                if (!year && !make) {
+                    showValidationError("Please enter at least the vehicle year or make.");
+                    return;
+                }
             }
             
             // Disable the search button and show loading
@@ -70,14 +96,17 @@ document.addEventListener('DOMContentLoaded', function () {
             
             try {
                 // Step 1: Send the field-based search request
-                // Build a prompt string from the fields (this will work with the existing API)
-                let fieldPrompt = '';
-                if (year) fieldPrompt += year + ' ';
-                if (make) fieldPrompt += make + ' ';
-                if (model) fieldPrompt += model + ' ';
-                if (part) fieldPrompt += part + ' ';
-                if (engine) fieldPrompt += engine + ' ';
-                fieldPrompt = fieldPrompt.trim();
+                // If we're in single-field mode, fieldPrompt is already set
+                // Otherwise, build it from the individual fields
+                if (!isSingleFieldMode) {
+                    fieldPrompt = '';
+                    if (year) fieldPrompt += year + ' ';
+                    if (make) fieldPrompt += make + ' ';
+                    if (model) fieldPrompt += model + ' ';
+                    if (part) fieldPrompt += part + ' ';
+                    if (engine) fieldPrompt += engine + ' ';
+                    fieldPrompt = fieldPrompt.trim();
+                }
                 
                 // Use the existing 'prompt' parameter expected by the API
                 const formData = new FormData();
@@ -134,7 +163,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     productFormData.append('search_term', analysisData.search_terms[0]);
                     
                     // Build original query string for context
-                    const originalQuery = [year, make, model, part, engine].filter(Boolean).join(' ');
+                    let originalQuery;
+                    if (isSingleFieldMode) {
+                        // For single field, use the field prompt directly
+                        originalQuery = fieldPrompt;
+                    } else {
+                        // For multi-field, join the individual fields
+                        originalQuery = [year, make, model, part, engine].filter(Boolean).join(' ');
+                    }
                     productFormData.append('original_query', originalQuery);
                     
                     // Also pass structured data for better search handling

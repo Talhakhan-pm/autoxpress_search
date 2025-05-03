@@ -1560,15 +1560,46 @@ class EnhancedQueryProcessor:
             return None
 
     def _extract_position(self, query):
-        """Extract position information like 'front', 'rear', 'driver side', etc."""
+        """
+        Extract position information like 'front', 'rear', 'driver side', etc.
+        Also handles abbreviations like RR (rear right), FL (front left), etc.
+        """
         positions = []
         query_lower = query.lower()
         
+        # Define abbreviation mappings first to check for compound positions
+        abbr_mappings = {
+            'rr': ['rear', 'right'],
+            'rl': ['rear', 'left'],
+            'fr': ['front', 'right'],
+            'fl': ['front', 'left'],
+            'rf': ['front', 'right'],
+            'lf': ['front', 'left'],
+            'lr': ['rear', 'left'],
+            'l/r': ['left', 'right'],
+            'f/r': ['front', 'rear'],
+            'f/l': ['front', 'left'],
+            'f/s': ['front'],
+            'r/s': ['rear'],
+            'l/s': ['left'],
+            'r/h': ['right'],
+            'l/h': ['left'],
+            'ps': ['right'],
+            'ds': ['left']
+        }
+        
+        # Check for abbreviations at word boundaries
+        for abbr, pos_list in abbr_mappings.items():
+            pattern = r'\b' + re.escape(abbr) + r'\b'
+            if re.search(pattern, query_lower):
+                positions.extend(pos_list)
+        
+        # Also check for standard position terms
         position_terms = {
-            "front": ["front", "forward"],
-            "rear": ["rear", "back"],
-            "left": ["left", "driver", "driver's", "driver side", "driver-side"],
-            "right": ["right", "passenger", "passenger's", "passenger side", "passenger-side"],
+            "front": ["front", "forward", "frt"],
+            "rear": ["rear", "back", "rr"],
+            "left": ["left", "driver", "driver's", "driver side", "driver-side", "lh", "ds"],
+            "right": ["right", "passenger", "passenger's", "passenger side", "passenger-side", "rh", "ps"],
             "upper": ["upper", "top"],
             "lower": ["lower", "bottom"],
             "inner": ["inner", "inside"],
@@ -1576,11 +1607,29 @@ class EnhancedQueryProcessor:
         }
         
         for position, terms in position_terms.items():
-            for term in terms:
-                pattern = r'\b' + re.escape(term) + r'\b'
-                if re.search(pattern, query_lower):
-                    positions.append(position)
-                    break
+            if position not in positions:  # Only check if not already added from abbreviations
+                for term in terms:
+                    pattern = r'\b' + re.escape(term) + r'\b'
+                    if re.search(pattern, query_lower):
+                        positions.append(position)
+                        break
+        
+        # Check for combined position phrases that may not be caught by the above
+        if 'front' in positions and 'left' in positions and 'front left' not in positions:
+            if 'front driver' in query_lower or 'driver front' in query_lower:
+                positions.append('front left')
+                
+        if 'front' in positions and 'right' in positions and 'front right' not in positions:
+            if 'front passenger' in query_lower or 'passenger front' in query_lower:
+                positions.append('front right')
+                
+        if 'rear' in positions and 'left' in positions and 'rear left' not in positions:
+            if 'rear driver' in query_lower or 'driver rear' in query_lower:
+                positions.append('rear left')
+                
+        if 'rear' in positions and 'right' in positions and 'rear right' not in positions:
+            if 'rear passenger' in query_lower or 'passenger rear' in query_lower:
+                positions.append('rear right')
         
         return positions if positions else None
 
@@ -2099,11 +2148,45 @@ class EnhancedQueryProcessor:
         position = self._extract_position(normalized)
         engine_specs = self._extract_engine_specs(normalized)
         
+        # Incorporate position terms into the part name for better part matching
+        enhanced_part = part
+        if position and part:
+            # First check if position terms are already in the part name
+            part_lower = part.lower()
+            
+            # Only add position terms if they're not already in the part name
+            if not any(pos in part_lower for pos in position):
+                # Check for compound positions (front left, rear right, etc.)
+                compound_positions = []
+                if 'front' in position and 'left' in position and 'front left' not in part_lower:
+                    compound_positions.append('front left')
+                if 'front' in position and 'right' in position and 'front right' not in part_lower:
+                    compound_positions.append('front right')
+                if 'rear' in position and 'left' in position and 'rear left' not in part_lower:
+                    compound_positions.append('rear left')
+                if 'rear' in position and 'right' in position and 'rear right' not in part_lower:
+                    compound_positions.append('rear right')
+                
+                # If we have compound positions, use those instead of individual positions
+                if compound_positions:
+                    position_prefix = ' '.join(compound_positions)
+                    enhanced_part = f"{position_prefix} {part}"
+                    print(f"[DEBUG] QueryProcessor - Enhanced part with compound positions: {enhanced_part}")
+                # Otherwise add individual positions that aren't already in the part name
+                else:
+                    position_keywords = ['front', 'rear', 'left', 'right', 'upper', 'lower', 'inner', 'outer']
+                    positions_to_add = [pos for pos in position if pos in position_keywords and pos not in part_lower.split()]
+                    
+                    if positions_to_add:
+                        position_prefix = ' '.join(positions_to_add)
+                        enhanced_part = f"{position_prefix} {part}"
+                        print(f"[DEBUG] QueryProcessor - Enhanced part with positions: {enhanced_part}")
+        
         result = {
             "year": year,
             "make": make,
             "model": model,
-            "part": part,
+            "part": enhanced_part,  # Use the enhanced part name
             "position": position,
             "engine_specs": engine_specs,
             "original_query": query,
