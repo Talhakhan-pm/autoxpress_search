@@ -1,14 +1,9 @@
 /**
- * Product Renderer Module - Compatibility Layer
- * 
- * This module now serves as a compatibility layer that delegates to the 
- * unified product display system in updated_products.js.
- * 
- * This ensures that any code relying on the original product-renderer.js 
- * functions continues to work, without duplicating logic.
+ * Product Renderer Module
+ * Handles rendering product cards and displaying products in different views
  */
 
-// Helper function to get the search year (retained for backward compatibility)
+// Helper function to get the search year
 function getSearchYear() {
   // Try multi-field first
   const yearField = document.getElementById('year-field');
@@ -29,16 +24,147 @@ function getSearchYear() {
 }
 
 /**
- * Get search terms from the form - delegates to the central implementation
- * if available, otherwise falls back to local implementation
+ * Helper function to render a product card with appropriate styling
  */
-function getSearchTerms() {
-  // Use centralized implementation if available
-  if (window.productDisplay && typeof window.productDisplay.getSearchTerms === 'function') {
-    return window.productDisplay.getSearchTerms();
+function renderProductCard(product, isExactMatch, isCompatible) {
+  const productsContainer = document.getElementById('products-container');
+  if (!productsContainer) return;
+
+  const productId = generateProductId(product);
+  const sourceClass = product.source === 'eBay' ? 'source-ebay' : 'source-google';
+  const conditionClass = product.condition.toLowerCase().includes('new') ? 'condition-new' : 'condition-used';
+  const shippingClass = product.shipping.toLowerCase().includes('free') ? 'free-shipping' : '';
+
+  // Check if this product is a favorite
+  const favorites = loadFavorites();
+  const isFavorite = favorites[productId] !== undefined;
+
+  // Build card classes
+  let cardClasses = "product-card";
+  if (isExactMatch) {
+    cardClasses += " exact-year-match";
+  }
+
+  // Create the product card element
+  const productCard = document.createElement('div');
+  productCard.className = 'col-md-4 col-lg-3 mb-3';
+
+  // Generate appropriate badges based on product attributes
+  let badgeHtml = '';
+  
+  // Exact match or compatibility badge (positioned top right)
+  if (isExactMatch) {
+    badgeHtml += `<div class="product-badge badge-exact-match badge-top-right">Exact Match</div>`;
+  } else if (isCompatible) {
+    badgeHtml += `<div class="product-badge badge-compatible badge-top-right">Compatible</div>`;
   }
   
-  // Fallback implementation (copied from original for backward compatibility)
+  // Determine product type (OEM/Premium) from text
+  const productText = (product.title + ' ' + (product.description || '')).toLowerCase();
+  const isOEM = productText.includes('oem') || productText.includes('original');
+  const isPremium = productText.includes('premium') || productText.includes('performance') || productText.includes('pro');
+  
+  // Condition badge (only for used items, since "new" is expected)
+  if (product.condition.toLowerCase().includes('used')) {
+    badgeHtml += `<div class="product-badge badge-used badge-bottom-right">Used</div>`;
+  }
+
+  // Highlight matching terms in the product title
+  const highlightedTitle = highlightKeywords(product.title, getSearchTerms());
+
+  // Build the card HTML
+  productCard.innerHTML = `
+    <div class="${cardClasses}">
+      <div class="product-source ${sourceClass}">${product.source}</div>
+      ${badgeHtml}
+      <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-product-id="${productId}" aria-label="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+        <i class="fas fa-heart"></i>
+      </button>
+      <div class="product-image-container" data-image="${product.image || '/static/placeholder.png'}">
+        <img src="${product.image || '/static/placeholder.png'}" class="product-image" alt="${product.title}">
+      </div>
+      <div class="p-3">
+        <div class="product-title mb-2">${highlightedTitle}</div>
+        <div class="d-flex justify-content-between mb-1">
+          <span>Condition:</span>
+          <span class="${conditionClass}">${product.condition}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-1">
+          <span>Price:</span>
+          <span class="product-price">${product.price}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-3">
+          <span>Shipping:</span>
+          <span class="${shippingClass}">${product.shipping}</span>
+        </div>
+        <a href="${product.link}" target="_blank" class="btn btn-danger btn-sm w-100">View Details</a>
+      </div>
+    </div>
+  `;
+
+  productsContainer.appendChild(productCard);
+}
+
+/**
+ * Displays products with enhanced highlighting and badges
+ */
+function displayProducts(listings) {
+  const productsContainer = document.getElementById('products-container');
+  if (!productsContainer) return;
+  
+  // Clear the container
+  productsContainer.innerHTML = '';
+
+  if (!listings || listings.length === 0) {
+    productsContainer.innerHTML = '<div class="col-12 text-center"><p>No products found. Try a different search term.</p></div>';
+    return;
+  }
+
+  // Extract the year we searched for (from query or structured form)
+  const searchYear = getSearchYear();
+  
+  // Get all search fields for term matching
+  const searchTerms = getSearchTerms();
+
+  // Enhanced display with badges and match highlighting 
+  listings.forEach(item => {
+    // Check if this is an exact match based on year
+    const isExactMatch = searchYear && item.title && 
+      (item.title.includes(searchYear) || 
+       (item.description && item.description.includes(searchYear)));
+    
+    // Check if compatible but not exact match
+    const isCompatible = !isExactMatch && determineCompatibility(item, searchTerms);
+    
+    renderProductCard(item, isExactMatch, isCompatible);
+  });
+
+  // Add event listeners to the favorite buttons
+  if (typeof attachFavoriteButtonListeners === 'function') {
+    attachFavoriteButtonListeners();
+  }
+  
+  // Add event listeners to the image containers
+  if (typeof attachImagePreviewListeners === 'function') {
+    attachImagePreviewListeners();
+  }
+
+  // Update product count badges
+  const productCountBadge = document.getElementById('products-count');
+  if (productCountBadge) {
+    productCountBadge.textContent = listings.length;
+  }
+  
+  // Trigger a custom event to notify that products were displayed
+  // This helps other modules (like the image modal) know when to attach handlers
+  document.dispatchEvent(new CustomEvent('productsDisplayed'));
+}
+
+/**
+ * Helper function to collect all search terms from the form
+ * Used for term matching in product listings
+ */
+function getSearchTerms() {
   const terms = [];
   
   // Try multi-field search form first
@@ -69,7 +195,7 @@ function getSearchTerms() {
 
 /**
  * Determines if a product is compatible based on search terms
- * (Kept for backward compatibility)
+ * Doesn't change existing sorting or filtering logic
  */
 function determineCompatibility(product, searchTerms) {
   if (!searchTerms || searchTerms.length === 0) return false;
@@ -90,15 +216,12 @@ function determineCompatibility(product, searchTerms) {
 }
 
 /**
- * Highlights keywords in text - delegates to central implementation if available
+ * Highlights keywords in a text string based on search terms
+ * @param {string} text - The text to highlight
+ * @param {string[]} keywords - The keywords to highlight
+ * @returns {string} - HTML with highlighted keywords
  */
 function highlightKeywords(text, keywords) {
-  // Use centralized implementation if available
-  if (window.productDisplay && typeof window.productDisplay.highlightKeywords === 'function') {
-    return window.productDisplay.highlightKeywords(text, keywords);
-  }
-  
-  // Fallback implementation (if the central system isn't available)
   if (!text || !keywords || keywords.length === 0) {
     return text;
   }
@@ -117,162 +240,32 @@ function highlightKeywords(text, keywords) {
     return text;
   }
   
-  // Create a regex pattern for matching
+  // Create a regex that matches any of the keywords
+  // Use word boundaries to match whole words when possible
+  const regex = new RegExp(
+    validKeywords.map(term => 
+      // If the term is alphanumeric, use word boundaries
+      /^[a-zA-Z0-9]+$/.test(term) 
+        ? `\\b${term}\\b` 
+        : term
+    ).join('|'), 
+    'gi'
+  );
+  
   try {
-    const regex = new RegExp(
-      validKeywords.map(term => 
-        /^[a-zA-Z0-9]+$/.test(term) ? `\\b${term}\\b` : term
-      ).join('|'), 
-      'gi'
-    );
-    
     // Replace all matches with highlighted spans
     return text.replace(regex, match => {
       return `<span class="keyword-highlight">${match}</span>`;
     });
   } catch (e) {
+    // In case of regex error, return the original text
     console.error('Error highlighting keywords:', e);
     return text;
   }
 }
 
-/**
- * Helper function to render a product card - now delegates to updated_products.js
- * Kept for backward compatibility
- */
-function renderProductCard(product, isExactMatch, isCompatible) {
-  console.log('renderProductCard called - delegating to unified product display system');
-  
-  // If the product already exists in the container, just return
-  const productsContainer = document.getElementById('products-container');
-  if (!productsContainer) return;
-  
-  // Add compatibility markers to the product
-  const enhancedProduct = {
-    ...product,
-    isExactMatch: isExactMatch === true,
-    isCompatible: isCompatible === true
-  };
-  
-  // Use the unified system if available, otherwise fall back
-  if (window.productDisplay && window.productDisplay.setProducts) {
-    window.productDisplay.setProducts([enhancedProduct]);
-  } else {
-    // Fallback - simplified version of original renderProductCard
-    console.warn('Unified product display system not found - using fallback rendering');
-    
-    const productId = generateProductId(product);
-    const favorites = loadFavorites ? loadFavorites() : {};
-    const isFavorite = favorites[productId] !== undefined;
-    
-    const productCard = document.createElement('div');
-    productCard.className = 'col-md-4 col-lg-3 mb-3';
-    
-    // Simple product card
-    productCard.innerHTML = `
-      <div class="product-card">
-        <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-product-id="${productId}">
-          <i class="fas fa-heart"></i>
-        </button>
-        <div class="product-image-container">
-          <img src="${product.image || '/static/placeholder.png'}" class="product-image" alt="${product.title}">
-        </div>
-        <div class="p-3">
-          <div class="product-title mb-2">${product.title}</div>
-          <div class="product-price">${product.price}</div>
-          <a href="${product.link}" target="_blank" class="btn btn-danger btn-sm w-100 mt-2">View Details</a>
-        </div>
-      </div>
-    `;
-    
-    productsContainer.appendChild(productCard);
-  }
-}
-
-/**
- * Displays products - now delegates to updated_products.js if available
- * Kept for backward compatibility
- */
-function displayProducts(listings) {
-  console.log('displayProducts called from product-renderer.js - delegating to unified product display system');
-  
-  // Use the unified system if available
-  if (window.productDisplay && window.productDisplay.setProducts) {
-    // Extract the year we searched for (from query or structured form)
-    const searchYear = getSearchYear();
-    const searchTerms = getSearchTerms();
-    
-    // Enhance listings with compatibility flags
-    const enhancedListings = listings.map(item => {
-      // Check if this is an exact match based on year
-      const isExactMatch = searchYear && item.title && 
-        (item.title.includes(searchYear) || 
-         (item.description && item.description.includes(searchYear)));
-      
-      // Check if compatible but not exact match
-      const isCompatible = !isExactMatch && determineCompatibility(item, searchTerms);
-      
-      return {
-        ...item,
-        isExactMatch: isExactMatch,
-        isCompatible: isCompatible
-      };
-    });
-    
-    // Use the centralized system
-    window.productDisplay.setProducts(enhancedListings);
-    
-    // Update product count badges
-    const productCountBadge = document.getElementById('products-count');
-    if (productCountBadge) {
-      productCountBadge.textContent = listings.length;
-    }
-    
-    return; // Exit early - rendering handled by the unified system
-  }
-  
-  // Fallback if the unified system isn't available - simplified version
-  console.warn('Unified product display system not found - using fallback rendering');
-  
-  const productsContainer = document.getElementById('products-container');
-  if (!productsContainer) return;
-  
-  // Clear the container
-  productsContainer.innerHTML = '';
-
-  if (!listings || listings.length === 0) {
-    productsContainer.innerHTML = '<div class="col-12 text-center"><p>No products found. Try a different search term.</p></div>';
-    return;
-  }
-  
-  // Get search context
-  const searchYear = getSearchYear();
-  const searchTerms = getSearchTerms();
-
-  // Render each product
-  listings.forEach(item => {
-    const isExactMatch = searchYear && item.title && 
-      (item.title.includes(searchYear) || 
-       (item.description && item.description.includes(searchYear)));
-    
-    const isCompatible = !isExactMatch && determineCompatibility(item, searchTerms);
-    
-    renderProductCard(item, isExactMatch, isCompatible);
-  });
-
-  // Update count badges
-  const productCountBadge = document.getElementById('products-count');
-  if (productCountBadge) {
-    productCountBadge.textContent = listings.length;
-  }
-  
-  // Notify that products were displayed
-  document.dispatchEvent(new CustomEvent('productsDisplayed'));
-}
-
-// Make globally available for backward compatibility
+// Make globally available
 window.renderProductCard = renderProductCard;
 window.getSearchYear = getSearchYear;
 window.displayProducts = displayProducts;
 window.highlightKeywords = highlightKeywords;
-window.getSearchTerms = getSearchTerms;

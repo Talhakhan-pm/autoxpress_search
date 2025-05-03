@@ -1,8 +1,8 @@
 /**
  * Product display and filtering functionality
- * This file is the single source of truth for product rendering and filtering
+ * This file should be imported in the main HTML after main.js
  * 
- * UPDATED: Enhanced to be the centralized product management system
+ * UPDATED: Now exposes key functions globally for better code reuse
  */
 
 // Creates a unique ID for a product
@@ -23,111 +23,19 @@ function loadFavorites() {
   return favoritesJson ? JSON.parse(favoritesJson) : {};
 }
 
-// Make these utility functions globally available
+// Make these functions globally available
 window.generateProductId = generateProductId;
 window.loadFavorites = loadFavorites;
 
-// Get search terms for highlighting (extracted from product-renderer.js)
-function getSearchTerms() {
-  const terms = [];
-  
-  // Try multi-field search form first
-  const yearField = document.getElementById('year-field');
-  const makeField = document.getElementById('make-field');
-  const modelField = document.getElementById('model-field');
-  const partField = document.getElementById('part-field');
-  const engineField = document.getElementById('engine-field');
-  
-  if (yearField && yearField.value) terms.push(yearField.value.trim());
-  if (makeField && makeField.value) terms.push(makeField.value.trim());
-  if (modelField && modelField.value) terms.push(modelField.value.trim());
-  if (partField && partField.value) terms.push(partField.value.trim());
-  if (engineField && engineField.value) terms.push(engineField.value.trim());
-  
-  // If no multi-field terms, try single field prompt
-  if (terms.length === 0) {
-    const promptField = document.getElementById('prompt');
-    if (promptField && promptField.value) {
-      // Split the prompt into individual terms
-      const promptTerms = promptField.value.split(/\s+/);
-      terms.push(...promptTerms.filter(term => term.length > 2)); // Only use terms with 3+ chars
-    }
-  }
-  
-  return terms;
-}
-
-// Highlight matching keywords in text
-function highlightKeywords(text, keywords) {
-  if (!text || !keywords || keywords.length === 0) {
-    return text;
-  }
-  
-  // Filter keywords to avoid highlighting common words
-  const validKeywords = keywords.filter(keyword => {
-    // Only use keywords with 3+ characters
-    if (keyword.length < 3) return false;
-    
-    // Skip common words that shouldn't be highlighted
-    const commonWords = ['the', 'and', 'for', 'with', 'this', 'that', 'from'];
-    return !commonWords.includes(keyword.toLowerCase());
-  });
-  
-  if (validKeywords.length === 0) {
-    return text;
-  }
-  
-  // Create a regex that matches any of the keywords
-  // Use word boundaries to match whole words when possible
-  const regex = new RegExp(
-    validKeywords.map(term => 
-      // If the term is alphanumeric, use word boundaries
-      /^[a-zA-Z0-9]+$/.test(term) 
-        ? `\\b${term}\\b` 
-        : term
-    ).join('|'), 
-    'gi'
-  );
-  
-  try {
-    // Replace all matches with highlighted spans
-    return text.replace(regex, match => {
-      return `<span class="keyword-highlight">${match}</span>`;
-    });
-  } catch (e) {
-    // In case of regex error, return the original text
-    console.error('Error highlighting keywords:', e);
-    return text;
-  }
-}
-
-// Callback functions that will be called by the product display system
-// These are placeholders that can be overridden by main.js
-window.productCallbacks = {
-  attachFavoriteButtonListeners: function() {
-    // Default implementation that does nothing
-    // Will be overridden by main.js
-    console.log("Default attachFavoriteButtonListeners called");
-  },
-  
-  attachImagePreviewListeners: function() {
-    // Default implementation that does nothing
-    // Will be overridden by main.js
-    console.log("Default attachImagePreviewListeners called");
-  }
-};
-
-// Empty placeholder functions that delegate to the callbacks
+// Empty placeholder functions that do nothing - we don't need their actual functionality
 function attachFavoriteButtonListeners() {
-  if (typeof window.productCallbacks.attachFavoriteButtonListeners === 'function') {
-    window.productCallbacks.attachFavoriteButtonListeners();
-  }
+  // We don't actually need to implement this for the product display
+  // The event handlers are attached in main.js
 }
 
 function attachImagePreviewListeners() {
-  if (typeof window.productCallbacks.attachImagePreviewListeners === 'function') {
-    window.productCallbacks.attachImagePreviewListeners();
-  }
+  // We don't actually need to implement this for the product display  
+  // The event handlers are attached in main.js
 }
 
 // Product display configuration
@@ -355,193 +263,70 @@ function resetFilters() {
 }
 
 /**
- * Enhanced unified filtering API
- * This is the central filtering system that both updated_products.js and enhanced-filtering.js use
- * 
- * @param {Object} options - Optional parameters to control filtering behavior
- * @param {Object} options.filters - Override the active filters (otherwise uses productConfig.activeFilters)
- * @param {boolean} options.updateDOM - Whether to update the DOM (defaults to true)
- * @param {boolean} options.debug - Whether to show debug logs (defaults to false)
- * @returns {Array} The filtered products array
+ * Applies current filters to the product list
  */
-function applyFilters(options = {}) {
+function applyFilters() {
   const allProducts = productConfig.allProducts;
-  const filters = options.filters || productConfig.activeFilters;
-  const debug = options.debug === true;
-  const updateDOM = options.updateDOM !== false;
-  
-  if (debug) {
-    console.group("Applying filters");
-    console.log("Active filters:", JSON.stringify(filters));
-    console.log("Product count before filtering:", allProducts.length);
-  }
-  
   let filteredProducts = [...allProducts];
 
-  // Apply condition filter - handles both 'new' and 'used' cases
-  if (filters.condition && filters.condition.length > 0) {
-    if (debug) console.log("Applying condition filters:", filters.condition);
-    
+  // Apply condition filter
+  if (productConfig.activeFilters.condition.length > 0) {
     filteredProducts = filteredProducts.filter(product => {
-      const condition = (product.condition || '').toLowerCase();
-      
-      // If we're filtering for new items
-      if (filters.condition.includes('new') && !filters.condition.includes('used')) {
-        return condition.includes('new');
+      if (productConfig.activeFilters.condition.includes('new')) {
+        return product.condition.toLowerCase().includes('new');
       }
-      
-      // If we're filtering for used items
-      if (filters.condition.includes('used') && !filters.condition.includes('new')) {
-        return condition.includes('used') || 
-               condition.includes('pre-owned') ||
-               condition.includes('preowned');
-      }
-      
-      // If both new and used are selected, no filtering needed
-      if (filters.condition.includes('new') && filters.condition.includes('used')) {
-        return true;
-      }
-      
-      // Default case - no condition filter applied
       return true;
     });
-    
-    if (debug) console.log("Products after condition filter:", filteredProducts.length);
   }
 
   // Apply shipping filter
-  if (filters.shipping && filters.shipping.length > 0) {
-    if (debug) {
-      console.log("Applying shipping filters:", filters.shipping);
-      console.log("Shipping values sample:", 
-        filteredProducts.map(p => p.shipping).slice(0, 5));
-    }
+  if (productConfig.activeFilters.shipping.length > 0) {
+    // Log shipping values for debugging purposes
+    console.log("Filtering for free shipping among these values:", 
+      filteredProducts.map(p => p.shipping).slice(0, 5)); // Show first 5 for brevity
       
     filteredProducts = filteredProducts.filter(product => {
-      if (filters.shipping.includes('free')) {
+      if (productConfig.activeFilters.shipping.includes('free')) {
         // More robust check for free shipping
         const shippingText = String(product.shipping || '').toLowerCase();
+        // Debug log for shipping values
+        if (shippingText.includes('free')) {
+          console.log("Found free shipping item:", product.title);
+        }
         return shippingText.includes('free');
       }
       return true;
     });
     
-    if (debug) console.log("Products after shipping filter:", filteredProducts.length);
+    // Log how many products matched the free shipping filter
+    console.log(`Found ${filteredProducts.length} products with free shipping`);
   }
 
   // Apply source filter
-  if (filters.source && filters.source.length > 0) {
-    if (debug) console.log("Applying source filters:", filters.source);
-    
+  if (productConfig.activeFilters.source.length > 0) {
     filteredProducts = filteredProducts.filter(product =>
-      filters.source.includes(product.source)
+      productConfig.activeFilters.source.includes(product.source)
     );
-    
-    if (debug) console.log("Products after source filter:", filteredProducts.length);
-  }
-
-  // Apply type filter (OEM, Premium)
-  if (filters.type && filters.type.length > 0) {
-    if (debug) console.log("Applying type filters:", filters.type);
-    
-    filteredProducts = filteredProducts.filter(product => {
-      const productText = ((product.title || '') + ' ' + (product.description || '')).toLowerCase();
-      
-      // Filter for OEM parts
-      if (filters.type.includes('oem')) {
-        return productText.includes('oem') || 
-               productText.includes('original equipment') || 
-               productText.includes('original');
-      }
-      
-      // Filter for premium parts
-      if (filters.type.includes('premium')) {
-        // Keyword-based detection
-        const isPremiumByKeywords = productText.includes('premium') || 
-            productText.includes('performance') || 
-            productText.includes('pro') || 
-            productText.includes('high quality') || 
-            productText.includes('elite') || 
-            productText.includes('advanced') || 
-            productText.includes('upgraded') ||
-            productText.includes('drilled') ||
-            productText.includes('slotted') ||
-            productText.includes('ceramic') ||
-            productText.includes('carbon ceramic') ||
-            productText.includes('semi-metallic') ||
-            productText.includes('semi metallic') ||
-            productText.includes('sport') ||
-            productText.includes('racing') ||
-            productText.includes('heavy duty');
-        
-        // Brand-based detection
-        const premiumBrands = ['bosch', 'brembo', 'bilstein', 'koni', 'borla', 'kw', 'k&n', 'moog', 
-                              'akebono', 'stoptech', 'eibach', 'h&r', 'magnaflow', 'hawk', 'edelbrock',
-                              'detroit', 'apf', 'detroit diesel', 'detroit axle'];
-        
-        const isPremiumByBrand = premiumBrands.some(brand => productText.includes(brand));
-        
-        // If has premium marker or premium data attribute
-        const hasPremiumAttribute = product.isPremium === true || product.premium === true;
-        
-        return isPremiumByKeywords || isPremiumByBrand || hasPremiumAttribute;
-      }
-      
-      // If we have multiple type filters, we need to check if ANY match
-      if (filters.type.length > 1) {
-        // This would handle more complex type filtering logic if needed
-        return true;
-      }
-      
-      return true;
-    });
-    
-    if (debug) console.log("Products after type filter:", filteredProducts.length);
   }
 
   // Apply relevance filter (using bestMatch property)
-  if (filters.relevance && filters.relevance.length > 0) {
-    if (debug) console.log("Applying relevance filters:", filters.relevance);
-    
+  if (productConfig.activeFilters.relevance.length > 0) {
     filteredProducts = filteredProducts.filter(product => {
-      if (filters.relevance.includes('high')) {
+      if (productConfig.activeFilters.relevance.includes('high')) {
         // Check for bestMatch flag which is set in the backend
-        return product.bestMatch === true || product.isExactMatch === true ||
-               (product.relevanceScore !== undefined && product.relevanceScore > 50);
+        return product.bestMatch === true;
       }
       return true;
     });
-    
-    if (debug) console.log("Products after relevance filter:", filteredProducts.length);
   }
 
-  if (debug) {
-    console.log("Final filtered products count:", filteredProducts.length);
-    console.groupEnd();
-  }
+  // Save filtered products and display first page
+  productConfig.displayedProducts = filteredProducts;
+  productConfig.currentPage = 1;
+  displayProductsPage();
 
-  // Only update the DOM if requested
-  if (updateDOM) {
-    // Save filtered products and display first page
-    productConfig.displayedProducts = filteredProducts;
-    productConfig.currentPage = 1;
-    displayProductsPage();
-
-    // Update product counts
-    updateProductCounts();
-    
-    // Trigger a custom event for components that need to know when filters change
-    document.dispatchEvent(new CustomEvent('filtersApplied', {
-      detail: {
-        filters: filters,
-        filteredCount: filteredProducts.length,
-        totalCount: allProducts.length
-      }
-    }));
-  }
-  
-  // Return the filtered products for external use
-  return filteredProducts;
+  // Update product counts
+  updateProductCounts();
 }
 
 /**
@@ -1061,64 +846,11 @@ function sortAndDisplayProducts() {
   displayProductsPage();
 }
 
-// Export the enhanced unified API
+// Export the API
 window.productDisplay = {
-  // Core product management functions
   setProducts,
   loadMoreProducts,
   resetFilters,
   updateViewMode,
-  sortAndDisplayProducts,
-  
-  // Filter API
-  applyFilters,
-  updateProductCounts,
-  
-  // Filter management helpers
-  addFilter: function(filterType, filterValue) {
-    if (!productConfig.activeFilters[filterType]) {
-      productConfig.activeFilters[filterType] = [];
-    }
-    
-    if (!productConfig.activeFilters[filterType].includes(filterValue)) {
-      productConfig.activeFilters[filterType].push(filterValue);
-      return true; // Filter was added
-    }
-    
-    return false; // Filter was already present
-  },
-  
-  removeFilter: function(filterType, filterValue) {
-    if (!productConfig.activeFilters[filterType]) {
-      return false; // Filter type doesn't exist
-    }
-    
-    const index = productConfig.activeFilters[filterType].indexOf(filterValue);
-    if (index !== -1) {
-      productConfig.activeFilters[filterType].splice(index, 1);
-      return true; // Filter was removed
-    }
-    
-    return false; // Filter wasn't present
-  },
-  
-  getActiveFilters: function() {
-    return JSON.parse(JSON.stringify(productConfig.activeFilters)); // Return a copy, not the reference
-  },
-  
-  // Utility functions
-  getSearchTerms,
-  highlightKeywords,
-  
-  // For debugging purposes
-  getConfig: function() {
-    return {
-      currentView: productConfig.currentView,
-      currentSort: productConfig.currentSort,
-      currentPage: productConfig.currentPage,
-      pageSize: productConfig.pageSize,
-      productsCount: productConfig.allProducts.length,
-      displayedCount: productConfig.displayedProducts.length
-    };
-  }
+  sortAndDisplayProducts
 };

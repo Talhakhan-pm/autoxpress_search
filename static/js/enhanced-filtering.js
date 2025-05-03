@@ -1,19 +1,16 @@
 /**
  * Enhanced Filtering System for AutoXpress
- * Now uses the unified filtering API from updated_products.js
+ * Supports OEM/premium/used product filtering without modifying core logic
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Log initialization
-    console.log('Initializing enhanced filtering system with unified API');
-    
     // Elements
     const filterCheckboxes = document.querySelectorAll('.filter-check');
     const resetFiltersButton = document.getElementById('resetFilters');
     const filterCountBadge = document.getElementById('filter-count');
     const activeFiltersContainer = document.getElementById('active-filters');
     
-    // Store active filters (local copy for UI management)
+    // Store active filters
     let activeFilters = {
         condition: [],
         type: [],
@@ -21,30 +18,18 @@ document.addEventListener('DOMContentLoaded', function() {
         source: ['eBay', 'Google Shopping'] // Default checked sources
     };
     
-    // Check if we have the unified product display API
-    const hasUnifiedAPI = window.productDisplay && typeof window.productDisplay.applyFilters === 'function';
-    
-    // If using unified API, synchronize local filters with central system
-    if (hasUnifiedAPI) {
-        console.log('Using unified filtering API from updated_products.js');
+    // Initialize filters in global productConfig if it exists
+    if (window.productConfig && window.productConfig.activeFilters) {
+        // Ensure all required filter types exist in productConfig
+        const requiredFilterTypes = Object.keys(activeFilters);
         
-        // Get current filters from the central system
-        try {
-            const centralFilters = window.productDisplay.getActiveFilters();
-            if (centralFilters) {
-                // Merge with our local filters, preferring central values
-                for (const [filterType, values] of Object.entries(centralFilters)) {
-                    if (Array.isArray(values)) {
-                        activeFilters[filterType] = [...values];
-                    }
-                }
-                console.log('Synchronized filters with central system:', activeFilters);
+        for (const filterType of requiredFilterTypes) {
+            if (!window.productConfig.activeFilters[filterType]) {
+                // Initialize missing filter types
+                window.productConfig.activeFilters[filterType] = filterType === 'source' ? 
+                    ['eBay', 'Google Shopping'] : [];
             }
-        } catch (e) {
-            console.warn('Failed to get active filters from central system:', e);
         }
-    } else {
-        console.warn('Unified filtering API not found - using standalone mode');
     }
     
     // Initialize filter event handlers
@@ -61,23 +46,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Add to active filters
                     if (!activeFilters[filterType].includes(filterValue)) {
                         activeFilters[filterType].push(filterValue);
-                        
-                        // If using unified API, synchronize with central system
-                        if (hasUnifiedAPI) {
-                            window.productDisplay.addFilter(filterType, filterValue);
-                        }
-                        
                         console.log(`Added ${filterValue} to ${filterType} filters`);
                     }
                 } else {
                     // Remove from active filters
                     activeFilters[filterType] = activeFilters[filterType].filter(v => v !== filterValue);
-                    
-                    // If using unified API, synchronize with central system
-                    if (hasUnifiedAPI) {
-                        window.productDisplay.removeFilter(filterType, filterValue);
-                    }
-                    
                     console.log(`Removed ${filterValue} from ${filterType} filters`);
                 }
                 
@@ -95,24 +68,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Initial UI update
         updateActiveFiltersUI();
-        
-        // Synchronize checkbox states with active filters
-        syncCheckboxesWithFilters();
-    }
-    
-    // Update checkboxes to match filter state
-    function syncCheckboxesWithFilters() {
-        filterCheckboxes.forEach(checkbox => {
-            const filterType = checkbox.dataset.filter;
-            const filterValue = checkbox.dataset.value;
-            
-            // Set checkbox state based on filter values
-            if (activeFilters[filterType] && activeFilters[filterType].includes(filterValue)) {
-                checkbox.checked = true;
-            } else {
-                checkbox.checked = filterType === 'source'; // Source checkboxes default to checked
-            }
-        });
     }
     
     // Update the active filters UI display
@@ -180,13 +135,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             checkbox.checked = false;
                         }
                         
-                        // Remove from active filters locally
+                        // Remove from active filters
                         activeFilters[type] = activeFilters[type].filter(v => v !== value);
-                        
-                        // If using unified API, synchronize with central system
-                        if (hasUnifiedAPI) {
-                            window.productDisplay.removeFilter(type, value);
-                        }
                         
                         // Update UI and apply filters
                         updateActiveFiltersUI();
@@ -215,20 +165,8 @@ document.addEventListener('DOMContentLoaded', function() {
         filterCallCount++;
         console.log(`Applying filters (call #${filterCallCount}) with activeFilters:`, JSON.stringify(activeFilters));
         
-        // If the unified API is available, use it
-        if (hasUnifiedAPI) {
-            console.log('Delegating filtering to unified API');
-            
-            // The applyFilters call will handle the DOM updates
-            window.productDisplay.applyFilters({
-                debug: true  // Enable debug logging
-            });
-            
-            return; // Exit early - filtering handled by unified API
-        }
-        
-        // Legacy standalone filter implementation - only used if unified API is not available
-        console.warn('Using legacy filter implementation (unified API not available)');
+        // FORCE TRIGGER: Add an alert so we can see if this function is being called
+        // alert('Filter is being applied with: ' + JSON.stringify(activeFilters));
         
         const productCards = document.querySelectorAll('.product-card');
         if (!productCards.length) {
@@ -236,9 +174,15 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Filter cards by walking the DOM
+        // Log all product cards for debugging
+        console.log('Found', productCards.length, 'product cards to filter');
+        productCards.forEach((card, index) => {
+            const title = card.querySelector('.product-title')?.textContent || 'Unknown';
+            console.log(`Product ${index+1}: ${title}`);
+        });
+        
         productCards.forEach(card => {
-            const parent = card.closest('.col-md-4, .col-lg-3, .col-6');
+            const parent = card.closest('.col-md-4, .col-lg-3');
             if (!parent) return;
             
             // Default to visible
@@ -263,38 +207,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Condition filtering
                 else if (filterType === 'condition') {
-                    const condition = card.textContent.toLowerCase();
-                    
-                    // For 'new' filter only
-                    if (activeValues.includes('new') && !activeValues.includes('used')) {
+                    // For 'new' filter
+                    if (activeValues.includes('new')) {
+                        const condition = card.textContent.toLowerCase();
                         if (!condition.includes('new') && !condition.includes('brand new')) {
                             isVisible = false;
                             break;
                         }
                     }
                     
-                    // For 'used' filter only
-                    else if (activeValues.includes('used') && !activeValues.includes('new')) {
+                    // For 'used' filter
+                    if (activeValues.includes('used')) {
+                        const condition = card.textContent.toLowerCase();
                         if (!condition.includes('used') && !condition.includes('pre-owned')) {
                             isVisible = false;
                             break;
                         }
                     }
-                    
-                    // If both are selected, all products should pass this filter
                 }
                 
                 // Type filtering (OEM, Premium)
                 else if (filterType === 'type') {
                     // For 'oem' filter
                     if (activeValues.includes('oem')) {
-                        // Check for OEM badge, tag or text
+                        // Check for OEM badge or text
                         const hasOemBadge = card.querySelector('.badge-oem');
-                        const hasOemTag = card.querySelector('.tag-oem');
                         const hasOemText = card.textContent.toLowerCase().includes('oem') || 
-                                           card.textContent.toLowerCase().includes('original equipment');
+                                          card.textContent.toLowerCase().includes('original equipment');
                         
-                        if (!hasOemBadge && !hasOemTag && !hasOemText) {
+                        if (!hasOemBadge && !hasOemText) {
                             isVisible = false;
                             break;
                         }
@@ -302,32 +243,52 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // For 'premium' filter
                     if (activeValues.includes('premium')) {
-                        // Check for Premium tag, badge, attribute or text
-                        const hasPremiumBadge = card.querySelector('.badge-premium');
-                        const hasPremiumTag = card.querySelector('.tag-premium');
-                        const hasPremiumAttr = card.getAttribute('data-premium') === 'true';
-                        const productTitle = card.querySelector('.product-title')?.textContent?.toLowerCase() || '';
+                        // FORCE TEST - Mark all products as passing premium filter for testing
+                        const forceAllProductsAsPremium = false;
                         
-                        // Premium text markers (same as in unified API)
-                        const hasPremiumText = productTitle.includes('premium') || 
-                                            productTitle.includes('performance') ||
-                                            productTitle.includes('detroit') ||
-                                            productTitle.includes('apf') ||
-                                            productTitle.includes('bosch') ||
-                                            productTitle.includes('brembo') ||
-                                            productTitle.includes('drilled') ||
-                                            productTitle.includes('slotted') ||
-                                            productTitle.includes('ceramic') ||
-                                            productTitle.includes('carbon ceramic') ||
-                                            productTitle.includes('semi-metallic') ||
-                                            productTitle.includes('semi metallic') ||
-                                            productTitle.includes('sport') ||
-                                            productTitle.includes('racing') ||
-                                            productTitle.includes('heavy duty');
-                        
-                        if (!hasPremiumBadge && !hasPremiumTag && !hasPremiumAttr && !hasPremiumText) {
-                            isVisible = false;
-                            break;
+                        if (forceAllProductsAsPremium) {
+                            console.log('FORCE TEST: All products set to pass premium filter');
+                            // Skip filtering - all products will show
+                        } else {
+                            // Check for Premium tag, badge, attribute or text
+                            const hasPremiumBadge = card.querySelector('.badge-premium');
+                            const hasPremiumTag = card.querySelector('.tag-premium');
+                            const hasPremiumAttr = card.getAttribute('data-premium') === 'true';
+                            const productTitle = card.querySelector('.product-title')?.textContent?.toLowerCase() || '';
+                            const hasPremiumText = productTitle.includes('premium') || 
+                                                productTitle.includes('performance') ||
+                                                productTitle.includes('detroit') ||
+                                                productTitle.includes('apf') ||
+                                                productTitle.includes('bosch') ||
+                                                productTitle.includes('brembo') ||
+                                                productTitle.includes('drilled') ||     // Drilled rotors are premium
+                                                productTitle.includes('slotted') ||     // Slotted rotors are premium
+                                                productTitle.includes('ceramic') ||     // Ceramic pads are premium
+                                                productTitle.includes('carbon ceramic') || // Carbon ceramic is high-end
+                                                productTitle.includes('semi-metallic') ||  // Semi-metallic is premium
+                                                productTitle.includes('semi metallic') ||  // Semi-metallic (alt spelling)
+                                                productTitle.includes('sport') ||       // Sport parts are premium
+                                                productTitle.includes('racing') ||      // Racing parts are premium
+                                                productTitle.includes('heavy duty');    // Heavy duty parts are premium
+                            
+                            // Enhanced debugging - log the state of each check
+                            console.log('Premium filter check for:', productTitle);
+                            console.log({
+                                hasPremiumBadge: !!hasPremiumBadge,
+                                hasPremiumTag: !!hasPremiumTag,
+                                hasPremiumAttr: !!hasPremiumAttr,
+                                hasPremiumText: hasPremiumText,
+                                productTitle: productTitle,
+                                isPremium: !!(hasPremiumBadge || hasPremiumTag || hasPremiumAttr || hasPremiumText)
+                            });
+                            
+                            if (!hasPremiumBadge && !hasPremiumTag && !hasPremiumAttr && !hasPremiumText) {
+                                console.log('Product failed premium filter:', productTitle);
+                                isVisible = false;
+                                break;
+                            } else {
+                                console.log('Product PASSED premium filter:', productTitle);
+                            }
                         }
                     }
                 }
@@ -342,6 +303,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 }
+                
+                // Future filtering extensions can be added here
             }
             
             // Update visibility
@@ -352,56 +315,42 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Update product count (legacy mode)
+        // Update product count
         updateFilteredProductCount();
     }
     
-    // Update the filtered product count (legacy standalone mode)
+    // Update the filtered product count
     function updateFilteredProductCount() {
         const totalCountElement = document.getElementById('product-total-count');
         if (!totalCountElement) return;
         
-        // Count visible product cards
-        const visibleCards = document.querySelectorAll('.col-md-4:not([style*="display: none"]), .col-lg-3:not([style*="display: none"]), .col-6:not([style*="display: none"])').length;
+        const visibleProducts = document.querySelectorAll('.product-card').length;
+        const visibleCards = document.querySelectorAll('.col-md-4:not([style*="display: none"]), .col-lg-3:not([style*="display: none"])').length;
         
-        // Update the counter
         totalCountElement.textContent = visibleCards;
     }
     
     // Reset all filters to default state
     function resetFilters() {
-        console.log('Resetting all filters to default state');
+        // Reset checkboxes except source filters (keep them checked by default)
+        filterCheckboxes.forEach(checkbox => {
+            const isSourceFilter = checkbox.dataset.filter === 'source';
+            checkbox.checked = isSourceFilter; // Only keep source filters checked
+        });
         
-        // If using unified API, use its reset function
-        if (hasUnifiedAPI && typeof window.productDisplay.resetFilters === 'function') {
-            window.productDisplay.resetFilters();
-            
-            // Update our local state to match
-            activeFilters = window.productDisplay.getActiveFilters();
-        } else {
-            // Legacy standalone reset
-            // Reset checkboxes except source filters (keep them checked by default)
-            filterCheckboxes.forEach(checkbox => {
-                const isSourceFilter = checkbox.dataset.filter === 'source';
-                checkbox.checked = isSourceFilter; // Only keep source filters checked
-            });
-            
-            // Reset active filters
-            for (const filterType in activeFilters) {
-                if (filterType === 'source') {
-                    // Maintain default source filters
-                    activeFilters[filterType] = ['eBay', 'Google Shopping'];
-                } else {
-                    activeFilters[filterType] = [];
-                }
+        // Reset active filters
+        for (const filterType in activeFilters) {
+            if (filterType === 'source') {
+                // Maintain default source filters
+                activeFilters[filterType] = ['eBay', 'Google Shopping'];
+            } else {
+                activeFilters[filterType] = [];
             }
-            
-            // Apply local filters
-            applyFilters();
         }
         
-        // Update the UI to match the reset state
+        // Update UI and apply filters
         updateActiveFiltersUI();
+        applyFilters();
     }
     
     // Initialize on document load
@@ -418,71 +367,41 @@ document.addEventListener('DOMContentLoaded', function() {
     // Listen for product display events to re-apply filters
     document.addEventListener('productsDisplayed', function() {
         console.log('productsDisplayed event triggered - preparing to reapply filters');
-        
         // Apply filters after a short delay to ensure all products are rendered
         setTimeout(() => {
-            // If using unified API, re-sync our local state with the central system
-            if (hasUnifiedAPI) {
-                try {
-                    activeFilters = window.productDisplay.getActiveFilters();
-                    updateActiveFiltersUI();
-                } catch (e) {
-                    console.warn('Failed to sync with unified filters:', e);
-                }
-            }
-            
-            // In standalone mode, we need to check for premium products
-            else {
-                // Re-check for products that should be premium but don't have the tag
-                const productCards = document.querySelectorAll('.product-card');
-                productCards.forEach(card => {
-                    const title = card.querySelector('.product-title')?.textContent.toLowerCase() || '';
-                    
-                    // Premium brand check (same list as in unified API)
-                    const premiumBrands = ['bosch', 'brembo', 'bilstein', 'koni', 'borla', 'kw', 'k&n', 'moog', 
-                                         'akebono', 'stoptech', 'eibach', 'h&r', 'magnaflow', 'hawk', 'edelbrock',
-                                         'detroit', 'apf', 'detroit diesel', 'detroit axle'];
-                    
-                    const isPremiumByBrand = premiumBrands.some(brand => title.includes(brand));
-                    const isPremiumByKeywords = title.includes('premium') || 
-                                             title.includes('performance') || 
-                                             title.includes('pro');
-                                             
-                    if ((isPremiumByBrand || isPremiumByKeywords) && !card.querySelector('.tag-premium')) {
-                        console.log('Adding missing premium tag to:', title);
+            // Re-check for products that should be premium but don't have the tag
+            const productCards = document.querySelectorAll('.product-card');
+            productCards.forEach(card => {
+                const title = card.querySelector('.product-title')?.textContent.toLowerCase() || '';
+                
+                // Premium brand check
+                const premiumBrands = ['bosch', 'brembo', 'bilstein', 'koni', 'borla', 'kw', 'k&n', 'moog', 
+                                     'akebono', 'stoptech', 'eibach', 'h&r', 'magnaflow', 'hawk', 'edelbrock',
+                                     'detroit', 'apf', 'detroit diesel', 'detroit axle'];
+                
+                const isPremiumByBrand = premiumBrands.some(brand => title.includes(brand));
+                const isPremiumByKeywords = title.includes('premium') || 
+                                         title.includes('performance') || 
+                                         title.includes('pro');
+                                         
+                if ((isPremiumByBrand || isPremiumByKeywords) && !card.querySelector('.tag-premium')) {
+                    console.log('Adding missing premium tag to:', title);
+                    // Add premium tag if missing
+                    const tagsContainer = card.querySelector('.product-tags');
+                    if (tagsContainer) {
+                        const premiumTag = document.createElement('span');
+                        premiumTag.className = 'product-tag tag-premium';
+                        premiumTag.textContent = 'Premium';
+                        tagsContainer.appendChild(premiumTag);
                         
-                        // Add premium tag if missing
-                        const tagsContainer = card.querySelector('.product-tags');
-                        if (tagsContainer) {
-                            const premiumTag = document.createElement('span');
-                            premiumTag.className = 'product-tag tag-premium';
-                            premiumTag.textContent = 'Premium';
-                            tagsContainer.appendChild(premiumTag);
-                            
-                            // Mark with data attribute for persistence
-                            card.setAttribute('data-premium', 'true');
-                        }
+                        // Mark with data attribute for persistence
+                        card.setAttribute('data-premium', 'true');
                     }
-                });
-            }
+                }
+            });
             
-            // Apply filters (using unified API if available)
+            // Apply filters
             applyFilters();
         }, 100);
-    });
-    
-    // Listen for filter changes from the unified system
-    document.addEventListener('filtersApplied', function(event) {
-        // Only process if we have filter data and we're using the unified API
-        if (hasUnifiedAPI && event.detail && event.detail.filters) {
-            console.log('Received filtersApplied event from unified system');
-            
-            // Update our local filter state to match the unified system
-            activeFilters = event.detail.filters;
-            
-            // Update the UI to reflect the new filter state
-            updateActiveFiltersUI();
-            syncCheckboxesWithFilters();
-        }
     });
 });
