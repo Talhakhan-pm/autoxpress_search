@@ -20,24 +20,21 @@
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <div class="container">
                 <a class="navbar-brand" href="#">Auto<span>Xpress</span></a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item">
-                            <a class="nav-link active" href="#">Home</a>
+                            <a class="nav-link active" href="#search-content" aria-current="page">
+                                <i class="fas fa-home me-1"></i>Home
+                            </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="#" id="favorites-nav-link">
                                 <i class="fas fa-heart me-1"></i>Favorites
                             </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">About</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">Contact</a>
                         </li>
                     </ul>
                 </div>
@@ -48,12 +45,13 @@
             <div class="container">
                 <div class="row align-items-center">
                     <div class="col-md-8">
-                        <h1>Find the Right Auto Parts Faster</h1>
-                        <p class="lead">Our AI-powered assistant helps you find OEM and aftermarket parts with perfect
-                            fitment for your vehicle.</p>
+                        <h1>Find the Right Auto Parts <span class="text-danger">Faster</span></h1>
+                        <p class="lead">Our AI-powered assistant helps you discover OEM and aftermarket parts with
+                            perfect
+                            fitment for your vehicle</p>
                     </div>
                     <div class="col-md-4 text-end d-none d-md-block">
-                        <i class="fas fa-car fa-4x text-white-50 opacity-50"></i>
+                        <i class="fas fa-car"></i>
                     </div>
                 </div>
             </div>
@@ -355,17 +353,19 @@
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div class="tab-pane fade" id="part-number-content" role="tabpanel"
                                     aria-labelledby="part-number-tab">
                                     <div id="part-number-container">
                                         <div class="d-flex justify-content-between mb-3">
                                             <h4>Part Number Search</h4>
                                             <div>
-                                                <button id="save-part-number" class="btn btn-sm btn-outline-primary me-2">
+                                                <button id="save-part-number"
+                                                    class="btn btn-sm btn-outline-primary me-2">
                                                     <i class="fas fa-save me-1"></i> Save
                                                 </button>
-                                                <button id="clear-part-history" class="btn btn-sm btn-outline-secondary">
+                                                <button id="clear-part-history"
+                                                    class="btn btn-sm btn-outline-secondary">
                                                     <i class="fas fa-trash me-1"></i> Clear History
                                                 </button>
                                             </div>
@@ -376,11 +376,13 @@
                                                 <div class="card mb-3">
                                                     <div class="card-body">
                                                         <h5 class="card-title">Find Parts by Number</h5>
-                                                        <p class="text-muted small">Enter a part number to find detailed information</p>
+                                                        <p class="text-muted small">Enter a part number to find detailed
+                                                            information</p>
 
                                                         <form id="part-number-form" class="mt-3">
                                                             <div class="mb-3">
-                                                                <label for="part-number-input" class="form-label">Part Number</label>
+                                                                <label for="part-number-input" class="form-label">Part
+                                                                    Number</label>
                                                                 <div class="input-group">
                                                                     <input type="text" class="form-control"
                                                                         id="part-number-input"
@@ -391,25 +393,31 @@
                                                                         <i class="fas fa-search me-1"></i> Search
                                                                     </button>
                                                                 </div>
-                                                                <div class="form-text">Enter the exact part number from your component</div>
+                                                                <div class="form-text">Enter the exact part number from
+                                                                    your component</div>
                                                             </div>
-                                                            
+
                                                             <div class="search-options">
                                                                 <div class="form-check mb-2">
-                                                                    <input class="form-check-input" type="checkbox" id="include-oem" checked>
+                                                                    <input class="form-check-input" type="checkbox"
+                                                                        id="include-oem" checked>
                                                                     <label class="form-check-label" for="include-oem">
                                                                         Include OEM terms
                                                                     </label>
                                                                 </div>
                                                                 <div class="form-check mb-2">
-                                                                    <input class="form-check-input" type="checkbox" id="include-alt-numbers" checked>
-                                                                    <label class="form-check-label" for="include-alt-numbers">
+                                                                    <input class="form-check-input" type="checkbox"
+                                                                        id="include-alt-numbers" checked>
+                                                                    <label class="form-check-label"
+                                                                        for="include-alt-numbers">
                                                                         Include alternative part numbers
                                                                     </label>
                                                                 </div>
                                                                 <div class="form-check">
-                                                                    <input class="form-check-input" type="checkbox" id="exclude-wholesalers">
-                                                                    <label class="form-check-label" for="exclude-wholesalers">
+                                                                    <input class="form-check-input" type="checkbox"
+                                                                        id="exclude-wholesalers">
+                                                                    <label class="form-check-label"
+                                                                        for="exclude-wholesalers">
                                                                         Exclude wholesalers (better retail results)
                                                                     </label>
                                                                 </div>
@@ -426,11 +434,12 @@
                                                             </div>
                                                         </div>
 
-                                                        <div id="part-number-error" class="alert alert-danger mt-3 d-none">
+                                                        <div id="part-number-error"
+                                                            class="alert alert-danger mt-3 d-none">
                                                         </div>
                                                     </div>
                                                 </div>
-                                                
+
                                             </div>
 
                                             <div class="col-md-6">
@@ -444,25 +453,29 @@
                                                                         <i class="fas fa-cog fa-2x text-danger"></i>
                                                                     </div>
                                                                     <div>
-                                                                        <h6 class="mb-0" id="part-number-display">Part #12345</h6>
-                                                                        <p class="text-muted mb-0" id="part-type-display">Component Type</p>
+                                                                        <h6 class="mb-0" id="part-number-display">Part
+                                                                            #12345</h6>
+                                                                        <p class="text-muted mb-0"
+                                                                            id="part-type-display">Component Type</p>
                                                                     </div>
                                                                 </div>
 
                                                                 <div id="part-details" class="mt-3">
                                                                     <!-- Part details will be inserted here -->
                                                                 </div>
-                                                                
+
                                                                 <div id="part-compatibility" class="mt-3">
                                                                     <h6 class="mb-2">Possible Vehicle Compatibility</h6>
                                                                     <div id="compatibility-list" class="small">
                                                                         <!-- Compatibility information will be inserted here -->
                                                                     </div>
                                                                 </div>
-                                                                
+
                                                                 <div class="search-links mt-3 p-2 bg-light rounded">
-                                                                    <p class="mb-1 small"><strong>Advanced Search Links</strong></p>
-                                                                    <div id="advanced-search-links" class="d-flex flex-wrap gap-2">
+                                                                    <p class="mb-1 small"><strong>Advanced Search
+                                                                            Links</strong></p>
+                                                                    <div id="advanced-search-links"
+                                                                        class="d-flex flex-wrap gap-2">
                                                                         <!-- Advanced search links will be inserted here -->
                                                                     </div>
                                                                 </div>
@@ -557,7 +570,7 @@
                                         <div>
                                             <span class="text-muted">Found <span id="product-total-count">0</span>
                                                 products</span>
-                                            
+
                                             <!-- Active filters display -->
                                             <div id="active-filters" class="active-filters mt-2"></div>
                                         </div>
@@ -567,69 +580,83 @@
                                                     type="button" id="filterDropdown" data-bs-toggle="dropdown"
                                                     aria-expanded="false" data-bs-auto-close="outside">
                                                     <i class="fas fa-filter me-1"></i> Filter
-                                                    <span id="filter-count" class="badge bg-danger ms-1" style="display: none;">0</span>
+                                                    <span id="filter-count" class="badge bg-danger ms-1"
+                                                        style="display: none;">0</span>
                                                 </button>
-                                                <div class="dropdown-menu p-3 filter-dropdown-menu" style="width: 280px;"
-                                                    aria-labelledby="filterDropdown">
+                                                <div class="dropdown-menu p-3 filter-dropdown-menu"
+                                                    style="width: 280px;" aria-labelledby="filterDropdown">
                                                     <h6 class="dropdown-header">Filter Products</h6>
-                                                    
+
                                                     <!-- Condition filters -->
                                                     <div class="filter-section">
                                                         <div class="filter-group-title">Condition</div>
                                                         <div class="form-check">
                                                             <input class="form-check-input filter-check" type="checkbox"
                                                                 id="newOnly" data-filter="condition" data-value="new">
-                                                            <label class="form-check-label" for="newOnly">New Only</label>
+                                                            <label class="form-check-label" for="newOnly">New
+                                                                Only</label>
                                                         </div>
                                                         <div class="form-check">
                                                             <input class="form-check-input filter-check" type="checkbox"
                                                                 id="usedOnly" data-filter="condition" data-value="used">
-                                                            <label class="form-check-label" for="usedOnly">Used Only</label>
+                                                            <label class="form-check-label" for="usedOnly">Used
+                                                                Only</label>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     <!-- Product Type filters -->
                                                     <div class="filter-section">
                                                         <div class="filter-group-title">Product Type</div>
                                                         <div class="form-check">
                                                             <input class="form-check-input filter-check" type="checkbox"
                                                                 id="oemOnly" data-filter="type" data-value="oem">
-                                                            <label class="form-check-label" for="oemOnly">OEM Parts</label>
+                                                            <label class="form-check-label" for="oemOnly">OEM
+                                                                Parts</label>
                                                         </div>
                                                         <div class="form-check">
                                                             <input class="form-check-input filter-check" type="checkbox"
-                                                                id="premiumOnly" data-filter="type" data-value="premium">
-                                                            <label class="form-check-label" for="premiumOnly">Premium Parts</label>
+                                                                id="premiumOnly" data-filter="type"
+                                                                data-value="premium">
+                                                            <label class="form-check-label" for="premiumOnly">Premium
+                                                                Parts</label>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     <!-- Shipping filters -->
                                                     <div class="filter-section">
                                                         <div class="filter-group-title">Shipping</div>
                                                         <div class="form-check">
                                                             <input class="form-check-input filter-check" type="checkbox"
-                                                                id="freeShipping" data-filter="shipping" data-value="free">
-                                                            <label class="form-check-label" for="freeShipping">Free Shipping</label>
+                                                                id="freeShipping" data-filter="shipping"
+                                                                data-value="free">
+                                                            <label class="form-check-label" for="freeShipping">Free
+                                                                Shipping</label>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     <!-- Sources filters -->
                                                     <div class="filter-section">
                                                         <div class="filter-group-title">Sources</div>
                                                         <div class="form-check">
                                                             <input class="form-check-input filter-check" type="checkbox"
-                                                                id="ebaySource" data-filter="source" data-value="eBay" checked>
-                                                            <label class="form-check-label" for="ebaySource">eBay</label>
+                                                                id="ebaySource" data-filter="source" data-value="eBay"
+                                                                checked>
+                                                            <label class="form-check-label"
+                                                                for="ebaySource">eBay</label>
                                                         </div>
                                                         <div class="form-check">
                                                             <input class="form-check-input filter-check" type="checkbox"
-                                                                id="googleSource" data-filter="source" data-value="Google Shopping" checked>
-                                                            <label class="form-check-label" for="googleSource">Google Shopping</label>
+                                                                id="googleSource" data-filter="source"
+                                                                data-value="Google Shopping" checked>
+                                                            <label class="form-check-label" for="googleSource">Google
+                                                                Shopping</label>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     <div class="dropdown-divider"></div>
-                                                    <button id="resetFilters" class="btn btn-sm btn-outline-secondary w-100">Reset Filters</button>
+                                                    <button id="resetFilters"
+                                                        class="btn btn-sm btn-outline-secondary w-100">Reset
+                                                        Filters</button>
                                                 </div>
                                             </div>
                                             <div class="dropdown">
@@ -727,7 +754,8 @@
     </div>
 
     <!-- Image Preview Modal -->
-    <div id="imageModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalDescription">
+    <div id="imageModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"
+        aria-describedby="modalDescription">
         <div id="modalTitle" class="sr-only">Product Image Preview</div>
         <div id="modalDescription" class="sr-only">Enlarged view of product image</div>
         <button class="close-modal" aria-label="Close image preview">&times;</button>
