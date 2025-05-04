@@ -421,11 +421,11 @@ document.addEventListener('DOMContentLoaded', function () {
     // Favorites system
     const FAVORITES_STORAGE_KEY = 'autoxpress_favorites';
 
-    // Load favorites from localStorage - using the function from updated_products.js
+    // Load favorites from localStorage
     function loadFavorites() {
-        return window.loadFavorites ? window.loadFavorites() : 
-            // Fallback if function not available
-            JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || '{}');
+        // Get directly from localStorage to avoid circular reference
+        const favoritesJson = localStorage.getItem(FAVORITES_STORAGE_KEY);
+        return favoritesJson ? JSON.parse(favoritesJson) : {};
     }
 
     // Save favorites to localStorage
@@ -470,9 +470,16 @@ document.addEventListener('DOMContentLoaded', function () {
         return favorites[productId] !== undefined;
     }
     
+    // Define a safer global loadFavorites function that doesn't create circular references
+    // This replaces the one from updated_products.js
+    window._internalLoadFavorites = function() {
+        const favoritesJson = localStorage.getItem(FAVORITES_STORAGE_KEY);
+        return favoritesJson ? JSON.parse(favoritesJson) : {};
+    };
+    
     // Expose the favorites functions to other modules
     window.toggleFavorite = toggleFavorite;
-    window.loadFavorites = loadFavorites;
+    window.loadFavorites = window._internalLoadFavorites;
 
     // In the event listener for favorite buttons:
     document.addEventListener('click', function (e) {

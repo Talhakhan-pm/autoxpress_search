@@ -24,11 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const noPartHistory = document.getElementById('no-part-history');
     const partHistoryList = document.getElementById('part-history-list');
     
-    // Quick search buttons
-    const searchGoogleBtn = document.getElementById('search-google-btn');
-    const searchAmazonBtn = document.getElementById('search-amazon-btn');
-    const searchEbayBtn = document.getElementById('search-ebay-btn');
-    const searchRockAutoBtn = document.getElementById('search-rockauto-btn');
+    // Quick search buttons - removed
     
     // Storage key for search history
     const PART_HISTORY_STORAGE_KEY = 'autoxpress_part_search_history';
@@ -165,30 +161,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
     
-    // Events: Quick search buttons
-    if (searchGoogleBtn) {
-        searchGoogleBtn.addEventListener('click', function() {
-            searchOnGoogle(currentPartNumber || partNumberInput.value.trim());
-        });
-    }
-    
-    if (searchAmazonBtn) {
-        searchAmazonBtn.addEventListener('click', function() {
-            searchOnAmazon(currentPartNumber || partNumberInput.value.trim());
-        });
-    }
-    
-    if (searchEbayBtn) {
-        searchEbayBtn.addEventListener('click', function() {
-            searchOnEbay(currentPartNumber || partNumberInput.value.trim());
-        });
-    }
-    
-    if (searchRockAutoBtn) {
-        searchRockAutoBtn.addEventListener('click', function() {
-            searchOnRockAuto(currentPartNumber || partNumberInput.value.trim());
-        });
-    }
+    // Events: Quick search buttons - removed
     
     /**
      * Initialize the UI elements and search history display
@@ -202,21 +175,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     /**
-     * Toggle the quick search buttons enabled/disabled state
+     * Toggle the quick search buttons enabled/disabled state - now removed
      */
     function toggleQuickSearchButtons(enabled) {
-        const buttons = [searchGoogleBtn, searchAmazonBtn, searchEbayBtn, searchRockAutoBtn];
-        
-        buttons.forEach(btn => {
-            if (btn) {
-                btn.disabled = !enabled;
-                if (enabled) {
-                    btn.classList.remove('disabled');
-                } else {
-                    btn.classList.add('disabled');
-                }
-            }
-        });
+        // Function is kept for compatibility but no longer does anything 
+        return;
     }
     
     /**
@@ -292,9 +255,9 @@ document.addEventListener('DOMContentLoaded', function () {
             partNumberDisplay.textContent = `Part #${partInfo.partNumber}`;
         }
         
-        // Update the part type display
+        // Update the part type display with the part name when available
         if (partTypeDisplay) {
-            partTypeDisplay.textContent = partInfo.partType || 'Automotive Part';
+            partTypeDisplay.textContent = partInfo.partName || partInfo.partType || 'Automotive Part';
         }
         
         // Update part details
@@ -447,54 +410,6 @@ document.addEventListener('DOMContentLoaded', function () {
         
         // Use the special part number search endpoint
         return `https://www.rockauto.com/en/partsearch/?partnum=${encodeURIComponent(cleanPartNumber)}`;
-    }
-    
-    /**
-     * Open a Google search for the given part number
-     */
-    function searchOnGoogle(partNumber) {
-        if (!partNumber) {
-            showError('Please enter a part number first');
-            return;
-        }
-        
-        window.open(getOptimizedGoogleSearchUrl(partNumber), '_blank');
-    }
-    
-    /**
-     * Open an Amazon search for the given part number
-     */
-    function searchOnAmazon(partNumber) {
-        if (!partNumber) {
-            showError('Please enter a part number first');
-            return;
-        }
-        
-        window.open(getAmazonSearchUrl(partNumber), '_blank');
-    }
-    
-    /**
-     * Open an eBay search for the given part number
-     */
-    function searchOnEbay(partNumber) {
-        if (!partNumber) {
-            showError('Please enter a part number first');
-            return;
-        }
-        
-        window.open(getEbaySearchUrl(partNumber), '_blank');
-    }
-    
-    /**
-     * Open a RockAuto search for the given part number
-     */
-    function searchOnRockAuto(partNumber) {
-        if (!partNumber) {
-            showError('Please enter a part number first');
-            return;
-        }
-        
-        window.open(getRockAutoSearchUrl(partNumber), '_blank');
     }
     
     /**

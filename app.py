@@ -1176,10 +1176,143 @@ def index():
         return render_template("index.html")
     return render_template("index.html")
 
+# AI function to extract part information from search results
+def extract_part_info_with_ai(part_number, search_results, include_alt=False):
+    """
+    Use OpenAI to extract structured part information from search results
+    """
+    # Create a detailed prompt with clear instructions
+    prompt = f"""
+You are an automotive parts expert assistant. I need your help to extract detailed information about an automotive part based on search results.
+
+Part Number: {part_number}
+
+Search Results:
+{search_results}
+
+Based on the search results, please extract the following information about this part number:
+1. Part Name: The common name of this specific part (e.g., "Oil Cooler Tube", "Spark Plug", "Brake Pad")
+2. Part Type: What type of automotive part is this? (Examples: Air Filter, Brake Pad, Oil Filter, Alternator, etc.)
+3. Manufacturer: Who makes this part? Is it OEM or aftermarket?
+4. Description: A brief (1-2 sentence) description of what this part is and what it does.
+5. Vehicle Compatibility: List of vehicles (make, model, years) this part is compatible with. Provide at least 3-5 if available.
+6. Alternative Part Numbers: List any cross-reference or alternative part numbers mentioned.
+
+Format your response as a valid JSON object with these keys:
+{{
+  "part_name": "string",
+  "part_type": "string",
+  "manufacturer": "string",
+  "description": "string",
+  "compatibility": ["string", "string", "..."],
+  "alternative_numbers": ["string", "string", "..."]
+}}
+
+IMPORTANT: 
+- If information is not available, use reasonable defaults based on the part number.
+- Make sure the JSON is valid - use double quotes and escape internal quotes if needed.
+- For compatibility, format as "YEAR MAKE MODEL" (Example: "2015-2020 Toyota Camry").
+- Don't include any explanations outside the JSON object.
+"""
+
+    try:
+        # Call OpenAI API
+        response = client.chat.completions.create(
+            model="gpt-4-1106-preview",  # Or your preferred model
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            temperature=0.3
+        )
+
+        # Extract JSON from response
+        result_text = response.choices[0].message.content.strip()
+        
+        # Parse JSON
+        result = json.loads(result_text)
+        
+        # Ensure all expected keys are present
+        if "part_name" not in result:
+            result["part_name"] = "Automotive Part"
+        if "part_type" not in result:
+            result["part_type"] = "Automotive Part"
+        if "manufacturer" not in result:
+            result["manufacturer"] = "Unknown"
+        if "description" not in result:
+            result["description"] = f"{part_number} - {result.get('part_type', 'Automotive Part')}"
+        if "compatibility" not in result:
+            result["compatibility"] = []
+        if "alternative_numbers" not in result:
+            result["alternative_numbers"] = []
+        
+        return result
+    
+    except Exception as e:
+        print(f"Error extracting part information with AI: {e}")
+        # Return a default structure in case of error
+        return {
+            "part_name": "Automotive Part",
+            "part_type": "Automotive Part",
+            "manufacturer": "Unknown",
+            "description": f"{part_number} - Automotive Part",
+            "compatibility": [],
+            "alternative_numbers": []
+        }
+
+# Function to get part number search results via SerpAPI
+def get_part_number_search_results(part_number, include_oem=True, exclude_wholesalers=False):
+    """
+    Fetch actual search results for a part number using Google Search via SerpAPI
+    Returns search results snippet text that can be used for AI processing
+    """
+    query = part_number
+    
+    # Add OEM if requested
+    if include_oem:
+        query += " OEM automotive part"
+    else:
+        query += " automotive part"
+    
+    # Exclude wholesaler sites if requested
+    if exclude_wholesalers:
+        query += " -wholesaler -distributor"
+    
+    # Set up params for SerpAPI
+    api_params = {
+        "engine": "google",
+        "q": query,
+        "google_domain": "google.com",
+        "num": 10,  # Top 10 results should be enough
+        "api_key": serpapi_key
+    }
+    
+    try:
+        # Make the API request
+        response = requests.get("https://serpapi.com/search", params=api_params, timeout=10)
+        response.raise_for_status()
+        result = response.json()
+        
+        # Extract organic results
+        organic_results = result.get("organic_results", [])
+        
+        # Format the results for processing by GPT
+        formatted_results = []
+        for i, res in enumerate(organic_results, 1):
+            title = res.get("title", "")
+            snippet = res.get("snippet", "")
+            link = res.get("link", "")
+            formatted_results.append(f"[{i}] {title}\nURL: {link}\nDescription: {snippet}\n")
+        
+        # Return joined text for GPT processing
+        return "\n".join(formatted_results)
+    
+    except Exception as e:
+        print(f"Error fetching search results: {e}")
+        return ""
+
 # Part number search route
 @app.route("/api/part-number-search", methods=["POST"])
 def part_number_search():
-    """Search for part number information using optimized techniques"""
+    """Search for part number information using AI and Google search results"""
     part_number = sanitize_input(request.form.get("part_number", ""))
     include_oem = request.form.get("include_oem", "true") == "true"
     include_alt = request.form.get("include_alt", "true") == "true"
@@ -1191,36 +1324,77 @@ def part_number_search():
             "error": "No part number provided"
         })
     
+    # Log the search for analytics
+    print(f"Part number search: {part_number} (OEM: {include_oem}, Alt: {include_alt}, ExclWhole: {exclude_wholesalers})")
+    
     try:
-        # For demonstration, we'll generate mock data
-        # In a production app, this would call external APIs or search engines
-        
-        # Generate search URLs with advanced techniques for better results
+        # Generate search URLs for different platforms
         google_search_url = generate_google_search_url(part_number, include_oem, exclude_wholesalers)
         amazon_search_url = f"https://www.amazon.com/s?k={part_number}&i=automotive-intl-ship"
         ebay_search_url = f"https://www.ebay.com/sch/i.html?_nkw={part_number}&_sacat=6000"
         rockauto_search_url = f"https://www.rockauto.com/en/partsearch/?partnum={part_number}"
         
-        # Guess details based on part number pattern
-        part_type = guess_part_type(part_number)
-        manufacturer = guess_manufacturer(part_number)
+        # Get real search results from Google via SerpAPI
+        search_results = get_part_number_search_results(part_number, include_oem, exclude_wholesalers)
         
-        # Generate some compatibility data
-        compatibility = generate_compatibility_data(part_number)
-        
-        # Generate alternative part numbers if requested
+        # Default values in case AI processing fails
+        part_type = "Automotive Part"
+        manufacturer = "Unknown"
+        description = f"{part_number} - Automotive Part"
+        compatibility = []
         alt_numbers = []
-        if include_alt:
-            alt_numbers = generate_alternative_numbers(part_number)
         
+        # Process with AI if we have search results
+        ai_processed = False
+        part_name = "Automotive Part"  # Default part name
+        
+        if search_results:
+            try:
+                # Use AI to extract part information from search results
+                part_info = extract_part_info_with_ai(part_number, search_results, include_alt)
+                
+                # Extract information from AI response if successful
+                part_name = part_info.get("part_name", "Automotive Part")
+                part_type = part_info.get("part_type", "Automotive Part")
+                manufacturer = part_info.get("manufacturer", "Unknown")
+                description = part_info.get("description", f"{part_number} - {part_type}")
+                compatibility = part_info.get("compatibility", [])
+                
+                # Only use AI's alternative numbers if requested
+                if include_alt:
+                    alt_numbers = part_info.get("alternative_numbers", [])
+                
+                ai_processed = True
+                print(f"Successfully processed part {part_number} with AI")
+            except Exception as ai_error:
+                print(f"AI processing failed for part {part_number}: {ai_error}")
+                # We'll fall back to pattern guessing below
+        
+        # Fallback to pattern guessing if no search results or AI processing failed
+        if not ai_processed:
+            part_type = guess_part_type(part_number)
+            manufacturer = guess_manufacturer(part_number)
+            part_name = part_type  # Use part type as fallback part name
+            description = f"{part_number} - {part_type} for various vehicle applications"
+            
+            # Generate some compatibility data
+            compatibility = generate_compatibility_data(part_number)
+            
+            # Generate alternative part numbers if requested
+            if include_alt:
+                alt_numbers = generate_alternative_numbers(part_number)
+        
+        # Return the structured part information
         return jsonify({
             "success": True,
             "partNumber": part_number,
+            "partName": part_name,
             "partType": part_type,
-            "description": f"{part_number} - {part_type} for various vehicle applications",
+            "description": description,
             "manufacturer": manufacturer,
             "compatibility": compatibility,
             "alternativeNumbers": alt_numbers,
+            "ai_enhanced": ai_processed,
             "searchUrls": {
                 "google": google_search_url,
                 "amazon": amazon_search_url,
