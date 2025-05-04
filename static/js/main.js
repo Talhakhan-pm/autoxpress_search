@@ -469,6 +469,10 @@ document.addEventListener('DOMContentLoaded', function () {
         updateFavoriteButtons();
         return favorites[productId] !== undefined;
     }
+    
+    // Expose the favorites functions to other modules
+    window.toggleFavorite = toggleFavorite;
+    window.loadFavorites = loadFavorites;
 
     // In the event listener for favorite buttons:
     document.addEventListener('click', function (e) {

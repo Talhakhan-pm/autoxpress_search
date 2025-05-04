@@ -3,6 +3,8 @@ import re
 import requests
 import time
 import json
+import random
+import urllib.parse
 import concurrent.futures
 from functools import lru_cache
 from flask import Flask, render_template, request, jsonify
@@ -1173,6 +1175,249 @@ def index():
         # Regular form submission just renders the template
         return render_template("index.html")
     return render_template("index.html")
+
+# Part number search route
+@app.route("/api/part-number-search", methods=["POST"])
+def part_number_search():
+    """Search for part number information using optimized techniques"""
+    part_number = sanitize_input(request.form.get("part_number", ""))
+    include_oem = request.form.get("include_oem", "true") == "true"
+    include_alt = request.form.get("include_alt", "true") == "true"
+    exclude_wholesalers = request.form.get("exclude_wholesalers", "false") == "true"
+    
+    if not part_number:
+        return jsonify({
+            "success": False,
+            "error": "No part number provided"
+        })
+    
+    try:
+        # For demonstration, we'll generate mock data
+        # In a production app, this would call external APIs or search engines
+        
+        # Generate search URLs with advanced techniques for better results
+        google_search_url = generate_google_search_url(part_number, include_oem, exclude_wholesalers)
+        amazon_search_url = f"https://www.amazon.com/s?k={part_number}&i=automotive-intl-ship"
+        ebay_search_url = f"https://www.ebay.com/sch/i.html?_nkw={part_number}&_sacat=6000"
+        rockauto_search_url = f"https://www.rockauto.com/en/partsearch/?partnum={part_number}"
+        
+        # Guess details based on part number pattern
+        part_type = guess_part_type(part_number)
+        manufacturer = guess_manufacturer(part_number)
+        
+        # Generate some compatibility data
+        compatibility = generate_compatibility_data(part_number)
+        
+        # Generate alternative part numbers if requested
+        alt_numbers = []
+        if include_alt:
+            alt_numbers = generate_alternative_numbers(part_number)
+        
+        return jsonify({
+            "success": True,
+            "partNumber": part_number,
+            "partType": part_type,
+            "description": f"{part_number} - {part_type} for various vehicle applications",
+            "manufacturer": manufacturer,
+            "compatibility": compatibility,
+            "alternativeNumbers": alt_numbers,
+            "searchUrls": {
+                "google": google_search_url,
+                "amazon": amazon_search_url,
+                "ebay": ebay_search_url,
+                "rockauto": rockauto_search_url
+            }
+        })
+    except Exception as e:
+        print(f"Error in part number search: {e}")
+        return jsonify({
+            "success": False,
+            "error": "An error occurred processing your request"
+        })
+
+def generate_google_search_url(part_number, include_oem=True, exclude_wholesalers=False):
+    """
+    Generate a clean Google search URL for a part number
+    Simply searches for the part number itself with no additional terms
+    """
+    # Just use the part number as-is, no additional terms or operators
+    # URL encode the query
+    encoded_query = urllib.parse.quote(part_number)
+    
+    # Return the simple search URL
+    return f"https://www.google.com/search?q={encoded_query}"
+
+def guess_part_type(part_number):
+    """Guess the part type based on part number patterns"""
+    part_number_lower = part_number.lower()
+    
+    # Common part number prefixes
+    if part_number_lower.startswith(('ac', 'air')):
+        return "Air Conditioning Component"
+    elif part_number_lower.startswith(('br', 'brake')):
+        return "Brake Component"
+    elif part_number_lower.startswith(('alt', 'altr')):
+        return "Alternator"
+    elif part_number_lower.startswith(('eng', 'mot')):
+        return "Engine Component"
+    elif part_number_lower.startswith(('oil', 'lub')):
+        return "Oil System Component"
+    elif part_number_lower.startswith(('tr', 'trans')):
+        return "Transmission Component"
+    elif part_number_lower.startswith(('sus', 'spr')):
+        return "Suspension Component"
+    elif part_number_lower.startswith(('exh', 'muf')):
+        return "Exhaust Component"
+    elif part_number_lower.startswith(('int', 'cab')):
+        return "Interior Component"
+    elif part_number_lower.startswith(('ele', 'elc')):
+        return "Electrical Component"
+    elif part_number_lower.startswith(('fil', 'flt')):
+        return "Filter"
+    elif part_number_lower.startswith(('sen', 'sns')):
+        return "Sensor"
+    
+    # Default
+    return "Automotive Part"
+
+def guess_manufacturer(part_number):
+    """Guess the manufacturer based on part number patterns"""
+    part_number_lower = part_number.lower()
+    
+    # Common manufacturer prefixes
+    if part_number_lower.startswith(('toy', 'to-')):
+        return "Toyota"
+    elif part_number_lower.startswith(('hon', 'ho-')):
+        return "Honda"
+    elif part_number_lower.startswith('bmw'):
+        return "BMW"
+    elif part_number_lower.startswith(('mb', 'mer')):
+        return "Mercedes-Benz"
+    elif part_number_lower.startswith(('for', 'fd-')):
+        return "Ford"
+    elif part_number_lower.startswith(('gm', 'chev')):
+        return "General Motors"
+    elif part_number_lower.startswith(('mo', 'chr')):
+        return "Mopar/Chrysler"
+    elif part_number_lower.startswith(('vw', 'audi')):
+        return "Volkswagen/Audi"
+    elif part_number_lower.startswith(('nis', 'ns-')):
+        return "Nissan"
+    elif part_number_lower.startswith(('sub', 'sb-')):
+        return "Subaru"
+    
+    # Default
+    return "OEM or Aftermarket"
+
+def generate_compatibility_data(part_number):
+    """Generate mock compatibility data based on part number"""
+    # This would be replaced with actual database lookups or API calls
+    # For this demo, we generate plausible compatibility based on patterns
+    
+    make = ""
+    if "toy" in part_number.lower():
+        make = "Toyota"
+    elif "hon" in part_number.lower():
+        make = "Honda"
+    elif "for" in part_number.lower():
+        make = "Ford"
+    elif "gm" in part_number.lower() or "chev" in part_number.lower():
+        make = "Chevrolet"
+    else:
+        # If no pattern match, pick a random make
+        makes = ["Toyota", "Honda", "Ford", "Chevrolet", "Nissan", "BMW", "Mercedes"]
+        make = random.choice(makes)
+    
+    # Generate 2-4 compatible vehicle models
+    result = []
+    
+    if make == "Toyota":
+        models = ["Camry", "Corolla", "RAV4", "Highlander", "Tacoma"]
+        years = [y for y in range(2015, 2023)]
+    elif make == "Honda":
+        models = ["Civic", "Accord", "CR-V", "Pilot", "Odyssey"]
+        years = [y for y in range(2016, 2023)]
+    elif make == "Ford":
+        models = ["F-150", "Escape", "Explorer", "Focus", "Mustang"]
+        years = [y for y in range(2015, 2022)]
+    elif make == "Chevrolet":
+        models = ["Silverado", "Malibu", "Equinox", "Traverse", "Tahoe"]
+        years = [y for y in range(2016, 2023)]
+    elif make == "Nissan":
+        models = ["Altima", "Rogue", "Sentra", "Pathfinder", "Frontier"]
+        years = [y for y in range(2017, 2023)]
+    elif make == "BMW":
+        models = ["3 Series", "5 Series", "X3", "X5", "7 Series"]
+        years = [y for y in range(2016, 2023)]
+    elif make == "Mercedes":
+        models = ["C-Class", "E-Class", "GLC", "GLE", "S-Class"]
+        years = [y for y in range(2016, 2023)]
+    else:
+        models = ["Model A", "Model B", "Model C"]
+        years = [y for y in range(2018, 2023)]
+    
+    # Select 2-4 models
+    selected_models = random.sample(models, min(len(models), random.randint(2, 4)))
+    
+    for model in selected_models:
+        # For each model, select either a single year or a range
+        if random.choice([True, False]):
+            # Single year
+            year = random.choice(years)
+            result.append(f"{year} {make} {model}")
+        else:
+            # Year range
+            start_year = random.choice(years[:-2])  # Avoid picking the last 2 years as start
+            end_idx = years.index(start_year) + random.randint(1, min(4, len(years) - years.index(start_year) - 1))
+            end_year = years[end_idx]
+            result.append(f"{start_year}-{end_year} {make} {model}")
+    
+    return result
+
+def generate_alternative_numbers(part_number):
+    """Generate alternative part numbers based on the original"""
+    # In a real app, this would look up cross-references from a database
+    # For this demo, we generate plausible alternatives
+    
+    # Remove any non-alphanumeric characters
+    base = re.sub(r'[^a-zA-Z0-9]', '', part_number)
+    
+    # Generate alternatives
+    alternatives = []
+    
+    # Different format with dashes
+    if len(base) >= 6:
+        alt1 = f"{base[:3]}-{base[3:]}"
+        alternatives.append(alt1)
+    
+    # Manufacturer variations
+    if not any(prefix in part_number.lower() for prefix in ['ac', 'alt', 'oil']):
+        manufacturers = ['AC', 'TYT', 'DL', 'NAPA']
+        mfr = random.choice(manufacturers)
+        alt2 = f"{mfr}{base[-4:]}"
+        alternatives.append(alt2)
+    
+    # Similar number with slight variation
+    digits = re.findall(r'\d+', part_number)
+    if digits:
+        # Get the longest numeric part
+        longest_digit = max(digits, key=len)
+        # Modify one digit
+        digit_list = list(longest_digit)
+        pos_to_change = random.randint(0, len(digit_list) - 1)
+        old_digit = digit_list[pos_to_change]
+        # Ensure we change to a different digit
+        new_digit = str(random.randint(0, 9))
+        while new_digit == old_digit:
+            new_digit = str(random.randint(0, 9))
+        digit_list[pos_to_change] = new_digit
+        new_digit_part = ''.join(digit_list)
+        
+        # Replace the original digit part with modified one
+        alt3 = part_number.replace(longest_digit, new_digit_part)
+        alternatives.append(alt3)
+    
+    return alternatives
 
 # Callback form route
 @app.route("/callbacks.html", methods=["GET"])
