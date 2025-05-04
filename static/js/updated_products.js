@@ -543,7 +543,7 @@ function createGridViewProduct(product, productId, sourceClass, exactMatchClass,
   // 2. Brand-based detection - list of premium brands
   const premiumBrands = ['bosch', 'brembo', 'bilstein', 'koni', 'borla', 'kw', 'k&n', 'moog', 
                          'akebono', 'stoptech', 'eibach', 'h&r', 'magnaflow', 'hawk', 'edelbrock',
-                         'detroit', 'apf', 'detroit diesel', 'detroit axle'];
+                         'detroit', 'apf', 'detroit diesel', 'detroit axle', 'aisin', 'gear'];
   
   const isPremiumByBrand = premiumBrands.some(brand => productText.includes(brand));
   
@@ -691,7 +691,7 @@ function createListViewProduct(product, productId, sourceClass, exactMatchClass,
   // 2. Brand-based detection - list of premium brands
   const premiumBrands = ['bosch', 'brembo', 'bilstein', 'koni', 'borla', 'kw', 'k&n', 'moog', 
                          'akebono', 'stoptech', 'eibach', 'h&r', 'magnaflow', 'hawk', 'edelbrock',
-                         'detroit', 'apf', 'detroit diesel', 'detroit axle'];
+                         'detroit', 'apf', 'detroit diesel', 'detroit axle', 'aisin', 'gear'];
   
   const isPremiumByBrand = premiumBrands.some(brand => productText.includes(brand));
   

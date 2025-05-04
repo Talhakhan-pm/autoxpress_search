@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Premium brand check
                 const premiumBrands = ['bosch', 'brembo', 'bilstein', 'koni', 'borla', 'kw', 'k&n', 'moog', 
                                      'akebono', 'stoptech', 'eibach', 'h&r', 'magnaflow', 'hawk', 'edelbrock',
-                                     'detroit', 'apf', 'detroit diesel', 'detroit axle'];
+                                     'detroit', 'apf', 'detroit diesel', 'detroit axle', 'aisin', 'gear'];
                 
                 const isPremiumByBrand = premiumBrands.some(brand => title.includes(brand));
                 const isPremiumByKeywords = title.includes('premium') || 
