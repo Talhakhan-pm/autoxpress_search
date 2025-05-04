@@ -3,10 +3,10 @@
  * Aggressive optimization for smaller laptop screens (13" and below)
  */
 
-/* Global size reduction */
+/* Global size reduction - but not too small for 1080p */
 html,
 body {
-  font-size: 13px !important;
+  font-size: 14px !important;
 }
 
 /* Container adjustments - remove excess padding */
@@ -219,14 +219,14 @@ body {
 
 /* Button styling */
 .btn {
-  padding: 0.4rem 0.8rem !important;
-  font-size: 0.85rem !important;
+  padding: 0.5rem 0.9rem !important;
+  font-size: 0.9rem !important;
   border-radius: 6px !important;
 }
 
 .btn-sm {
-  padding: 0.25rem 0.5rem !important;
-  font-size: 0.75rem !important;
+  padding: 0.3rem 0.6rem !important;
+  font-size: 0.8rem !important;
 }
 
 /* Tabs */
@@ -293,60 +293,60 @@ body {
 }
 
 .product-image-container {
-  height: 110px !important;
+  height: 140px !important;
 }
 
 .product-details {
-  padding: 0.6rem !important;
+  padding: 0.8rem !important;
 }
 
 .product-title {
-  font-size: 0.8rem !important;
+  font-size: 0.9rem !important;
   margin-bottom: 0.5rem !important;
-  height: 3.4em !important;
+  height: 3.6em !important;
 }
 
 .product-meta,
 .product-details .d-flex {
-  font-size: 0.75rem !important;
-  margin-bottom: 0.3rem !important;
+  font-size: 0.85rem !important;
+  margin-bottom: 0.4rem !important;
 }
 
 .product-price,
 .price {
-  font-size: 1rem !important;
+  font-size: 1.15rem !important;
 }
 
 /* Even more compact view */
 .compact-view .product-image-container {
-  height: 90px !important;
+  height: 110px !important;
 }
 
 .compact-view .product-title {
-  font-size: 0.75rem !important;
-  height: 2.8em !important;
-  margin-bottom: 0.3rem !important;
+  font-size: 0.85rem !important;
+  height: 3em !important;
+  margin-bottom: 0.4rem !important;
 }
 
 .compact-view .product-details {
-  padding: 0.5rem !important;
+  padding: 0.65rem !important;
 }
 
 .compact-view .product-meta {
-  font-size: 0.7rem !important;
+  font-size: 0.8rem !important;
 }
 
 .compact-view .product-price {
-  font-size: 0.85rem !important;
+  font-size: 1rem !important;
 }
 
 /* List view */
 .list-view .product-card {
-  max-height: 120px !important;
+  max-height: 150px !important;
 }
 
 .list-view .product-image-container {
-  width: 120px !important;
+  width: 150px !important;
 }
 
 .list-view .product-title {
@@ -389,10 +389,10 @@ body {
 }
 
 .product-tag {
-  font-size: 0.65rem !important;
-  padding: 0.1rem 0.3rem !important;
-  margin-right: 0.25rem !important;
-  margin-bottom: 0.25rem !important;
+  font-size: 0.75rem !important;
+  padding: 0.15rem 0.4rem !important;
+  margin-right: 0.3rem !important;
+  margin-bottom: 0.3rem !important;
   border-radius: 3px !important;
 }
 
