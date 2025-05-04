@@ -127,15 +127,16 @@ body {
 
 footer {
     flex-shrink: 0;
-    margin-top: 3rem;
-    padding: 2rem 0;
+    margin-top: 2rem;
+    padding: 1.25rem 0;
     background-color: #212529;
     color: white;
 }
 
 footer h5 {
     font-weight: 600;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
 }
 
 footer span.text-danger {
@@ -144,6 +145,8 @@ footer span.text-danger {
 
 footer p.small {
     opacity: 0.7;
+    font-size: 0.8rem;
+    margin-bottom: 0;
 }
 
 /* Navbar styling */
