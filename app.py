@@ -1464,7 +1464,14 @@ def part_number_listings():
         for search_part in search_part_numbers:
             # Try to get listings from eBay first (faster and more reliable)
             try:
-                ebay_results = get_ebay_serpapi_results(search_part, part_type)
+                # Include both original part number and a clean version (without hyphens/symbols)
+                clean_search_part = re.sub(r'[^a-zA-Z0-9]', '', search_part)
+                if clean_search_part != search_part:
+                    formatted_search_part = f"{search_part} {clean_search_part}"
+                else:
+                    formatted_search_part = search_part
+
+                ebay_results = get_ebay_serpapi_results(formatted_search_part, part_type)
 
                 # Add source information to each listing
                 for listing in ebay_results:
@@ -1485,7 +1492,14 @@ def part_number_listings():
             # If we don't have enough results yet, also try Google Shopping
             if len(all_listings) < 10:
                 try:
-                    google_results = get_google_shopping_results(search_part, part_type)
+                    # Include both original part number and a clean version (without hyphens/symbols)
+                    clean_search_part = re.sub(r'[^a-zA-Z0-9]', '', search_part)
+                    if clean_search_part != search_part:
+                        formatted_search_part = f"{search_part} {clean_search_part}"
+                    else:
+                        formatted_search_part = search_part
+
+                    google_results = get_google_shopping_results(formatted_search_part, part_type)
 
                     # Add source information to each listing
                     for listing in google_results:

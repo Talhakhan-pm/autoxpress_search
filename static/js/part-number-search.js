@@ -298,18 +298,17 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        // Update advanced search links (hidden now, but keeping the container)
+        // Update advanced search links
         if (advancedSearchLinks) {
             advancedSearchLinks.innerHTML = `
-                <!-- Advanced search links are now hidden but can be re-enabled later -->
-                <div style="display: none;">
-                    <a href="${partInfo.searchUrls.google}" target="_blank" class="btn btn-sm btn-outline-primary">
+                <div class="mb-2">
+                    <a href="${partInfo.searchUrls.google}" target="_blank" class="btn btn-sm btn-outline-primary me-1">
                         <i class="fab fa-google me-1"></i> Google
                     </a>
-                    <a href="${partInfo.searchUrls.amazon}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <a href="${partInfo.searchUrls.amazon}" target="_blank" class="btn btn-sm btn-outline-primary me-1">
                         <i class="fab fa-amazon me-1"></i> Amazon
                     </a>
-                    <a href="${partInfo.searchUrls.ebay}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <a href="${partInfo.searchUrls.ebay}" target="_blank" class="btn btn-sm btn-outline-primary me-1">
                         <i class="fab fa-ebay me-1"></i> eBay
                     </a>
                     <a href="${partInfo.searchUrls.rockauto}" target="_blank" class="btn btn-sm btn-outline-primary">
@@ -318,24 +317,24 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
             `;
 
-            // Add button to search for listings using the part numbers
-            if (partInfo.alternativeNumbers && partInfo.alternativeNumbers.length > 0) {
-                advancedSearchLinks.innerHTML += `
-                    <button class="btn btn-danger mt-2 w-100 py-2" id="find-listings-btn">
-                        <i class="fas fa-search-dollar me-1"></i> Find Product Listings
-                    </button>
-                `;
+            // Always add the button to search for product listings, regardless of alternative numbers
+            advancedSearchLinks.innerHTML += `
+                <button class="btn btn-danger mt-2 w-100 py-2" id="find-listings-btn">
+                    <i class="fas fa-search-dollar me-1"></i> Find Product Listings
+                </button>
+            `;
 
-                // Add event listener to the new button
-                setTimeout(() => {
-                    const findListingsBtn = document.getElementById('find-listings-btn');
-                    if (findListingsBtn) {
-                        findListingsBtn.addEventListener('click', () => {
-                            findProductListings(partInfo.partNumber, partInfo.partType, partInfo.alternativeNumbers);
-                        });
-                    }
-                }, 100);
-            }
+            // Add event listener to the new button
+            setTimeout(() => {
+                const findListingsBtn = document.getElementById('find-listings-btn');
+                if (findListingsBtn) {
+                    findListingsBtn.addEventListener('click', () => {
+                        // Always pass an empty array if no alternative numbers exist
+                        const altNumbers = partInfo.alternativeNumbers || [];
+                        findProductListings(partInfo.partNumber, partInfo.partType, altNumbers);
+                    });
+                }
+            }, 100);
         }
 
         // Show the result card and hide the placeholder
