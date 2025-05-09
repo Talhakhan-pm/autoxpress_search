@@ -1317,6 +1317,7 @@ def part_number_search():
     include_oem = request.form.get("include_oem", "true") == "true"
     include_alt = request.form.get("include_alt", "true") == "true"
     exclude_wholesalers = request.form.get("exclude_wholesalers", "false") == "true"
+    auto_search_listings = request.form.get("auto_search_listings", "false") == "true"
     
     if not part_number:
         return jsonify({
@@ -1417,9 +1418,149 @@ def generate_google_search_url(part_number, include_oem=True, exclude_wholesaler
     # Just use the part number as-is, no additional terms or operators
     # URL encode the query
     encoded_query = urllib.parse.quote(part_number)
-    
+
     # Return the simple search URL
     return f"https://www.google.com/search?q={encoded_query}"
+
+@app.route("/api/part-number-listings", methods=["POST"])
+def part_number_listings():
+    """Search for product listings using part numbers"""
+    part_number = sanitize_input(request.form.get("part_number", ""))
+    alt_numbers = request.form.get("alt_numbers", "[]")
+    part_type = sanitize_input(request.form.get("part_type", "Automotive Part"))
+
+    if not part_number:
+        return jsonify({
+            "success": False,
+            "error": "No part number provided"
+        })
+
+    try:
+        # Parse alternative part numbers if provided
+        alt_numbers_list = []
+        try:
+            alt_numbers_list = json.loads(alt_numbers)
+
+            # Ensure it's a list and has no more than 3 items to avoid excessive API usage
+            if not isinstance(alt_numbers_list, list):
+                alt_numbers_list = []
+
+            # Limit to 3 alternative part numbers
+            alt_numbers_list = alt_numbers_list[:3]
+        except:
+            # If parsing fails, assume no alternatives
+            alt_numbers_list = []
+
+        # Log the search
+        print(f"Part number listings search: {part_number}, Alternatives: {alt_numbers_list}")
+
+        # Create a list of part numbers to search (primary + alternatives)
+        search_part_numbers = [part_number] + alt_numbers_list
+
+        # Initialize collection for listings
+        all_listings = []
+
+        # Get listings for each part number (primary first, then alternatives)
+        for search_part in search_part_numbers:
+            # Try to get listings from eBay first (faster and more reliable)
+            try:
+                ebay_results = get_ebay_serpapi_results(search_part, part_type)
+
+                # Add source information to each listing
+                for listing in ebay_results:
+                    # Add information about which part number found this listing
+                    listing["source_part"] = search_part
+                    # Add a flag to indicate if this is from the primary part number
+                    listing["is_primary"] = (search_part == part_number)
+
+                    # Add to our results
+                    all_listings.append(listing)
+
+                # If we already have enough results, stop
+                if len(all_listings) >= 20:
+                    break
+            except Exception as ebay_err:
+                print(f"Error searching eBay for part {search_part}: {ebay_err}")
+
+            # If we don't have enough results yet, also try Google Shopping
+            if len(all_listings) < 10:
+                try:
+                    google_results = get_google_shopping_results(search_part, part_type)
+
+                    # Add source information to each listing
+                    for listing in google_results:
+                        # Add information about which part number found this listing
+                        listing["source_part"] = search_part
+                        # Add a flag to indicate if this is from the primary part number
+                        listing["is_primary"] = (search_part == part_number)
+
+                        # Add to our results - only if we don't already have a similar listing
+                        # Simple deduplication by checking title similarity
+                        title_lower = listing["title"].lower()
+
+                        # Check if this listing is similar to any existing one
+                        is_duplicate = False
+                        for existing in all_listings:
+                            existing_title = existing["title"].lower()
+                            # If titles are 80% similar, consider it a duplicate
+                            if similar_strings(title_lower, existing_title, 0.8):
+                                is_duplicate = True
+                                break
+
+                        if not is_duplicate:
+                            all_listings.append(listing)
+
+                    # If we have enough results, stop
+                    if len(all_listings) >= 20:
+                        break
+                except Exception as google_err:
+                    print(f"Error searching Google for part {search_part}: {google_err}")
+
+        # Sort listings - primary part number listings first, then by price
+        all_listings.sort(key=lambda x: (not x.get("is_primary", False), get_price_value(x.get("price", ""))))
+
+        # Limit total number of listings to return (max 20)
+        return jsonify({
+            "success": True,
+            "part_number": part_number,
+            "alt_numbers": alt_numbers_list,
+            "listings": all_listings[:20],
+            "total": len(all_listings[:20])
+        })
+    except Exception as e:
+        print(f"Error in part number listings search: {e}")
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": "An error occurred while searching for product listings. Please try again."
+        })
+
+# Helper function to check string similarity for deduplication
+def similar_strings(str1, str2, threshold=0.8):
+    """Check if two strings are similar enough using difflib"""
+    if not str1 or not str2:
+        return False
+
+    # For very short strings, use simple matching
+    if len(str1) < 10 or len(str2) < 10:
+        return str1 in str2 or str2 in str1
+
+    # For longer strings, use sequence matching
+    return difflib.SequenceMatcher(None, str1, str2).ratio() > threshold
+
+# Helper function to extract numeric price value for sorting
+def get_price_value(price_str):
+    """Extract numeric price value from price string"""
+    if not price_str:
+        return float('inf')  # Unknown prices go to the end
+
+    # Remove non-numeric characters, keeping only digits and decimal point
+    price_str = re.sub(r'[^0-9.]', '', price_str)
+
+    try:
+        return float(price_str)
+    except:
+        return float('inf')  # If conversion fails, move to the end
 
 def guess_part_type(part_number):
     """Guess the part type based on part number patterns"""

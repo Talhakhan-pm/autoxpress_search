@@ -23,6 +23,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const excludeWholesalers = document.getElementById('exclude-wholesalers');
     const noPartHistory = document.getElementById('no-part-history');
     const partHistoryList = document.getElementById('part-history-list');
+
+    // Create toast container for notifications
+    const toastContainer = document.createElement('div');
+    toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+    toastContainer.id = 'toast-container';
+    toastContainer.style.zIndex = '1100';
+    document.body.appendChild(toastContainer);
     
     // Quick search buttons - removed
     
@@ -249,17 +256,17 @@ document.addEventListener('DOMContentLoaded', function () {
      */
     function displayPartInfo(partInfo) {
         if (!partInfo) return;
-        
+
         // Update the part number display
         if (partNumberDisplay) {
             partNumberDisplay.textContent = `Part #${partInfo.partNumber}`;
         }
-        
+
         // Update the part type display with the part name when available
         if (partTypeDisplay) {
             partTypeDisplay.textContent = partInfo.partName || partInfo.partType || 'Automotive Part';
         }
-        
+
         // Update part details
         if (partDetails) {
             partDetails.innerHTML = `
@@ -279,42 +286,304 @@ document.addEventListener('DOMContentLoaded', function () {
                 ` : ''}
             `;
         }
-        
+
         // Update compatibility list
         if (compatibilityList) {
             if (partInfo.compatibility && partInfo.compatibility.length > 0) {
-                compatibilityList.innerHTML = partInfo.compatibility.map(vehicle => 
+                compatibilityList.innerHTML = partInfo.compatibility.map(vehicle =>
                     `<div class="mb-1"><i class="fas fa-check-circle text-success me-1"></i> ${vehicle}</div>`
                 ).join('');
             } else {
                 compatibilityList.innerHTML = '<div class="text-muted">No compatibility information available</div>';
             }
         }
-        
-        // Update advanced search links
+
+        // Update advanced search links (hidden now, but keeping the container)
         if (advancedSearchLinks) {
             advancedSearchLinks.innerHTML = `
-                <a href="${partInfo.searchUrls.google}" target="_blank" class="btn btn-sm btn-outline-primary">
-                    <i class="fab fa-google me-1"></i> Google
-                </a>
-                <a href="${partInfo.searchUrls.amazon}" target="_blank" class="btn btn-sm btn-outline-primary">
-                    <i class="fab fa-amazon me-1"></i> Amazon
-                </a>
-                <a href="${partInfo.searchUrls.ebay}" target="_blank" class="btn btn-sm btn-outline-primary">
-                    <i class="fab fa-ebay me-1"></i> eBay
-                </a>
-                <a href="${partInfo.searchUrls.rockauto}" target="_blank" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-tools me-1"></i> RockAuto
-                </a>
+                <!-- Advanced search links are now hidden but can be re-enabled later -->
+                <div style="display: none;">
+                    <a href="${partInfo.searchUrls.google}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="fab fa-google me-1"></i> Google
+                    </a>
+                    <a href="${partInfo.searchUrls.amazon}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="fab fa-amazon me-1"></i> Amazon
+                    </a>
+                    <a href="${partInfo.searchUrls.ebay}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="fab fa-ebay me-1"></i> eBay
+                    </a>
+                    <a href="${partInfo.searchUrls.rockauto}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-tools me-1"></i> RockAuto
+                    </a>
+                </div>
             `;
+
+            // Add button to search for listings using the part numbers
+            if (partInfo.alternativeNumbers && partInfo.alternativeNumbers.length > 0) {
+                advancedSearchLinks.innerHTML += `
+                    <button class="btn btn-danger mt-2 w-100 py-2" id="find-listings-btn">
+                        <i class="fas fa-search-dollar me-1"></i> Find Product Listings
+                    </button>
+                `;
+
+                // Add event listener to the new button
+                setTimeout(() => {
+                    const findListingsBtn = document.getElementById('find-listings-btn');
+                    if (findListingsBtn) {
+                        findListingsBtn.addEventListener('click', () => {
+                            findProductListings(partInfo.partNumber, partInfo.partType, partInfo.alternativeNumbers);
+                        });
+                    }
+                }, 100);
+            }
         }
-        
+
         // Show the result card and hide the placeholder
         if (partNumberResult) partNumberResult.classList.remove('d-none');
         if (noPartResults) noPartResults.classList.add('d-none');
-        
+
         // Enable quick search buttons
         toggleQuickSearchButtons(true);
+    }
+
+    /**
+     * Search for product listings using the part number and alternatives
+     */
+    async function findProductListings(partNumber, partType, alternativeNumbers) {
+        // Show loading indicator in a toast notification
+        const toastContainer = document.getElementById('toast-container');
+        if (toastContainer) {
+            const loadingToast = document.createElement('div');
+            loadingToast.className = 'toast show';
+            loadingToast.role = 'alert';
+            loadingToast.setAttribute('aria-live', 'assertive');
+            loadingToast.setAttribute('aria-atomic', 'true');
+            loadingToast.id = 'product-listings-loading-toast';
+            loadingToast.innerHTML = `
+                <div class="toast-header">
+                    <strong class="me-auto">Searching for Listings</strong>
+                    <small>Just now</small>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body d-flex align-items-center">
+                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                        <span class="visually-hidden">Searching...</span>
+                    </div>
+                    <span>Finding products for part #${partNumber}...</span>
+                </div>
+            `;
+
+            toastContainer.appendChild(loadingToast);
+        }
+
+        // Disable the find listings button if it exists
+        const findListingsBtn = document.getElementById('find-listings-btn');
+        if (findListingsBtn) {
+            findListingsBtn.disabled = true;
+            findListingsBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Searching...';
+        }
+
+        try {
+            // Prepare form data for the API request
+            const formData = new FormData();
+            formData.append('part_number', partNumber);
+            formData.append('part_type', partType || 'Automotive Part');
+            formData.append('alt_numbers', JSON.stringify(alternativeNumbers || []));
+
+            // Call our backend API
+            const response = await fetch('/api/part-number-listings', {
+                method: 'POST',
+                body: formData
+            });
+
+            // Parse the response
+            const result = await response.json();
+
+            // Remove loading toast
+            const loadingToast = document.getElementById('product-listings-loading-toast');
+            if (loadingToast) {
+                loadingToast.remove();
+            }
+
+            // Reset the find listings button
+            const findListingsBtn = document.getElementById('find-listings-btn');
+            if (findListingsBtn) {
+                findListingsBtn.disabled = false;
+                findListingsBtn.innerHTML = '<i class="fas fa-search-dollar me-1"></i> Find Product Listings';
+            }
+
+            if (!result.success) {
+                showError(result.error || 'Failed to find product listings. Please try again.');
+                return;
+            }
+
+            // If we have listings, display them using the enhanced UI
+            if (result.listings && result.listings.length > 0) {
+                // Use the enhanced display function if available, otherwise fall back to original
+                if (typeof window.displayEnhancedProductListings === 'function') {
+                    window.displayEnhancedProductListings(result.listings, partNumber, alternativeNumbers);
+                } else {
+                    displayProductListings(result.listings, partNumber, alternativeNumbers);
+                }
+            } else {
+                // Show a message if no listings were found
+                const noListingsElement = document.createElement('div');
+                noListingsElement.className = 'alert alert-info mt-3';
+                noListingsElement.innerHTML = `
+                    <i class="fas fa-info-circle me-2"></i>
+                    No product listings found for this part number.
+                `;
+
+                // Add after the advanced search links
+                if (advancedSearchLinks) {
+                    advancedSearchLinks.after(noListingsElement);
+                }
+            }
+        } catch (error) {
+            console.error('Error searching for product listings:', error);
+
+            // Remove loading toast
+            const loadingToast = document.getElementById('product-listings-loading-toast');
+            if (loadingToast) {
+                loadingToast.remove();
+            }
+
+            // Reset the find listings button
+            const findListingsBtn = document.getElementById('find-listings-btn');
+            if (findListingsBtn) {
+                findListingsBtn.disabled = false;
+                findListingsBtn.innerHTML = '<i class="fas fa-search-dollar me-1"></i> Find Product Listings';
+            }
+
+            showError('Failed to search for product listings. Please try again.');
+        }
+    }
+
+    /**
+     * Display product listings in the UI
+     */
+    function displayProductListings(listings, primaryPartNumber, alternativeNumbers) {
+        // Create a modal container for the listings
+        let listingsModal = document.getElementById('part-listings-modal');
+
+        // If the modal doesn't exist, create it
+        if (!listingsModal) {
+            listingsModal = document.createElement('div');
+            listingsModal.id = 'part-listings-modal';
+            listingsModal.className = 'modal fade';
+            listingsModal.tabIndex = '-1';
+            listingsModal.setAttribute('aria-labelledby', 'part-listings-modal-label');
+            listingsModal.setAttribute('aria-hidden', 'true');
+
+            // Create the modal HTML structure
+            listingsModal.innerHTML = `
+                <div class="modal-dialog modal-dialog-centered modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="part-listings-modal-label">Product Listings</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="product-listings-grid" class="row"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add the modal to the body
+            document.body.appendChild(listingsModal);
+        }
+
+        // Get the grid element within the modal
+        const listingsGrid = document.getElementById('product-listings-grid');
+
+        // Clear any existing listings
+        listingsGrid.innerHTML = '';
+
+        // Add a header for the listings count
+        const headerElement = document.createElement('div');
+        headerElement.className = 'col-12 mb-3';
+        headerElement.innerHTML = `
+            <h5>Found ${listings.length} product listings for "${primaryPartNumber}"
+            ${alternativeNumbers && alternativeNumbers.length > 0 ?
+                ` and ${alternativeNumbers.length} alternative part number${alternativeNumbers.length > 1 ? 's' : ''}` : ''}
+            </h5>
+        `;
+        listingsGrid.appendChild(headerElement);
+
+        // Add each listing to the modal
+        listings.forEach(listing => {
+            // Determine the source class (eBay, Google, etc.)
+            const sourceClass = listing.source === 'eBay' ? 'source-ebay' : 'source-google';
+
+            // Determine condition class
+            const conditionClass = listing.condition && listing.condition.toLowerCase().includes('new')
+                ? 'condition-new'
+                : 'condition-used';
+
+            // Determine if it's from the primary part or an alternative
+            const sourcePart = listing.source_part || primaryPartNumber;
+            const isPrimary = sourcePart === primaryPartNumber;
+            const sourcePartIndex = !isPrimary && alternativeNumbers
+                ? alternativeNumbers.indexOf(sourcePart) + 1
+                : 0;
+
+            // Create card for the listing
+            const listingCard = document.createElement('div');
+            listingCard.className = 'col-md-6 col-lg-4 mb-3';
+            listingCard.innerHTML = `
+                <div class="card h-100 ${isPrimary ? 'border-success' : ''}">
+                    ${isPrimary
+                        ? '<div class="card-header bg-success text-white">Primary Part Number</div>'
+                        : `<div class="card-header">Alternative Part #${sourcePartIndex}</div>`}
+                    <div class="product-source ${sourceClass}">${listing.source}</div>
+                    <div class="product-image-container" style="height: 150px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                        <img src="${listing.image || '/static/placeholder.png'}" class="product-image"
+                            alt="${listing.title}" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                    </div>
+                    <div class="card-body">
+                        <h6 class="product-title mb-2" style="height: 3em; overflow: hidden; text-overflow: ellipsis;">${listing.title}</h6>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Condition:</span>
+                            <span class="${conditionClass}">${listing.condition || 'Not specified'}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Price:</span>
+                            <span class="product-price fw-bold">${listing.price || 'Not available'}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span>Shipping:</span>
+                            <span>${listing.shipping || 'Not specified'}</span>
+                        </div>
+                        <a href="${listing.link}" target="_blank" class="btn btn-primary btn-sm w-100">View Details</a>
+                    </div>
+                </div>
+            `;
+
+            listingsGrid.appendChild(listingCard);
+        });
+
+        // Show the modal using Bootstrap's modal API
+        const modal = new bootstrap.Modal(listingsModal);
+        modal.show();
+
+        // Also add a count badge to the button
+        const findListingsBtn = document.getElementById('find-listings-btn');
+        if (findListingsBtn) {
+            findListingsBtn.innerHTML = `
+                <i class="fas fa-search-dollar me-1"></i>
+                Product Listings <span class="badge bg-light text-dark ms-1">${listings.length}</span>
+            `;
+
+            // Add a click handler to reopen the modal if it's closed
+            findListingsBtn.onclick = function() {
+                modal.show();
+                return false; // Prevent default button behavior
+            };
+        }
     }
     
     /**
