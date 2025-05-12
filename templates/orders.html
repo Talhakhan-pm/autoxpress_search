@@ -27,8 +27,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         h2 {
@@ -57,14 +64,16 @@
             transition: all 0.3s ease;
         }
 
-        .form-control, .form-select {
+        .form-control,
+        .form-select {
             border: 2px solid #ecf0f1;
             border-radius: 8px;
             padding: 10px;
             transition: all 0.3s ease;
         }
 
-        .form-control:focus, .form-select:focus {
+        .form-control:focus,
+        .form-select:focus {
             border-color: #e74c3c;
             box-shadow: 0 0 8px rgba(231, 76, 60, 0.3);
             transform: scale(1.02);
@@ -100,8 +109,15 @@
         }
 
         @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .mb-3 {
@@ -120,20 +136,25 @@
         .input-group:focus-within .input-group-text {
             border-color: #e74c3c;
         }
+
         .input-group .form-control {
             border-left: 0;
             border-radius: 0 8px 8px 0;
         }
+
         .btn-primary.dimmed {
             opacity: 0.6;
-            pointer-events: none; /* Prevents additional clicks while dimmed */
+            pointer-events: none;
+            /* Prevents additional clicks while dimmed */
         }
-                /* Ensure the blue outline for Order and Callbacks matches the current style */
+
+        /* Ensure the blue outline for Order and Callbacks matches the current style */
         .btn-outline-primary {
-            color: #0d6efd; /* Bootstrap's default primary blue */
+            color: #0d6efd;
+            /* Bootstrap's default primary blue */
             border-color: #0d6efd;
         }
-        
+
         /* Customize hover and focus states for blue outline */
         .btn-outline-primary:hover,
         .btn-outline-primary:focus {
@@ -141,13 +162,14 @@
             background-color: #0d6efd;
             border-color: #0d6efd;
         }
-        
+
         /* Ensure the red outline for Assistant */
         .btn-outline-danger {
-            color: #e74c3c; /* Matches the red theme of AutoXpress */
+            color: #e74c3c;
+            /* Matches the red theme of AutoXpress */
             border-color: #e74c3c;
         }
-        
+
         /* Customize hover and focus states for red outline */
         .btn-outline-danger:hover,
         .btn-outline-danger:focus {
@@ -166,7 +188,8 @@
                 <h2>AutoXpress Order Entry</h2>
                 <div>
                     <a href="https://autoxpress.us/callbacks" class="btn btn-outline-primary btn-sm me-2">Callbacks</a>
-                    <a href="https://assistant-autoxpress.onrender.com/" class="btn btn-outline-danger btn-sm">Assistant</a>
+                    <a href="https://assistant-autoxpress.onrender.com/"
+                        class="btn btn-outline-danger btn-sm">Assistant</a>
                 </div>
             </div>
             <form id="orderForm">
@@ -183,6 +206,8 @@
                             <option>Farhan</option>
                             <option>Khan</option>
                             <option>Murtaza</option>
+                            <option>Luis</option>
+                            <option>Roy</option>
                         </select>
                     </div>
                 </div>
@@ -203,21 +228,22 @@
                     </div>
                 </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Product & Condition</label>
-                        <div class="row">
-                            <div class="col-md-9">
-                                <input type="text" class="form-control" id="product" placeholder="Enter product" maxlength="100" required>
-                            </div>
-                            <div class="col-md-3">
-                                <select class="form-select" id="condition" required>
-                                    <option value="">Condition</option>
-                                    <option value="New">New</option>
-                                    <option value="Used">Used</option>
-                                </select>
-                            </div>
+                <div class="mb-3">
+                    <label class="form-label">Product & Condition</label>
+                    <div class="row">
+                        <div class="col-md-9">
+                            <input type="text" class="form-control" id="product" placeholder="Enter product"
+                                maxlength="100" required>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="condition" required>
+                                <option value="">Condition</option>
+                                <option value="New">New</option>
+                                <option value="Used">Used</option>
+                            </select>
                         </div>
                     </div>
+                </div>
 
                 <div class="row">
                     <div class="col-md-8 mb-3">
@@ -233,11 +259,11 @@
                 <div class="mb-4">
                     <label for="charge" class="form-label">Charge ($)</label>
                     <div class="input-group">
-                      <span class="input-group-text">$</span>
-                      <input type="number" class="form-control" id="charge" step="0.01" required>
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control" id="charge" step="0.01" required>
                     </div>
                 </div>
-                
+
                 <div class="mb-4">
                     <label for="comments" class="form-label">Comments</label>
                     <textarea class="form-control" id="comments" rows="3" maxlength="300"></textarea>
@@ -250,72 +276,72 @@
         </div>
     </div>
 
-<script>
-    // Function to capitalize the first letter of each word
-    function capitalizeWords(str) {
-        return str.replace(/\b\w/g, char => char.toUpperCase());
-    }
+    <script>
+        // Function to capitalize the first letter of each word
+        function capitalizeWords(str) {
+            return str.replace(/\b\w/g, char => char.toUpperCase());
+        }
 
-    document.getElementById('orderForm').addEventListener('submit', function (e) {
-        e.preventDefault();
+        document.getElementById('orderForm').addEventListener('submit', function (e) {
+            e.preventDefault();
 
-        // Dim the submit button
-        const submitButton = this.querySelector('.btn-primary');
-        submitButton.classList.add('dimmed');
+            // Dim the submit button
+            const submitButton = this.querySelector('.btn-primary');
+            submitButton.classList.add('dimmed');
 
-        // Hide any previous success message
-        document.getElementById('successMessage').style.display = 'none';
+            // Hide any previous success message
+            document.getElementById('successMessage').style.display = 'none';
 
-        // Generate order number
-        const orderNumber = `23-${Math.floor(10000 + Math.random() * 90000)}`;
+            // Generate order number
+            const orderNumber = `23-${Math.floor(10000 + Math.random() * 90000)}`;
 
-        // Get form values and capitalize relevant fields
-        const formData = {
-            orderNumber: orderNumber,
-            agentName: document.getElementById('agentName').value,
-            customerName: capitalizeWords(document.getElementById('customerName').value),
-            address: capitalizeWords(document.getElementById('address').value),
-            number: document.getElementById('number').value, // Phone number, no capitalization
-            email: document.getElementById('email').value,   // Email, no capitalization
-            product: capitalizeWords(document.getElementById('product').value),
-            condition: document.getElementById('condition').value,
-            car: capitalizeWords(document.getElementById('car').value),
-            year: document.getElementById('year').value,    // Number, no capitalization
-            charge: document.getElementById('charge').value, // Number, no capitalization
-            comments: document.getElementById('comments').value
-        };
+            // Get form values and capitalize relevant fields
+            const formData = {
+                orderNumber: orderNumber,
+                agentName: document.getElementById('agentName').value,
+                customerName: capitalizeWords(document.getElementById('customerName').value),
+                address: capitalizeWords(document.getElementById('address').value),
+                number: document.getElementById('number').value, // Phone number, no capitalization
+                email: document.getElementById('email').value,   // Email, no capitalization
+                product: capitalizeWords(document.getElementById('product').value),
+                condition: document.getElementById('condition').value,
+                car: capitalizeWords(document.getElementById('car').value),
+                year: document.getElementById('year').value,    // Number, no capitalization
+                charge: document.getElementById('charge').value, // Number, no capitalization
+                comments: document.getElementById('comments').value
+            };
 
-        fetch('https://script.google.com/macros/s/AKfycby45FebWINDXSPflSKHxJnZNZeLFWKYgry7c5_mYckpNVF1DDoHIduTydcXJGmFfZe0/exec', {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        })
-        .then(() => {
-            document.getElementById('successMessage').innerHTML = 
-                `<div class="alert alert-success">
+            fetch('https://script.google.com/macros/s/AKfycby45FebWINDXSPflSKHxJnZNZeLFWKYgry7c5_mYckpNVF1DDoHIduTydcXJGmFfZe0/exec', {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+                .then(() => {
+                    document.getElementById('successMessage').innerHTML =
+                        `<div class="alert alert-success">
                     Order successfully submitted!<br>
                     Your Order Number is <strong>${orderNumber}</strong>
                  </div>`;
-            document.getElementById('successMessage').style.display = 'block';
-            document.getElementById('orderForm').reset();
+                    document.getElementById('successMessage').style.display = 'block';
+                    document.getElementById('orderForm').reset();
 
-            // Remove dimming effect after success
-            submitButton.classList.remove('dimmed');
+                    // Remove dimming effect after success
+                    submitButton.classList.remove('dimmed');
 
-            setTimeout(() => {
-                document.getElementById('successMessage').style.display = 'none';
-            }, 30000);
-        })
-        .catch((error) => {
-            alert('Error submitting form: ' + error.message);
-            // Remove dimming effect on error
-            submitButton.classList.remove('dimmed');
+                    setTimeout(() => {
+                        document.getElementById('successMessage').style.display = 'none';
+                    }, 30000);
+                })
+                .catch((error) => {
+                    alert('Error submitting form: ' + error.message);
+                    // Remove dimming effect on error
+                    submitButton.classList.remove('dimmed');
+                });
         });
-    });
-</script>
+    </script>
 </body>
 
 </html>

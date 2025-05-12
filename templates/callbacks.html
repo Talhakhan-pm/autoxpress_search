@@ -24,8 +24,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         h3 {
@@ -53,14 +60,16 @@
             transition: all 0.3s ease;
         }
 
-        .form-control, .form-select {
+        .form-control,
+        .form-select {
             border: 2px solid #ddd;
             border-radius: 8px;
             padding: 10px;
             transition: all 0.3s ease;
         }
 
-        .form-control:focus, .form-select:focus {
+        .form-control:focus,
+        .form-select:focus {
             border-color: #3498db;
             box-shadow: 0 0 8px rgba(52, 152, 219, 0.3);
             transform: scale(1.02);
@@ -94,6 +103,7 @@
                 opacity: 1;
                 background: linear-gradient(45deg, #3498db, #2980b9);
             }
+
             to {
                 opacity: 0.5;
                 background: linear-gradient(45deg, #7f8c8d, #95a5a6);
@@ -109,8 +119,15 @@
         }
 
         @keyframes slideIn {
-            from { opacity: 0; transform: translateX(20px); }
-            to { opacity: 1; transform: translateX(0); }
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
 
         .mb-3 {
@@ -122,31 +139,40 @@
             border-color: #3498db;
         }
 
-        
+
         /* Custom red button for Assistant */
         .btn-custom-red {
-            background-color: #fff !important; /* White fill */
-            color: #e74c3c; /* Red text to match outline */
-            border: 2px solid #e74c3c; /* Red outline */
-            border-radius: 8px; /* Match existing button border-radius */
-            transition: all 0.3s ease; /* Match existing transition */
+            background-color: #fff !important;
+            /* White fill */
+            color: #e74c3c;
+            /* Red text to match outline */
+            border: 2px solid #e74c3c;
+            /* Red outline */
+            border-radius: 8px;
+            /* Match existing button border-radius */
+            transition: all 0.3s ease;
+            /* Match existing transition */
         }
-        
+
         /* Hover and focus states for red button */
         .btn-custom-red:hover,
         .btn-custom-red:focus {
-            background-color: #e74c3c !important; /* Red fill on hover */
-            color: #fff; /* White text on hover */
+            background-color: #e74c3c !important;
+            /* Red fill on hover */
+            color: #fff;
+            /* White text on hover */
             border-color: #e74c3c;
-            box-shadow: 0 0 8px rgba(231, 76, 60, 0.3); /* Match existing focus shadow */
-            transform: scale(1.02); /* Match existing focus transform */
+            box-shadow: 0 0 8px rgba(231, 76, 60, 0.3);
+            /* Match existing focus shadow */
+            transform: scale(1.02);
+            /* Match existing focus transform */
         }
     </style>
 </head>
 
 <body>
     <div class="form-container">
-       <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
             <div></div>
             <h3 class="text-center">Callback Tracker</h3>
             <div>
@@ -163,6 +189,8 @@
                     <option>Farhan</option>
                     <option>Khan</option>
                     <option>Murtaza</option>
+                    <option>Luis</option>
+                    <option>Roy</option>
                 </select>
             </div>
 
@@ -201,10 +229,11 @@
                 <label class="form-label">Follow-up Date</label>
                 <input type="date" class="form-control" id="followupDate">
             </div>
-            
+
             <div class="mb-4">
                 <label for="comments" class="form-label">Comments</label>
-                <textarea class="form-control" id="comments" rows="3" maxlength="300" placeholder="Quoted Price:"></textarea>
+                <textarea class="form-control" id="comments" rows="3" maxlength="300"
+                    placeholder="Quoted Price:"></textarea>
             </div>
 
             <button type="submit" class="btn btn-primary w-100">Add to Callback Sheet</button>
@@ -215,64 +244,64 @@
         </div>
     </div>
 
-<script>
-    // Function to capitalize the first letter of each word
-    function capitalizeWords(str) {
-        return str.replace(/\b\w/g, char => char.toUpperCase());
-    }
+    <script>
+        // Function to capitalize the first letter of each word
+        function capitalizeWords(str) {
+            return str.replace(/\b\w/g, char => char.toUpperCase());
+        }
 
-    document.getElementById('callbackForm').addEventListener('submit', function (e) {
-        e.preventDefault();
+        document.getElementById('callbackForm').addEventListener('submit', function (e) {
+            e.preventDefault();
 
-        // Get the submit button
-        const submitButton = document.querySelector('button[type="submit"]');
+            // Get the submit button
+            const submitButton = document.querySelector('button[type="submit"]');
 
-        // Disable the button and apply the dimmed effect
-        submitButton.disabled = true;
-        submitButton.classList.add('dimmed');
+            // Disable the button and apply the dimmed effect
+            submitButton.disabled = true;
+            submitButton.classList.add('dimmed');
 
-        // Prepare form data with capitalization for relevant fields
-        const formData = {
-            agentName: document.getElementById('agentName').value,
-            product: capitalizeWords(document.getElementById('product').value),
-            vehicleInfo: capitalizeWords(document.getElementById('vehicleInfo').value),
-            year: document.getElementById('year').value, // Number, no capitalization
-            zip: document.getElementById('zip').value,   // Zip code, no capitalization
-            customerName: capitalizeWords(document.getElementById('customerName').value),
-            callbackNumber: document.getElementById('callbackNumber').value, // Phone, no capitalization
-            followupDate: document.getElementById('followupDate').value,     // Date, no capitalization
-            comments: capitalizeWords(document.getElementById('comments').value)
-        };
+            // Prepare form data with capitalization for relevant fields
+            const formData = {
+                agentName: document.getElementById('agentName').value,
+                product: capitalizeWords(document.getElementById('product').value),
+                vehicleInfo: capitalizeWords(document.getElementById('vehicleInfo').value),
+                year: document.getElementById('year').value, // Number, no capitalization
+                zip: document.getElementById('zip').value,   // Zip code, no capitalization
+                customerName: capitalizeWords(document.getElementById('customerName').value),
+                callbackNumber: document.getElementById('callbackNumber').value, // Phone, no capitalization
+                followupDate: document.getElementById('followupDate').value,     // Date, no capitalization
+                comments: capitalizeWords(document.getElementById('comments').value)
+            };
 
-        fetch('https://script.google.com/macros/s/AKfycbzFldA90XFFOuUgK9qJLjRSktD-5mCO2Bmm8GZBH9PclhHvr_DBYxvfI0Rpduae6WUPDg/exec', {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        })
-        .then(() => {
-            document.getElementById('successMessage').style.display = 'block';
-            document.getElementById('callbackForm').reset();
+            fetch('https://script.google.com/macros/s/AKfycbzFldA90XFFOuUgK9qJLjRSktD-5mCO2Bmm8GZBH9PclhHvr_DBYxvfI0Rpduae6WUPDg/exec', {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+                .then(() => {
+                    document.getElementById('successMessage').style.display = 'block';
+                    document.getElementById('callbackForm').reset();
 
-            // Re-enable the button and remove the dimmed effect after success
-            submitButton.disabled = false;
-            submitButton.classList.remove('dimmed');
+                    // Re-enable the button and remove the dimmed effect after success
+                    submitButton.disabled = false;
+                    submitButton.classList.remove('dimmed');
 
-            setTimeout(() => {
-                document.getElementById('successMessage').style.display = 'none';
-            }, 3000);
-        })
-        .catch((error) => {
-            alert('Error submitting form: ' + error.message);
+                    setTimeout(() => {
+                        document.getElementById('successMessage').style.display = 'none';
+                    }, 3000);
+                })
+                .catch((error) => {
+                    alert('Error submitting form: ' + error.message);
 
-            // Re-enable the button and remove the dimmed effect if there's an error
-            submitButton.disabled = false;
-            submitButton.classList.remove('dimmed');
+                    // Re-enable the button and remove the dimmed effect if there's an error
+                    submitButton.disabled = false;
+                    submitButton.classList.remove('dimmed');
+                });
         });
-    });
-</script>
+    </script>
 </body>
 
 </html>
