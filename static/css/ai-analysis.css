@@ -1,0 +1,140 @@
+/* AI Analysis Response Styling */
+.ai-analysis {
+  padding: 1rem;
+  line-height: 1.6;
+  font-size: 0.95rem;
+  color: #333;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border-left: 4px solid var(--autoxpress-red);
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.ai-analysis h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #212529;
+}
+
+.ai-analysis p {
+  margin-bottom: 1rem;
+}
+
+.ai-analysis ul, .ai-analysis ol {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+.ai-analysis li {
+  margin-bottom: 0.5rem;
+}
+
+.ai-analysis-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.ai-analysis-header .ai-icon {
+  width: 24px;
+  height: 24px;
+  margin-right: 10px;
+  color: var(--autoxpress-red);
+}
+
+.ai-analysis-header .ai-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #212529;
+  margin: 0;
+}
+
+.ai-highlight {
+  background-color: rgba(229, 50, 56, 0.1);
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: 500;
+}
+
+.ai-section {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.ai-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.ai-spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+.ai-spec-table th, .ai-spec-table td {
+  padding: 0.5rem;
+  border: 1px solid #dee2e6;
+}
+
+.ai-spec-table th {
+  background-color: #f1f3f5;
+  font-weight: 600;
+  text-align: left;
+}
+
+.ai-compatibility {
+  background-color: #e9f7ef;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin: 1rem 0;
+}
+
+.ai-compatibility-title {
+  font-weight: 600;
+  color: #28a745;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.ai-warning {
+  background-color: #fff3cd;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin: 1rem 0;
+}
+
+.ai-warning-title {
+  font-weight: 600;
+  color: #856404;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.ai-recommendation {
+  margin-top: 1rem;
+  font-weight: 500;
+}
+
+/* Fade-in animation for AI content */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
