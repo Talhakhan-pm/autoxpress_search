@@ -123,6 +123,71 @@
   font-weight: 500;
 }
 
+/* Price Range Section Styling */
+.ai-price-range {
+  background-color: #f8f9fa;
+  border-left: 4px solid #28a745;
+  padding: 15px;
+  margin: 15px 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.ai-price-title {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #212529;
+  font-size: 1.1rem;
+}
+
+.ai-price-title i {
+  margin-right: 8px;
+  color: #28a745;
+}
+
+.price-range-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.price-range-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: white;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.price-range-label {
+  font-weight: 500;
+  color: #495057;
+}
+
+.price-range-value {
+  font-weight: 600;
+  color: #28a745;
+}
+
+.price-range-oem {
+  border-left: 3px solid #007bff;
+}
+
+.price-range-aftermarket {
+  border-left: 3px solid #fd7e14;
+}
+
+.price-note {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
 /* Fade-in animation for AI content */
 @keyframes fadeIn {
   from {

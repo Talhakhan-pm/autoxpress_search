@@ -111,6 +111,70 @@ document.addEventListener('DOMContentLoaded', function() {
           // Apply special formatting based on content
           if (isHeader) {
             p.innerHTML = `<strong>${paragraph}</strong>`;
+          } else if (paragraph.includes('💲') || paragraph.toLowerCase().includes('price range')) {
+            // Extract price range information
+            const isPriceRange = true;
+            
+            // Check if we already have a price range section
+            let priceRangeSection = currentSection.querySelector('.ai-price-range');
+            
+            if (!priceRangeSection) {
+              // Create a new price range section if it doesn't exist
+              priceRangeSection = document.createElement('div');
+              priceRangeSection.className = 'ai-price-range';
+              priceRangeSection.innerHTML = `
+                <div class="ai-price-title">
+                  <i class="fas fa-dollar-sign"></i> Price Analysis
+                </div>
+                <div class="price-range-container">
+                  <!-- Price ranges will be added here -->
+                </div>
+              `;
+              currentSection.appendChild(priceRangeSection);
+            }
+            
+            const priceContainer = priceRangeSection.querySelector('.price-range-container');
+            const priceRangeItem = document.createElement('div');
+            
+            // Process different price range formats
+            if (paragraph.toLowerCase().includes('oem price range')) {
+              priceRangeItem.className = 'price-range-item price-range-oem';
+              const priceText = paragraph.replace('💲', '').replace('OEM Price Range:', '').trim();
+              priceRangeItem.innerHTML = `
+                <span class="price-range-label">OEM Parts</span>
+                <span class="price-range-value">${priceText}</span>
+              `;
+            } else if (paragraph.toLowerCase().includes('aftermarket price range')) {
+              priceRangeItem.className = 'price-range-item price-range-aftermarket';
+              const priceText = paragraph.replace('💲', '').replace('Aftermarket Price Range:', '').trim();
+              priceRangeItem.innerHTML = `
+                <span class="price-range-label">Aftermarket Parts</span>
+                <span class="price-range-value">${priceText}</span>
+              `;
+            } else {
+              // Generic price range
+              priceRangeItem.className = 'price-range-item';
+              const priceText = paragraph.replace('💲', '').replace('Expected Price Range:', '').trim();
+              priceRangeItem.innerHTML = `
+                <span class="price-range-label">Expected Price</span>
+                <span class="price-range-value">${priceText}</span>
+              `;
+            }
+            
+            priceContainer.appendChild(priceRangeItem);
+            
+            // If this paragraph mentions value or expense, add it as a note
+            if (paragraph.toLowerCase().includes('expensive') || 
+                paragraph.toLowerCase().includes('value') ||
+                paragraph.toLowerCase().includes('cost')) {
+              const noteElem = document.createElement('div');
+              noteElem.className = 'price-note';
+              noteElem.innerHTML = `<i class="fas fa-info-circle"></i> ${paragraph}`;
+              priceContainer.appendChild(noteElem);
+            }
+            
+            // Don't add the paragraph again since we've processed it
+            return;
           } else if (paragraph.toLowerCase().includes('compatible') || 
                      paragraph.toLowerCase().includes('will fit')) {
             p.className = 'ai-compatibility';
