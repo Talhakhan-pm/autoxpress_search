@@ -1294,7 +1294,7 @@ footer p.small {
 /* Mini action links styling */
 .mini-actions {
     position: absolute;
-    bottom: -28px;
+    bottom: -38px;
     right: 0;
     display: flex;
     gap: 14px;
@@ -1311,7 +1311,7 @@ footer p.small {
 /* Mini actions for single field search */
 .single-mini-actions {
     text-align: right;
-    bottom: -22px;
+    bottom: -38px;
     right: 0;
 }
 
