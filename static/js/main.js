@@ -7,6 +7,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchForm = document.getElementById('search-form');
     const searchButton = document.getElementById('search-button');
     const singleSearchButton = document.getElementById('single-search-button');
+    const refreshFieldsButton = document.getElementById('refresh-fields-button');
+    const copyFieldsButton = document.getElementById('copy-fields-button');
+    const refreshSingleButton = document.getElementById('refresh-single-button');
+    const copySingleButton = document.getElementById('copy-single-button');
     const vinForm = document.getElementById('vin-form');
     const vinButton = document.getElementById('vin-button');
     const resultContainer = document.getElementById('result-container');
@@ -1242,6 +1246,120 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initialize favorites display
     displayFavorites();
+
+    // Refresh and copy buttons functionality
+    if (refreshFieldsButton) {
+        refreshFieldsButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Clear all multi-field search inputs
+            yearField.value = '';
+            makeField.value = '';
+            modelField.value = '';
+            partField.value = '';
+            engineField.value = '';
+            
+            // Clear the search feedback
+            searchFeedbackContainer.classList.add('d-none');
+            
+            // Focus on the first field
+            yearField.focus();
+            
+            // Show a brief visual feedback
+            this.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => {
+                this.innerHTML = '<i class="fas fa-sync-alt"></i>';
+            }, 1000);
+        });
+    }
+    
+    if (copyFieldsButton) {
+        copyFieldsButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Get all field values
+            const year = yearField.value.trim();
+            const make = makeField.value.trim();
+            const model = modelField.value.trim();
+            const part = partField.value.trim();
+            const engine = engineField.value.trim();
+            
+            // Format all values in a single line (space-separated)
+            const fieldValues = [year, make, model, part, engine]
+                .filter(Boolean) // Remove empty fields
+                .join(' ');
+            
+            if (fieldValues) {
+                // Copy to clipboard
+                navigator.clipboard.writeText(fieldValues).then(() => {
+                    // Show visual feedback
+                    this.innerHTML = '<i class="fas fa-check"></i>';
+                    setTimeout(() => {
+                        this.innerHTML = '<i class="fas fa-copy"></i>';
+                    }, 1000);
+                }).catch(err => {
+                    console.error('Could not copy text: ', err);
+                    alert('Failed to copy to clipboard');
+                });
+            } else {
+                // Show error if no fields have values
+                this.innerHTML = '<i class="fas fa-times"></i>';
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-copy"></i>';
+                }, 1000);
+            }
+        });
+    }
+    
+    if (refreshSingleButton) {
+        refreshSingleButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Clear the single search field
+            promptField.value = '';
+            
+            // Clear the search feedback
+            searchFeedbackContainer.classList.add('d-none');
+            
+            // Focus on the field
+            promptField.focus();
+            
+            // Show a brief visual feedback
+            this.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => {
+                this.innerHTML = '<i class="fas fa-sync-alt"></i>';
+            }, 1000);
+        });
+    }
+    
+    if (copySingleButton) {
+        copySingleButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Get the value from the single search field
+            const searchValue = promptField.value.trim();
+            
+            if (searchValue) {
+                // Copy to clipboard
+                navigator.clipboard.writeText(searchValue).then(() => {
+                    // Show visual feedback
+                    this.innerHTML = '<i class="fas fa-check"></i>';
+                    setTimeout(() => {
+                        this.innerHTML = '<i class="fas fa-copy"></i>';
+                    }, 1000);
+                }).catch(err => {
+                    console.error('Could not copy text: ', err);
+                    alert('Failed to copy to clipboard');
+                });
+            } else {
+                // Show error if field is empty
+                this.innerHTML = '<i class="fas fa-times"></i>';
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-copy"></i>';
+                }, 1000);
+            }
+        });
+    }
 
     // Image modal click handling has been moved to the ImageModal module
 

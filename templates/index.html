@@ -139,6 +139,14 @@
                                                         <i class="fas fa-search me-1" style="font-size: 0.875rem;"></i>
                                                         Find Parts
                                                     </button>
+                                                    <div class="mini-actions">
+                                                        <a href="#" class="mini-action-link" id="refresh-fields-button" title="Clear all fields">
+                                                            <i class="fas fa-sync-alt"></i>
+                                                        </a>
+                                                        <a href="#" class="mini-action-link" id="copy-fields-button" title="Copy search fields">
+                                                            <i class="fas fa-copy"></i>
+                                                        </a>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div class="form-text mt-2">
@@ -150,14 +158,24 @@
 
                                         <!-- Single field search (hidden by default) -->
                                         <div class="mb-3 d-none" id="single-field-container">
-                                            <div class="input-group">
-                                                <input type="text" class="form-control" id="prompt" name="prompt"
-                                                    placeholder="Example: 2018 Toyota Camry front brake pads"
-                                                    autocomplete="off">
-                                                <button class="btn btn-danger" type="submit" id="single-search-button">
-                                                    <i class="fas fa-search me-1" style="font-size: 0.875rem;"></i> Find
-                                                    Parts
-                                                </button>
+                                            <div class="single-search-container">
+                                                <div class="input-group">
+                                                    <input type="text" class="form-control" id="prompt" name="prompt"
+                                                        placeholder="Example: 2018 Toyota Camry front brake pads"
+                                                        autocomplete="off">
+                                                    <button class="btn btn-danger" type="submit" id="single-search-button">
+                                                        <i class="fas fa-search me-1" style="font-size: 0.875rem;"></i> Find
+                                                        Parts
+                                                    </button>
+                                                </div>
+                                                <div class="mini-actions single-mini-actions">
+                                                    <a href="#" class="mini-action-link" id="refresh-single-button" title="Clear field">
+                                                        <i class="fas fa-sync-alt"></i>
+                                                    </a>
+                                                    <a href="#" class="mini-action-link" id="copy-single-button" title="Copy search query">
+                                                        <i class="fas fa-copy"></i>
+                                                    </a>
+                                                </div>
                                             </div>
                                             <div class="form-text mt-2">
                                                 Include year, make, model, and part. Example: "2018 Toyota Camry front
