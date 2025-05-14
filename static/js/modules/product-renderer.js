@@ -100,7 +100,12 @@ function renderProductCard(product, isExactMatch, isCompatible) {
           <span>Shipping:</span>
           <span class="${shippingClass}">${product.shipping}</span>
         </div>
-        <a href="${product.link || '#'}" target="_blank" class="btn btn-danger btn-sm w-100">View Details</a>
+        <div class="d-flex gap-2 mb-2">
+          <a href="${product.link || '#'}" target="_blank" class="btn btn-danger btn-sm flex-grow-1">View Details</a>
+          <button class="btn btn-outline-secondary btn-sm chat-about-product" data-product-id="${productId}" data-product-title="${product.title}">
+            <i class="fas fa-comments"></i>
+          </button>
+        </div>
       </div>
     </div>
   `;
@@ -151,6 +156,9 @@ function displayProducts(listings) {
   if (typeof attachImagePreviewListeners === 'function') {
     attachImagePreviewListeners();
   }
+  
+  // Add event listeners to the chat buttons
+  attachChatButtonListeners();
 
   // Update product count badges
   const productCountBadge = document.getElementById('products-count');
@@ -267,8 +275,33 @@ function highlightKeywords(text, keywords) {
   }
 }
 
+/**
+ * Attaches event listeners to the chat buttons on product cards
+ */
+function attachChatButtonListeners() {
+  const chatButtons = document.querySelectorAll('.chat-about-product');
+  
+  chatButtons.forEach(btn => {
+    btn.addEventListener('click', function() {
+      const productId = this.dataset.productId;
+      const productTitle = this.dataset.productTitle;
+      
+      // Switch to chat tab
+      document.getElementById('chatbot-tab').click();
+      
+      // Fill input with product question
+      const chatInput = document.getElementById('chat-input');
+      if (chatInput) {
+        chatInput.value = `Tell me more about this product: ${productTitle}`;
+        chatInput.focus();
+      }
+    });
+  });
+}
+
 // Make globally available
 window.renderProductCard = renderProductCard;
 window.getSearchYear = getSearchYear;
 window.displayProducts = displayProducts;
 window.highlightKeywords = highlightKeywords;
+window.attachChatButtonListeners = attachChatButtonListeners;

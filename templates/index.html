@@ -12,6 +12,7 @@
     <!-- Application CSS -->
     <link rel="stylesheet" href="/static/css/styles.css">
     <link rel="stylesheet" href="/static/css/favorites-actions.css">
+    <link rel="stylesheet" href="/static/css/chatbot.css">
     <!-- Small screen aggressive optimization - loads for all standard screens up to 1920px -->
     <link rel="stylesheet" href="/static/css/small-screen-aggressive.css" media="(max-width: 1920px)">
     <!-- No inline styles here anymore - all styles are in the CSS file -->
@@ -98,6 +99,13 @@
                                         data-bs-target="#part-number-content" type="button" role="tab"
                                         aria-controls="part-number-content" aria-selected="false">
                                         <i class="fas fa-hashtag me-2"></i>Part Number
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="chatbot-tab" data-bs-toggle="tab"
+                                        data-bs-target="#chatbot-content" type="button" role="tab"
+                                        aria-controls="chatbot-content" aria-selected="false">
+                                        <i class="fas fa-comments me-2"></i>Chat Assistant
                                     </button>
                                 </li>
                             </ul>
@@ -531,6 +539,56 @@
                                         </div>
                                     </div>
                                 </div>
+                                
+                                <div class="tab-pane fade" id="chatbot-content" role="tabpanel" aria-labelledby="chatbot-tab">
+                                    <div id="chatbot-container">
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <h4>Chat Assistant</h4>
+                                            <div>
+                                                <button id="clear-chat" class="btn btn-sm btn-outline-secondary">
+                                                    <i class="fas fa-trash me-1"></i> Clear Chat
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-12">
+                                                <div class="card mb-3 chat-card">
+                                                    <div class="card-body">
+                                                        <div id="chat-messages" class="chat-messages">
+                                                            <div class="chat-message system-message">
+                                                                <div class="message-content">
+                                                                    <p>Hello! I'm your auto parts assistant. How can I help you today?</p>
+                                                                    <p class="small text-muted">You can ask me about:
+                                                                        <span class="badge bg-light text-dark me-1">parts compatibility</span>
+                                                                        <span class="badge bg-light text-dark me-1">repair advice</span>
+                                                                        <span class="badge bg-light text-dark me-1">part specifications</span>
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-footer">
+                                                        <form id="chat-form">
+                                                            <div class="input-group">
+                                                                <input type="text" id="chat-input" class="form-control" 
+                                                                       placeholder="Type your message here..." autocomplete="off">
+                                                                <button class="btn btn-danger" type="submit" id="send-message-btn">
+                                                                    <i class="fas fa-paper-plane"></i>
+                                                                </button>
+                                                            </div>
+                                                        </form>
+                                                        <div class="quick-responses mt-2">
+                                                            <button class="btn btn-sm btn-outline-secondary quick-response-btn" data-message="What's the difference between OEM and aftermarket parts?">OEM vs Aftermarket</button>
+                                                            <button class="btn btn-sm btn-outline-secondary quick-response-btn" data-message="How do I find the right parts for my vehicle?">Find right parts</button>
+                                                            <button class="btn btn-sm btn-outline-secondary quick-response-btn" data-message="What's your return policy?">Return policy</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -811,6 +869,9 @@
     <script src="/static/js/modules/vin-decoder.js"></script>
     <script src="/static/js/modules/product-renderer.js"></script>
     <script src="/static/js/modules/image-modal.js"></script>
+    
+    <!-- User Context and Preferences -->
+    <script src="/static/js/user-context.js"></script>
 
     <!-- Core Application Scripts -->
     <script src="/static/js/field-autocomplete.js"></script>
@@ -823,6 +884,7 @@
     <script src="/static/js/part-number-display.js"></script>
     <script src="/static/js/part-number-search.js"></script>
     <script src="/static/js/ai-analysis-formatter.js"></script>
+    <script src="/static/js/chatbot.js"></script>
 </body>
 
 </html>

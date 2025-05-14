@@ -6,12 +6,16 @@ import json
 import random
 import urllib.parse
 import concurrent.futures
+import traceback
+import difflib
 from functools import lru_cache
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 from openai import OpenAI
 from vehicle_validation import has_vehicle_info, get_missing_info_message
 from query_processor import EnhancedQueryProcessor
+from query_templates import get_template_for_message
+from chatbot_handler import process_chat_message
 
 load_dotenv()
 
@@ -2851,6 +2855,12 @@ def vin_decode_api():
 @app.route("/vin-decode", methods=["POST"])
 def vin_decode():
     return vin_decode_api()
+
+@app.route("/api/chat", methods=["POST"])
+def chat_api():
+    """Process chat messages and return AI-powered responses"""
+    # Delegate processing to the chatbot handler module
+    return process_chat_message(request.json)
 
 # Run app
 if __name__ == "__main__":
