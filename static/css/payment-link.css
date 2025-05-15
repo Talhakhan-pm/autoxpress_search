@@ -118,7 +118,7 @@
 
 .input-icon-wrapper input {
     padding-left: 35px;
-    text-indent: 7px;
+    text-indent: 10px;
     /* Add extra space after the icon */
 }
 
@@ -158,13 +158,15 @@ button[type="submit"]:hover {
     /* darker shade of --color-primary */
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    color: white; /* Ensure text stays white on hover */
+    color: white;
+    /* Ensure text stays white on hover */
 }
 
 button[type="submit"]:active {
     transform: translateY(0);
     box-shadow: none;
-    color: white; /* Ensure text stays white on active state */
+    color: white;
+    /* Ensure text stays white on active state */
 }
 
 button[type="submit"]:disabled {
