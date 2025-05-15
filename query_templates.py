@@ -89,6 +89,65 @@ The user is asking about pricing for a part or repair. In your response:
 Be clear that prices vary by location and time, and these are just general guidelines.
 """
 
+# Template for return policy inquiries
+RETURN_POLICY_TEMPLATE = """
+The user is asking about AutoXpress's return policy. In your response:
+
+1. Explain that AutoXpress offers a 30-day satisfaction guarantee with full refund for unused parts
+2. Mention that parts must be in their original packaging and unused condition
+3. Clarify that special order parts may have different return terms
+4. Include AutoXpress's contact number (252-275-3786) for processing returns
+5. Reference the website (https://autoxpress.us) for full return policy details
+
+Generate a unique, conversational response that doesn't sound like a standard policy statement.
+Make your response sound personalized for this specific customer.
+"""
+
+# Template for missed call responses
+MISSED_CALL_TEMPLATE = """
+The message indicates AutoXpress missed a call from the customer. In your response:
+
+1. Keep your message EXTREMELY SHORT (1-2 sentences max)
+2. Express that AutoXpress missed their call and ask them to call back
+3. End with a signature line including phone number (252-275-3786) and website (https://autoxpress.us)
+
+Example format:
+[Very brief message about missing their call]
+Contact us: (252-275-3786) or https://autoxpress.us
+
+Keep the entire response under 25 words plus signature.
+"""
+
+# Template for callback requests
+CALLBACK_TEMPLATE = """
+The message indicates AutoXpress needs the customer to call back about their order. In your response:
+
+1. Keep your message EXTREMELY SHORT (1-2 sentences max)
+2. Mention there's an update about their order and ask them to call
+3. End with a signature line including phone number (252-275-3786) and website (https://autoxpress.us)
+
+Example format:
+[Very brief message about their order]
+Contact us: (252-275-3786) or https://autoxpress.us
+
+Keep the entire response under 25 words plus signature.
+"""
+
+# Template for follow-up requests
+FOLLOWUP_TEMPLATE = """
+The message indicates AutoXpress needs the customer to call back about their auto part. In your response:
+
+1. Keep your message EXTREMELY SHORT (1-2 sentences max)
+2. Mention AutoXpress needs to discuss their auto part and ask them to call
+3. End with a signature line including phone number (252-275-3786) and website (https://autoxpress.us)
+
+Example format:
+[Very brief message about their auto part]
+Contact us: (252-275-3786) or https://autoxpress.us
+
+Keep the entire response under 25 words plus signature.
+"""
+
 # Template for customer transcript analysis
 TRANSCRIPT_TEMPLATE = """
 As an automotive parts sales expert with SPECIFIC KNOWLEDGE of RAM trucks and OEM parts, analyze this conversation to provide PRACTICAL SALES ADVICE that addresses the customer's actual situation.
@@ -131,6 +190,10 @@ QUERY_TEMPLATES = {
     "comparison": COMPARISON_TEMPLATE,
     "maintenance": MAINTENANCE_TEMPLATE,
     "price": PRICE_TEMPLATE,
+    "return_policy": RETURN_POLICY_TEMPLATE,
+    "missed_call": MISSED_CALL_TEMPLATE,
+    "callback": CALLBACK_TEMPLATE,
+    "followup": FOLLOWUP_TEMPLATE,
     "transcript": TRANSCRIPT_TEMPLATE,
     "general": GENERAL_TEMPLATE
 }
@@ -160,6 +223,22 @@ QUERY_KEYWORDS = {
     "price": [
         "cost", "price", "expensive", "cheap", "affordable", "deal", "discount",
         "oem price", "aftermarket price", "how much", "worth", "value", "pricing"
+    ],
+    "return_policy": [
+        "return policy", "return", "refund", "money back", "exchange", "30-day", 
+        "satisfaction guarantee", "can I return", "return process", "return part"
+    ],
+    "missed_call": [
+        "missed a call", "missed call", "call from you", "missed your call", 
+        "we missed", "didn't catch your call", "couldn't answer", "please call back"
+    ],
+    "callback": [
+        "call us back", "call back", "about your order", "order update", "order status", 
+        "order question", "regarding your order", "please call", "need to speak"
+    ],
+    "followup": [
+        "about your auto part", "part question", "part update", "part availability", 
+        "compatibility check", "follow up", "follow-up", "check in", "checking in"
     ],
     "transcript": [
         "transcript", "conversation", "customer said", "dialogue", "chat log",

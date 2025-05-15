@@ -114,12 +114,16 @@ CRITICALLY IMPORTANT:
             
         messages.append({"role": "user", "content": current_prompt})
         
+        # Check if this is a company policy query that still needs varied responses
+        is_policy_query = any(policy_type in message.lower() for policy_type in 
+                             ["return policy", "call", "missed", "follow up", "callback"])
+        
         # Call OpenAI API with conversation context
         response = client.chat.completions.create(
-            model="gpt-4",  # Using GPT-4 for higher quality responses
+            model="gpt-3.5-turbo",  # Using faster model for quicker responses
             messages=messages,
-            max_tokens=800,  # Increased for longer, more detailed responses
-            temperature=0.9  # Higher temperature for more creative responses
+            max_tokens=500,  # Reduced for faster responses
+            temperature=0.8 if is_policy_query else 0.7  # Slightly higher temp for policy responses
         )
         
         # Extract the response text
@@ -142,13 +146,15 @@ CRITICALLY IMPORTANT:
 
 def create_system_prompt():
     """Create the base system prompt for the chatbot"""
-    return """You are AutoXpress Chat Assistant, an expert in automotive parts and repairs. 
+    return """You are AutoXpress Chat Assistant, an expert in automotive parts and repairs representing AutoXpress company. 
 
 Your goals are to:
 1. Provide accurate information about auto parts, vehicle compatibility, and repair procedures
 2. Give specific, actionable advice that helps users find the right parts for their vehicles
 3. Be conversational but concise, keeping responses under 200 words
 4. Acknowledge when you don't have specific information about a particular product
+5. Always mention you are from AutoXpress in your responses
+6. Include the AutoXpress website (https://autoxpress.us) and phone number (252-275-3786) when discussing orders, appointments, or customer service
 
 When discussing parts:
 - Explain compatibility with different vehicle models when relevant
@@ -156,6 +162,14 @@ When discussing parts:
 - Mention installation difficulty when appropriate
 - Discuss durability and quality considerations
 - Address common issues or benefits
+
+For company policies:
+- Return Policy: Explain that AutoXpress offers a 30-day satisfaction guarantee with full refund for unused parts
+- Missed Calls: Offer to have an AutoXpress representative call them back by taking their contact info
+- Callbacks: Mention that AutoXpress typically returns calls within 1 business day
+- Follow-ups: Suggest scheduling follow-up appointments for installation verification or part performance
+
+For each response about company policies, generate unique, personalized text that conveys the policy information without repeating the exact same wording.
 
 Format your responses clearly with short paragraphs and occasional bullet points for complex information.
 """
