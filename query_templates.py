@@ -103,6 +103,21 @@ Generate a unique, conversational response that doesn't sound like a standard po
 Make your response sound personalized for this specific customer.
 """
 
+# Template for warranty script for agents
+WARRANTY_TEMPLATE = """
+Generate a concise sales closing script about AutoXpress warranties. The agent will read this to customers during sales calls:
+
+1. Create 1-3 brief, persuasive sentences about:
+   - 30-day money-back guarantee on all parts 
+   - 1-year manufacturer warranty on most parts
+2. Focus on VALUE and PEACE OF MIND these warranties provide
+3. Make it sound natural for verbal delivery, not like reading policy text
+4. Avoid asking for commitment or agreement
+5. Do NOT include contact information or website
+
+Create 2-3 DIFFERENT script variations so the agent can choose. Each should be 1-3 sentences only.
+"""
+
 # Template for missed call responses
 MISSED_CALL_TEMPLATE = """
 The message indicates AutoXpress missed a call from the customer. In your response:
@@ -191,6 +206,7 @@ QUERY_TEMPLATES = {
     "maintenance": MAINTENANCE_TEMPLATE,
     "price": PRICE_TEMPLATE,
     "return_policy": RETURN_POLICY_TEMPLATE,
+    "warranty": WARRANTY_TEMPLATE,
     "missed_call": MISSED_CALL_TEMPLATE,
     "callback": CALLBACK_TEMPLATE,
     "followup": FOLLOWUP_TEMPLATE,
@@ -223,6 +239,11 @@ QUERY_KEYWORDS = {
     "price": [
         "cost", "price", "expensive", "cheap", "affordable", "deal", "discount",
         "oem price", "aftermarket price", "how much", "worth", "value", "pricing"
+    ],
+    "warranty": [
+        "warranty", "warranties", "warranty policy", "guarantee", "money-back", 
+        "30-day warranty", "1-year warranty", "manufacturer warranty", "covered by", 
+        "warranty coverage", "warranty period", "warranty terms"
     ],
     "return_policy": [
         "return policy", "return", "refund", "money back", "exchange", "30-day", 
