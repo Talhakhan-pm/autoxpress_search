@@ -155,10 +155,12 @@
                                                         Find Parts
                                                     </button>
                                                     <div class="mini-actions">
-                                                        <a href="#" class="mini-action-link" id="refresh-fields-button" title="Clear all fields">
+                                                        <a href="#" class="mini-action-link" id="refresh-fields-button"
+                                                            title="Clear all fields">
                                                             <i class="fas fa-sync-alt"></i>
                                                         </a>
-                                                        <a href="#" class="mini-action-link" id="copy-fields-button" title="Copy search fields">
+                                                        <a href="#" class="mini-action-link" id="copy-fields-button"
+                                                            title="Copy search fields">
                                                             <i class="fas fa-copy"></i>
                                                         </a>
                                                     </div>
@@ -178,16 +180,20 @@
                                                     <input type="text" class="form-control" id="prompt" name="prompt"
                                                         placeholder="Example: 2018 Toyota Camry front brake pads"
                                                         autocomplete="off">
-                                                    <button class="btn btn-danger" type="submit" id="single-search-button">
-                                                        <i class="fas fa-search me-1" style="font-size: 0.875rem;"></i> Find
+                                                    <button class="btn btn-danger" type="submit"
+                                                        id="single-search-button">
+                                                        <i class="fas fa-search me-1" style="font-size: 0.875rem;"></i>
+                                                        Find
                                                         Parts
                                                     </button>
                                                 </div>
                                                 <div class="mini-actions single-mini-actions">
-                                                    <a href="#" class="mini-action-link" id="refresh-single-button" title="Clear field">
+                                                    <a href="#" class="mini-action-link" id="refresh-single-button"
+                                                        title="Clear field">
                                                         <i class="fas fa-sync-alt"></i>
                                                     </a>
-                                                    <a href="#" class="mini-action-link" id="copy-single-button" title="Copy search query">
+                                                    <a href="#" class="mini-action-link" id="copy-single-button"
+                                                        title="Copy search query">
                                                         <i class="fas fa-copy"></i>
                                                     </a>
                                                 </div>
@@ -546,49 +552,77 @@
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <div class="tab-pane fade" id="payment-link-content" role="tabpanel" aria-labelledby="payment-link-tab">
+
+                                <div class="tab-pane fade" id="payment-link-content" role="tabpanel"
+                                    aria-labelledby="payment-link-tab">
                                     <div class="payment-link-section">
-                                        <h3>Create Payment Link</h3>
-                                        <p>Generate a secure payment link that you can share with customers.</p>
-                                        
+                                        <h3><i class="fas fa-link"></i>Create Payment Link</h3>
+                                        <p class="intro-text">Generate a secure payment link for your customers to make
+                                            payments quickly and easily. Perfect for remote transactions and customer
+                                            convenience.</p>
+
                                         <form id="payment-link-form">
                                             <div class="form-group">
-                                                <label for="product-name">Product Name</label>
-                                                <input type="text" id="product-name" class="form-control" placeholder="Enter product name" required>
+                                                <label for="product-name"><i class="fas fa-tag"></i>Product Name</label>
+                                                <input type="text" id="product-name" class="form-control"
+                                                    placeholder="Enter product name (e.g., Brake Pads, Oil Change)"
+                                                    required>
+                                                <div class="form-hint">The name of the product or service you're selling
+                                                </div>
                                             </div>
-                                            
+
                                             <div class="form-group">
-                                                <label for="product-description">Product Description (optional)</label>
-                                                <textarea id="product-description" class="form-control" placeholder="Enter product description"></textarea>
+                                                <label for="product-description"><i
+                                                        class="fas fa-align-left"></i>Product Description
+                                                    (optional)</label>
+                                                <textarea id="product-description" class="form-control"
+                                                    placeholder="Enter details about the product or service..."></textarea>
+                                                <div class="form-hint">Add specific details to help your customer
+                                                    understand what they're paying for</div>
                                             </div>
-                                            
+
                                             <div class="price-inputs">
                                                 <div class="form-group amount-field">
-                                                    <label for="payment-amount">Amount</label>
-                                                    <input type="number" id="payment-amount" class="form-control" placeholder="0.00" step="0.01" min="0.01" required>
+                                                    <label for="payment-amount"><i
+                                                            class="fas fa-dollar-sign"></i>Amount</label>
+                                                    <div class="input-icon-wrapper">
+                                                        <i class="fas fa-dollar-sign"></i>
+                                                        <input type="number" id="payment-amount" class="form-control"
+                                                            placeholder="0.00" step="0.01" min="0.01" max="4000.00"
+                                                            required>
+                                                    </div>
+                                                    <div class="form-hint">This is the exact amount your customer will
+                                                        pay</div>
                                                 </div>
-                                                
+
                                                 <div class="form-group currency-field">
-                                                    <label for="payment-currency">Currency</label>
-                                                    <select id="payment-currency" class="form-control" required>
-                                                        <!-- Options will be populated by JavaScript -->
+                                                    <label for="payment-currency"><i
+                                                            class="fas fa-globe"></i>Currency</label>
+                                                    <select id="payment-currency" class="form-control" disabled>
+                                                        <option value="usd" selected>US Dollar ($)</option>
                                                     </select>
+                                                    <div class="form-hint">Fixed to US Dollar for all transactions</div>
                                                 </div>
                                             </div>
-                                            
-                                            <button type="submit" class="btn btn-danger">
-                                                <i class="fas fa-link me-2"></i>Generate Payment Link
-                                            </button>
+
+                                            <div class="form-actions">
+                                                <button type="submit" class="btn">
+                                                    <i class="fas fa-link"></i>Generate Payment Link
+                                                </button>
+                                                <button type="button" class="btn-reset" id="reset-payment-form">
+                                                    <i class="fas fa-redo-alt" style="padding: 5px;"></i> Clear Form
+                                                </button>
+                                            </div>
                                         </form>
-                                        
-                                        <div id="payment-link-result" class="hidden mt-4">
+
+                                        <div id="payment-link-result" class="hidden">
                                             <!-- Results will be displayed here -->
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <div class="tab-pane fade" id="chatbot-content" role="tabpanel" aria-labelledby="chatbot-tab">
+
+                                <div class="tab-pane fade" id="chatbot-content" role="tabpanel"
+                                    aria-labelledby="chatbot-tab">
                                     <div id="chatbot-container">
                                         <div class="d-flex justify-content-between mb-3">
                                             <h4>Chat Assistant</h4>
@@ -598,7 +632,7 @@
                                                 </button>
                                             </div>
                                         </div>
-                                        
+
                                         <div class="row">
                                             <div class="col-12">
                                                 <div class="card mb-3 chat-card">
@@ -606,11 +640,17 @@
                                                         <div id="chat-messages" class="chat-messages">
                                                             <div class="chat-message system-message">
                                                                 <div class="message-content">
-                                                                    <p>Hello! I'm your auto parts assistant. How can I help you today?</p>
+                                                                    <p>Hello! I'm your auto parts assistant. How can I
+                                                                        help you today?</p>
                                                                     <p class="small text-muted">You can ask me about:
-                                                                        <span class="badge bg-light text-dark me-1">parts compatibility</span>
-                                                                        <span class="badge bg-light text-dark me-1">repair advice</span>
-                                                                        <span class="badge bg-light text-dark me-1">part specifications</span>
+                                                                        <span
+                                                                            class="badge bg-light text-dark me-1">parts
+                                                                            compatibility</span>
+                                                                        <span
+                                                                            class="badge bg-light text-dark me-1">repair
+                                                                            advice</span>
+                                                                        <span class="badge bg-light text-dark me-1">part
+                                                                            specifications</span>
                                                                     </p>
                                                                 </div>
                                                             </div>
@@ -619,17 +659,28 @@
                                                     <div class="card-footer">
                                                         <form id="chat-form">
                                                             <div class="input-group">
-                                                                <input type="text" id="chat-input" class="form-control" 
-                                                                       placeholder="Type your message here..." autocomplete="off">
-                                                                <button class="btn btn-danger" type="submit" id="send-message-btn">
+                                                                <input type="text" id="chat-input" class="form-control"
+                                                                    placeholder="Type your message here..."
+                                                                    autocomplete="off">
+                                                                <button class="btn btn-danger" type="submit"
+                                                                    id="send-message-btn">
                                                                     <i class="fas fa-paper-plane"></i>
                                                                 </button>
                                                             </div>
                                                         </form>
                                                         <div class="quick-responses mt-2">
-                                                            <button class="btn btn-sm btn-outline-secondary quick-response-btn" data-message="What's the difference between OEM and aftermarket parts?">OEM vs Aftermarket</button>
-                                                            <button class="btn btn-sm btn-outline-secondary quick-response-btn" data-message="How do I find the right parts for my vehicle?">Find right parts</button>
-                                                            <button class="btn btn-sm btn-outline-secondary quick-response-btn" data-message="What's your return policy?">Return policy</button>
+                                                            <button
+                                                                class="btn btn-sm btn-outline-secondary quick-response-btn"
+                                                                data-message="What's the difference between OEM and aftermarket parts?">OEM
+                                                                vs Aftermarket</button>
+                                                            <button
+                                                                class="btn btn-sm btn-outline-secondary quick-response-btn"
+                                                                data-message="How do I find the right parts for my vehicle?">Find
+                                                                right parts</button>
+                                                            <button
+                                                                class="btn btn-sm btn-outline-secondary quick-response-btn"
+                                                                data-message="What's your return policy?">Return
+                                                                policy</button>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -917,7 +968,7 @@
     <script src="/static/js/modules/vin-decoder.js"></script>
     <script src="/static/js/modules/product-renderer.js"></script>
     <script src="/static/js/modules/image-modal.js"></script>
-    
+
     <!-- User Context and Preferences -->
     <script src="/static/js/user-context.js"></script>
 
@@ -934,7 +985,7 @@
     <script src="/static/js/ai-analysis-formatter.js"></script>
     <script src="/static/js/chatbot.js"></script>
     <script src="/static/js/payment-link.js"></script>
-    
+
     <!-- Add CSS for payment link -->
     <link rel="stylesheet" href="/static/css/payment-link.css">
 </body>
