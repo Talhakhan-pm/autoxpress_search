@@ -37,6 +37,8 @@ const vehicleData = {
 
   "GMC": ["Sierra", "Yukon", "Acadia", "Terrain", "Canyon", "Savana", "Hummer EV", "Jimmy", "Envoy", "Sonoma", "Safari", "Syclone", "Typhoon", "Suburban", "Sprint", "Rally", "Vandura", "S15", "C1500", "C2500", "C3500", "K1500", "K2500", "K3500", "Caballero", "Carryall", "Forward Control", "New Look Bus", "Old Look Bus", "P Forward Control", "PD Series", "General", "Panel Truck", "Pickup", "S-15 Jimmy", "Cabover", "Astro", "Brigadier", "Topkick", "Handi-Van", "Handi-Bus", "Series 100", "Series 150", "Series 250", "Series 280", "Series 370", "Series 450", "Series 550", "Series 620", "Series 630", "Series 660", "Series 720", "Series 730", "Series 930", "Truck", "Chevette", "Value Van", "Stepvan"],
 
+  "Hummer": ["H1", "H2", "H3", "H3T", "EV"],
+
   "Honda": ["Accord", "Civic", "CR-V", "Pilot", "Odyssey", "Ridgeline", "HR-V", "Passport", "Fit", "Clarity", "Insight", "Element", "S2000", "Crosstour", "Prelude", "CR-Z", "Del Sol", "Accord Hybrid", "Accord Crosstour", "Civic Type R", "Civic Si", "CR-V Hybrid", "Prologue", "Pilot TrailSport", "Civic Hatchback", "Civic Coupe", "Accord Coupe", "e", "EV Plus", "FCX Clarity"],
 
   "Hyundai": ["Elantra", "Sonata", "Tucson", "Santa Fe", "Kona", "Palisade", "Veloster", "Venue", "Ioniq", "Santa Cruz", "Accent", "Veracruz", "Azera", "Equus", "Genesis", "Entourage", "Tiburon", "Excel"],
@@ -109,7 +111,7 @@ const vehicleData = {
 
   "Tesla": ["Model 3", "Model S", "Model X", "Model Y", "Cybertruck", "Roadster"],
 
-  "Toyota": ["Camry", "Corolla", "RAV4", "Tacoma", "Highlander", "4Runner", "Prius", "Tundra", "Sienna", "Avalon", "Sequoia", "Venza", "C-HR", "Land Cruiser", "FJ Cruiser", "86", "GR86", "Supra", "Mirai", "Matrix", "Yaris", "Echo", "Celica", "Crown", "Corolla Cross", "bZ4X", "GR Corolla", "Camry Solara", "Cressida", "Tercel", "Paseo", "T100", "Previa"],
+  "Toyota": ["Camry", "Corolla", "Corolla S", "RAV4", "Tacoma", "Highlander", "4Runner", "Prius", "Tundra", "Sienna", "Avalon", "Sequoia", "Venza", "C-HR", "Land Cruiser", "FJ Cruiser", "86", "GR86", "Supra", "Mirai", "Matrix", "Yaris", "Echo", "Celica", "Crown", "Corolla Cross", "bZ4X", "GR Corolla", "Camry Solara", "Cressida", "Tercel", "Paseo", "T100", "Previa"],
 
   "Volkswagen": ["Jetta", "Passat", "Tiguan", "Atlas", "Golf", "ID.4", "Taos", "Arteon", "GTI", "Beetle", "Touareg", "Rabbit", "CC", "Eos", "GLI", "R32", "Golf R", "Corrado", "Scirocco", "Thing", "Karmann Ghia", "Type 1", "Type 2", "Type 3", "Vanagon", "New Beetle", "Cabrio", "Phaeton", "Routan"],
 

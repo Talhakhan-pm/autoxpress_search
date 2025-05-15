@@ -242,7 +242,7 @@ class EnhancedQueryProcessor:
     
     "lexus": ["es", "is", "gs", "ls", "rc", "lc", "nx", "rx", "gx", "lx", "ux", "es350", "es300h", "is300", "is350", "gs350", "ls500", "nx300", "rx350", "gx460", "lx570", "ux250h", "rcf", "lc500", "rx450h", "is500"],
     
-    "toyota": ["camry", "corolla", "rav4", "highlander", "4runner", "tacoma", "tundra", "sienna", "prius", "avalon", "sequoia", "venza", "c-hr", "chr", "supra", "gr86", "mirai", "matrix", "yaris", "echo", "celica", "land cruiser", "fj cruiser", "crown"],
+    "toyota": ["camry", "corolla", "corolla s", "rav4", "highlander", "4runner", "tacoma", "tundra", "sienna", "prius", "avalon", "sequoia", "venza", "c-hr", "chr", "supra", "gr86", "mirai", "matrix", "yaris", "echo", "celica", "land cruiser", "fj cruiser", "crown"],
     
     "nissan": ["altima", "sentra", "maxima", "rogue", "pathfinder", "murano", "armada", "frontier", "titan", "kicks", "versa", "juke", "leaf", "z", "370z", "350z", "240sx", "gt-r", "gtr", "cube", "xterra", "quest"],
     
@@ -260,6 +260,8 @@ class EnhancedQueryProcessor:
     "ford": ["f-150", "f150", "f-250", "f250", "f-350", "f350", "mustang", "explorer", "escape", "fusion", "focus", "edge", "expedition", "ranger", "bronco", "taurus", "maverick", "ecosport", "flex", "transit", "fiesta", "crown victoria", "five hundred", "freestyle", "excursion", "e-series", "e150", "e250", "e350", "thunderbird", "probe", "contour", "tempo", "escort", "gt", "model a", "model t", "fairlane", "falcon", "galaxie", "country sedan", "country squire", "crestline", "custom", "custom 500", "customline", "deluxe", "fairlane 500", "galaxie 500", "ltd", "ltd ii", "mainline", "police interceptor", "ranch wagon", "ranchero", "starliner", "sunliner", "torino", "victoria", "pinto", "mustang boss 302", "mustang boss 429", "mustang mach 1", "fairmont", "granada", "courier", "f-100"],
     
     "gmc": ["sierra", "yukon", "acadia", "terrain", "canyon", "savana", "hummer ev", "jimmy", "envoy", "sonoma", "safari", "syclone", "typhoon", "suburban", "sprint", "rally", "vandura", "s15", "c1500", "c2500", "c3500", "k1500", "k2500", "k3500", "caballero", "carryall", "forward control", "new look bus", "panel truck", "pickup", "s-15 jimmy", "cabover", "astro", "brigadier", "topkick"],
+
+    "hummer": ["h1", "h2", "h3", "h3t", "ev"],
     
     "cadillac": ["escalade", "ct4", "ct5", "xt4", "xt5", "xt6", "ct6", "ats", "cts", "xts", "srx", "sts", "dts", "eldorado", "seville", "deville", "fleetwood", "allante", "brougham", "catera", "series 60", "series 61", "series 62", "series 63", "series 65", "series 70", "series 75", "series 80", "series 90", "calais", "commercial chassis", "coupe de ville", "sedan de ville", "eldorado biarritz", "eldorado brougham", "eldorado seville", "escalade esv", "escalade ext", "sixty special", "fleetwood 75", "fleetwood brougham", "fleetwood limousine", "cimarron"],
     
