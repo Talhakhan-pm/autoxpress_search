@@ -158,11 +158,13 @@ button[type="submit"]:hover {
     /* darker shade of --color-primary */
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    color: white; /* Ensure text stays white on hover */
 }
 
 button[type="submit"]:active {
     transform: translateY(0);
     box-shadow: none;
+    color: white; /* Ensure text stays white on active state */
 }
 
 button[type="submit"]:disabled {

@@ -52,6 +52,18 @@ function initPaymentLinkUI() {
             }, 300);
         });
     }
+    
+    // Handle automatic decimal formatting for amount field
+    const amountField = document.getElementById('payment-amount');
+    if (amountField) {
+        amountField.addEventListener('blur', function() {
+            // Only format if there's a value and it's a valid number
+            if (this.value && !isNaN(parseFloat(this.value))) {
+                // Parse the value as a float and format to 2 decimal places
+                this.value = parseFloat(this.value).toFixed(2);
+            }
+        });
+    }
 }
 
 /**
