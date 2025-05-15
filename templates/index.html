@@ -108,6 +108,13 @@
                                         <i class="fas fa-comments me-2"></i>Chat Assistant
                                     </button>
                                 </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="payment-link-tab" data-bs-toggle="tab"
+                                        data-bs-target="#payment-link-content" type="button" role="tab"
+                                        aria-controls="payment-link-content" aria-selected="false">
+                                        <i class="fas fa-credit-card me-2"></i>Payment Link
+                                    </button>
+                                </li>
                             </ul>
                         </div>
                         <div class="card-body">
@@ -540,6 +547,47 @@
                                     </div>
                                 </div>
                                 
+                                <div class="tab-pane fade" id="payment-link-content" role="tabpanel" aria-labelledby="payment-link-tab">
+                                    <div class="payment-link-section">
+                                        <h3>Create Payment Link</h3>
+                                        <p>Generate a secure payment link that you can share with customers.</p>
+                                        
+                                        <form id="payment-link-form">
+                                            <div class="form-group">
+                                                <label for="product-name">Product Name</label>
+                                                <input type="text" id="product-name" class="form-control" placeholder="Enter product name" required>
+                                            </div>
+                                            
+                                            <div class="form-group">
+                                                <label for="product-description">Product Description (optional)</label>
+                                                <textarea id="product-description" class="form-control" placeholder="Enter product description"></textarea>
+                                            </div>
+                                            
+                                            <div class="price-inputs">
+                                                <div class="form-group amount-field">
+                                                    <label for="payment-amount">Amount</label>
+                                                    <input type="number" id="payment-amount" class="form-control" placeholder="0.00" step="0.01" min="0.01" required>
+                                                </div>
+                                                
+                                                <div class="form-group currency-field">
+                                                    <label for="payment-currency">Currency</label>
+                                                    <select id="payment-currency" class="form-control" required>
+                                                        <!-- Options will be populated by JavaScript -->
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            
+                                            <button type="submit" class="btn btn-danger">
+                                                <i class="fas fa-link me-2"></i>Generate Payment Link
+                                            </button>
+                                        </form>
+                                        
+                                        <div id="payment-link-result" class="hidden mt-4">
+                                            <!-- Results will be displayed here -->
+                                        </div>
+                                    </div>
+                                </div>
+                                
                                 <div class="tab-pane fade" id="chatbot-content" role="tabpanel" aria-labelledby="chatbot-tab">
                                     <div id="chatbot-container">
                                         <div class="d-flex justify-content-between mb-3">
@@ -885,6 +933,10 @@
     <script src="/static/js/part-number-search.js"></script>
     <script src="/static/js/ai-analysis-formatter.js"></script>
     <script src="/static/js/chatbot.js"></script>
+    <script src="/static/js/payment-link.js"></script>
+    
+    <!-- Add CSS for payment link -->
+    <link rel="stylesheet" href="/static/css/payment-link.css">
 </body>
 
 </html>

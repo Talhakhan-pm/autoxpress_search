@@ -2862,6 +2862,61 @@ def chat_api():
     # Delegate processing to the chatbot handler module
     return process_chat_message(request.json)
 
+@app.route("/api/create-payment-link", methods=["POST"])
+def create_payment_link():
+    """Create a Stripe payment link using agent input for price and product info"""
+    try:
+        import stripe
+        
+        # Get your secret key from the environment variable
+        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+        
+        # Get agent input parameters from request
+        agent_input = request.json.get("agent_input", {})
+        amount = agent_input.get("amount")
+        currency = agent_input.get("currency", "usd")
+        product_name = agent_input.get("product_name", "Payment")
+        product_description = agent_input.get("product_description", "")
+        
+        # Validate amount
+        if not amount or not isinstance(amount, (int, float)) or amount <= 0:
+            return jsonify({"error": "Invalid amount in agent input"}), 400
+            
+        # Create a Product
+        product = stripe.Product.create(
+            name=product_name,
+            description=product_description
+        )
+        
+        # Create a Price (amount in cents)
+        price = stripe.Price.create(
+            product=product.id,
+            unit_amount=int(amount * 100),  # Convert to cents
+            currency=currency,
+        )
+        
+        # Create a Payment Link
+        payment_link = stripe.PaymentLink.create(
+            line_items=[{"price": price.id, "quantity": 1}],
+        )
+        
+        # Return the payment link URL and details
+        return jsonify({
+            "success": True,
+            "payment_link": payment_link.url,
+            "product_details": {
+                "name": product_name,
+                "price": amount,
+                "currency": currency,
+                "description": product_description
+            }
+        })
+        
+    except ImportError:
+        return jsonify({"error": "Stripe library not installed. Run 'pip install stripe'"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # Run app
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5040))
