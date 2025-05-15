@@ -2895,9 +2895,19 @@ def create_payment_link():
             currency=currency,
         )
         
-        # Create a Payment Link
+        # Configure address collection - only US addresses
+        billing_address_collection = "required"
+        shipping_address_collection = {"allowed_countries": ["US"]}
+        
+        # Configure payment methods - disable Link
+        payment_method_types = ["card"]
+        
+        # Create a Payment Link with full address collection
         payment_link = stripe.PaymentLink.create(
             line_items=[{"price": price.id, "quantity": 1}],
+            billing_address_collection=billing_address_collection,
+            shipping_address_collection=shipping_address_collection,
+            payment_method_types=payment_method_types
         )
         
         # Return the payment link URL and details
