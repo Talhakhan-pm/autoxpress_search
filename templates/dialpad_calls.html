@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoXpress Dialpad Call Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .main-container {
+            max-width: 95%;
+            margin: 30px auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .form-container {
+            max-width: 600px;
+            margin: 0 auto 30px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h3 {
+            color: #2c3e50;
+            font-weight: 600;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        h3::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 3px;
+            background: #3498db;
+            border-radius: 2px;
+        }
+
+        .form-label {
+            color: #34495e;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .form-control,
+        .form-select {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 8px rgba(52, 152, 219, 0.3);
+            transform: scale(1.02);
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+            background: linear-gradient(45deg, #2980b9, #3498db);
+        }
+
+        /* Inbound/Outbound call tabs */
+        .tab-btn {
+            background-color: #ecf0f1;
+            border: none;
+            color: #7f8c8d;
+            padding: 10px 20px;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background-color: #3498db;
+            color: white;
+        }
+
+        /* Call tables */
+        .table {
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table thead {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .table th, .table td {
+            vertical-align: middle;
+        }
+
+        /* Status indicators */
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-completed {
+            background-color: #2ecc71;
+            color: white;
+        }
+
+        .status-pending {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        .status-missed {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        /* Action buttons */
+        .action-btn {
+            color: #3498db;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 0 5px;
+        }
+
+        .action-btn:hover {
+            color: #2980b9;
+            transform: scale(1.2);
+        }
+
+        /* Filters */
+        .filters-container {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        /* Dimmed state for buttons */
+        .btn-primary.dimmed {
+            opacity: 0.5;
+            background: linear-gradient(45deg, #7f8c8d, #95a5a6);
+            cursor: not-allowed;
+            animation: dim 0.3s ease forwards;
+        }
+
+        @keyframes dim {
+            from {
+                opacity: 1;
+                background: linear-gradient(45deg, #3498db, #2980b9);
+            }
+
+            to {
+                opacity: 0.5;
+                background: linear-gradient(45deg, #7f8c8d, #95a5a6);
+            }
+        }
+
+        .alert-success {
+            background: #2ecc71;
+            border: none;
+            color: white;
+            border-radius: 8px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Custom red button for Assistant */
+        .btn-custom-red {
+            background-color: #fff !important;
+            color: #e74c3c;
+            border: 2px solid #e74c3c;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-custom-red:hover,
+        .btn-custom-red:focus {
+            background-color: #e74c3c !important;
+            color: #fff;
+            border-color: #e74c3c;
+            box-shadow: 0 0 8px rgba(231, 76, 60, 0.3);
+            transform: scale(1.02);
+        }
+
+        /* Toggle switch for call type */
+        .call-type-toggle {
+            display: flex;
+            background: #ecf0f1;
+            border-radius: 30px;
+            margin: 20px 0;
+            padding: 5px;
+            overflow: hidden;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            border: none;
+            padding: 10px;
+            background: transparent;
+            color: #7f8c8d;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .toggle-btn.active {
+            color: white;
+        }
+
+        .toggle-bg {
+            position: absolute;
+            height: 40px;
+            width: 50%;
+            border-radius: 25px;
+            background: #3498db;
+            transition: transform 0.3s ease;
+            transform: translateX(0);
+        }
+
+        .toggle-bg.outbound {
+            transform: translateX(100%);
+        }
+
+        /* Today's stats cards */
+        .stats-card {
+            border-radius: 10px;
+            padding: 15px;
+            color: white;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .stats-card h4 {
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+
+        .stats-card .value {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .stats-inbound {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+        }
+
+        .stats-outbound {
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+        }
+
+        .stats-missed {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+
+        .stats-total {
+            background: linear-gradient(45deg, #9b59b6, #8e44ad);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <a href="/" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-home"></i> Home
+                </a>
+            </div>
+            <h3 class="text-center">AutoXpress Dialpad Call Tracker</h3>
+            <div>
+                <a href="/callbacks.html" class="btn btn-custom-red btn-sm me-2">Callbacks</a>
+                <a href="https://assistant-autoxpress.onrender.com/" class="btn btn-custom-red btn-sm">AI Assistant</a>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card stats-inbound">
+                    <h4><i class="fas fa-phone-alt me-2"></i>Inbound Calls</h4>
+                    <div class="value">0</div>
+                    <div class="small">Today</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card stats-outbound">
+                    <h4><i class="fas fa-phone-volume me-2"></i>Outbound Calls</h4>
+                    <div class="value">0</div>
+                    <div class="small">Today</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card stats-missed">
+                    <h4><i class="fas fa-phone-slash me-2"></i>Missed Calls</h4>
+                    <div class="value">0</div>
+                    <div class="small">Today</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card stats-total">
+                    <h4><i class="fas fa-chart-line me-2"></i>Total Calls</h4>
+                    <div class="value">0</div>
+                    <div class="small">Today</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call Type Toggle -->
+        <div class="position-relative call-type-toggle mb-4 mx-auto" style="max-width: 400px;">
+            <div class="toggle-bg" id="toggleBg"></div>
+            <button class="toggle-btn active" id="inboundToggle">
+                <i class="fas fa-phone-alt me-2"></i>Inbound Calls
+            </button>
+            <button class="toggle-btn" id="outboundToggle">
+                <i class="fas fa-phone-volume me-2"></i>Outbound Calls
+            </button>
+        </div>
+
+        <!-- Add Call Button -->
+        <div class="text-center mb-4">
+            <button id="addCallBtn" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add New Call
+            </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-container mb-4">
+            <div class="row">
+                <div class="col-md-3">
+                    <label class="form-label">Agent</label>
+                    <select class="form-select" id="filterAgent">
+                        <option value="">All Agents</option>
+                        <option value="Ayesha">Ayesha</option>
+                        <option value="Farhan">Farhan</option>
+                        <option value="Khan">Khan</option>
+                        <option value="Murtaza">Murtaza</option>
+                        <option value="Luis">Luis</option>
+                        <option value="Roy">Roy</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" id="filterStatus">
+                        <option value="">All Statuses</option>
+                        <option value="completed">Completed</option>
+                        <option value="pending">Pending</option>
+                        <option value="missed">Missed</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Date Range</label>
+                    <select class="form-select" id="filterDateRange">
+                        <option value="today">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="last7">Last 7 Days</option>
+                        <option value="last30">Last 30 Days</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Search</label>
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search...">
+                </div>
+            </div>
+            <div class="row mt-3" id="customDateRange" style="display: none;">
+                <div class="col-md-3">
+                    <label class="form-label">From</label>
+                    <input type="date" class="form-control" id="dateFrom">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">To</label>
+                    <input type="date" class="form-control" id="dateTo">
+                </div>
+            </div>
+        </div>
+
+        <!-- Call Tables -->
+        <div class="tab-content">
+            <!-- Inbound Calls Table -->
+            <div class="tab-pane active" id="inboundCallsTab">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date/Time</th>
+                                <th>Agent</th>
+                                <th>Customer</th>
+                                <th>Phone</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inboundCallsTable">
+                            <!-- Inbound calls will be loaded here -->
+                            <tr>
+                                <td colspan="8" class="text-center">No inbound calls found</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Outbound Calls Table -->
+            <div class="tab-pane" id="outboundCallsTab" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date/Time</th>
+                                <th>Agent</th>
+                                <th>Customer</th>
+                                <th>Phone</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="outboundCallsTable">
+                            <!-- Outbound calls will be loaded here -->
+                            <tr>
+                                <td colspan="8" class="text-center">No outbound calls found</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <div>
+                <span>Showing <span id="startCount">0</span> to <span id="endCount">0</span> of <span id="totalCount">0</span> calls</span>
+            </div>
+            <div>
+                <button class="btn btn-outline-secondary btn-sm me-2" id="prevPage" disabled>
+                    <i class="fas fa-chevron-left"></i> Previous
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" id="nextPage" disabled>
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Call Modal -->
+    <div class="modal fade" id="callModal" tabindex="-1" aria-labelledby="callModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="callModalLabel">Add New Call</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="callForm">
+                        <input type="hidden" id="callId" value="">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Call Type</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="callType" id="inboundCall" value="inbound" checked>
+                                    <label class="form-check-label" for="inboundCall">
+                                        <i class="fas fa-phone-alt me-2"></i>Inbound Call
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="callType" id="outboundCall" value="outbound">
+                                    <label class="form-check-label" for="outboundCall">
+                                        <i class="fas fa-phone-volume me-2"></i>Outbound Call
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Call Status</label>
+                                <select class="form-select" id="callStatus" required>
+                                    <option value="">Select Status</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="missed">Missed</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Date</label>
+                                <input type="date" class="form-control" id="callDate" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Time</label>
+                                <input type="time" class="form-control" id="callTime" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Agent Name</label>
+                                <select class="form-select" id="agentName" required>
+                                    <option value="">Select Agent</option>
+                                    <option>Ayesha</option>
+                                    <option>Farhan</option>
+                                    <option>Khan</option>
+                                    <option>Murtaza</option>
+                                    <option>Luis</option>
+                                    <option>Roy</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Call Duration (minutes)</label>
+                                <input type="number" class="form-control" id="callDuration" min="0" step="0.1" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Customer Name</label>
+                                <input type="text" class="form-control" id="customerName">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="phoneNumber" maxlength="15" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Product/Inquiry</label>
+                            <input type="text" class="form-control" id="product">
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Car (Make & Model)</label>
+                                <input type="text" class="form-control" id="vehicleInfo">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Year</label>
+                                <input type="number" class="form-control" id="year" min="1900" max="2100">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Call Notes</label>
+                            <textarea class="form-control" id="notes" rows="3" maxlength="500"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Follow-up Required?</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="followupRequired">
+                                <label class="form-check-label" for="followupRequired">
+                                    Yes, schedule a follow-up
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="followupSection" class="mb-3" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">Follow-up Date</label>
+                                    <input type="date" class="form-control" id="followupDate">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Follow-up Time</label>
+                                    <input type="time" class="form-control" id="followupTime">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveCallBtn">Save Call</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div id="notificationToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto">Notification</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="toastMessage">
+                Call data saved successfully!
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize variables
+            let activeTab = 'inbound';
+            let currentCallData = {};
+            const modal = new bootstrap.Modal(document.getElementById('callModal'));
+            const toast = new bootstrap.Toast(document.getElementById('notificationToast'));
+            
+            // Elements
+            const inboundToggle = document.getElementById('inboundToggle');
+            const outboundToggle = document.getElementById('outboundToggle');
+            const toggleBg = document.getElementById('toggleBg');
+            const inboundCallsTab = document.getElementById('inboundCallsTab');
+            const outboundCallsTab = document.getElementById('outboundCallsTab');
+            const addCallBtn = document.getElementById('addCallBtn');
+            const filterDateRange = document.getElementById('filterDateRange');
+            const customDateRange = document.getElementById('customDateRange');
+            const followupRequired = document.getElementById('followupRequired');
+            const followupSection = document.getElementById('followupSection');
+            const saveCallBtn = document.getElementById('saveCallBtn');
+            
+            // Filter elements
+            const filterAgent = document.getElementById('filterAgent');
+            const filterStatus = document.getElementById('filterStatus');
+            const searchInput = document.getElementById('searchInput');
+            const dateFrom = document.getElementById('dateFrom');
+            const dateTo = document.getElementById('dateTo');
+            
+            // Pagination elements
+            const prevPage = document.getElementById('prevPage');
+            const nextPage = document.getElementById('nextPage');
+            
+            // Event Listeners
+            inboundToggle.addEventListener('click', function() {
+                setActiveTab('inbound');
+                loadCallData();
+            });
+            
+            outboundToggle.addEventListener('click', function() {
+                setActiveTab('outbound');
+                loadCallData();
+            });
+            
+            filterDateRange.addEventListener('change', function() {
+                if (this.value === 'custom') {
+                    customDateRange.style.display = 'flex';
+                } else {
+                    customDateRange.style.display = 'none';
+                    loadCallData(); // Reload with new filter
+                }
+            });
+            
+            // Add event listeners for all filter inputs
+            filterAgent.addEventListener('change', loadCallData);
+            filterStatus.addEventListener('change', loadCallData);
+            searchInput.addEventListener('input', debounce(loadCallData, 500));
+            dateFrom.addEventListener('change', applyCustomDateFilter);
+            dateTo.addEventListener('change', applyCustomDateFilter);
+            
+            followupRequired.addEventListener('change', function() {
+                followupSection.style.display = this.checked ? 'block' : 'none';
+            });
+            
+            addCallBtn.addEventListener('click', function() {
+                // Reset form
+                document.getElementById('callForm').reset();
+                document.getElementById('callId').value = '';
+                document.getElementById('callModalLabel').textContent = 'Add New Call';
+                
+                // Set default values
+                const today = new Date();
+                document.getElementById('callDate').value = formatDate(today);
+                document.getElementById('callTime').value = formatTime(today);
+                
+                // Show the correct call type based on active tab
+                if (activeTab === 'inbound') {
+                    document.getElementById('inboundCall').checked = true;
+                } else {
+                    document.getElementById('outboundCall').checked = true;
+                }
+                
+                // Reset followup section
+                followupSection.style.display = 'none';
+                
+                modal.show();
+            });
+            
+            saveCallBtn.addEventListener('click', function() {
+                // Check form validity
+                if (!validateForm()) {
+                    return;
+                }
+                
+                // Disable button to prevent double submission
+                this.disabled = true;
+                this.classList.add('dimmed');
+                
+                // Collect form data
+                const formData = getFormData();
+                
+                // Determine if this is a new call or an update
+                const callId = document.getElementById('callId').value;
+                
+                if (callId) {
+                    // Update existing call
+                    updateCallOnServer(callId, formData)
+                        .then(handleSaveSuccess)
+                        .catch(handleSaveError);
+                } else {
+                    // Create new call
+                    saveCallToServer(formData)
+                        .then(handleSaveSuccess)
+                        .catch(handleSaveError);
+                }
+            });
+            
+            // Helper function for save/update success
+            function handleSaveSuccess(response) {
+                // Show success message
+                document.getElementById('toastMessage').textContent = 'Call data saved successfully!';
+                toast.show();
+                
+                // Close modal
+                modal.hide();
+                
+                // Re-enable button
+                saveCallBtn.disabled = false;
+                saveCallBtn.classList.remove('dimmed');
+                
+                // Refresh data
+                loadCallData();
+            }
+            
+            // Helper function for save/update error
+            function handleSaveError(error) {
+                // Show error message
+                document.getElementById('toastMessage').textContent = 'Error saving call data: ' + error.message;
+                toast.show();
+                
+                // Re-enable button
+                saveCallBtn.disabled = false;
+                saveCallBtn.classList.remove('dimmed');
+            }
+            
+            // Functions
+            function setActiveTab(tab) {
+                activeTab = tab;
+                
+                if (tab === 'inbound') {
+                    inboundToggle.classList.add('active');
+                    outboundToggle.classList.remove('active');
+                    toggleBg.classList.remove('outbound');
+                    inboundCallsTab.style.display = 'block';
+                    outboundCallsTab.style.display = 'none';
+                } else {
+                    inboundToggle.classList.remove('active');
+                    outboundToggle.classList.add('active');
+                    toggleBg.classList.add('outbound');
+                    inboundCallsTab.style.display = 'none';
+                    outboundCallsTab.style.display = 'block';
+                }
+            }
+            
+            function formatDate(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            
+            function formatTime(date) {
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${hours}:${minutes}`;
+            }
+            
+            function validateForm() {
+                const requiredFields = [
+                    'callStatus', 'callDate', 'callTime', 'agentName', 
+                    'callDuration', 'phoneNumber'
+                ];
+                
+                let isValid = true;
+                
+                requiredFields.forEach(field => {
+                    const element = document.getElementById(field);
+                    if (!element.value.trim()) {
+                        element.classList.add('is-invalid');
+                        isValid = false;
+                    } else {
+                        element.classList.remove('is-invalid');
+                    }
+                });
+                
+                if (followupRequired.checked) {
+                    const followupDate = document.getElementById('followupDate');
+                    const followupTime = document.getElementById('followupTime');
+                    
+                    if (!followupDate.value) {
+                        followupDate.classList.add('is-invalid');
+                        isValid = false;
+                    } else {
+                        followupDate.classList.remove('is-invalid');
+                    }
+                    
+                    if (!followupTime.value) {
+                        followupTime.classList.add('is-invalid');
+                        isValid = false;
+                    } else {
+                        followupTime.classList.remove('is-invalid');
+                    }
+                }
+                
+                return isValid;
+            }
+            
+            function getFormData() {
+                return {
+                    call_type: document.querySelector('input[name="callType"]:checked').value,
+                    call_status: document.getElementById('callStatus').value,
+                    call_date: document.getElementById('callDate').value,
+                    call_time: document.getElementById('callTime').value,
+                    agent_name: document.getElementById('agentName').value,
+                    customer_name: document.getElementById('customerName').value,
+                    phone_number: document.getElementById('phoneNumber').value,
+                    call_duration: document.getElementById('callDuration').value,
+                    product: document.getElementById('product').value,
+                    vehicle_info: document.getElementById('vehicleInfo').value,
+                    year: document.getElementById('year').value,
+                    notes: document.getElementById('notes').value,
+                    followup_required: document.getElementById('followupRequired').checked,
+                    followup_date: document.getElementById('followupDate').value,
+                    followup_time: document.getElementById('followupTime').value
+                };
+            }
+            
+            function saveCallToServer(formData) {
+                return fetch('/api/calls', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                });
+            }
+            
+            function updateCallOnServer(callId, formData) {
+                return fetch(`/api/calls/${callId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                });
+            }
+            
+            function loadCallData() {
+                // Show loading state (could add spinner here)
+                
+                // Build query parameters for filters
+                const queryParams = new URLSearchParams();
+                
+                // Add call type filter
+                queryParams.append('call_type', activeTab);
+                
+                // Add agent filter if selected
+                if (filterAgent.value) {
+                    queryParams.append('agent', filterAgent.value);
+                }
+                
+                // Add status filter if selected
+                if (filterStatus.value) {
+                    queryParams.append('status', filterStatus.value);
+                }
+                
+                // Add date range filter
+                if (filterDateRange.value !== 'custom') {
+                    queryParams.append('date_range', filterDateRange.value);
+                } else if (dateFrom.value && dateTo.value) {
+                    queryParams.append('date_from', dateFrom.value);
+                    queryParams.append('date_to', dateTo.value);
+                }
+                
+                // Add search filter if provided
+                if (searchInput.value.trim()) {
+                    queryParams.append('search', searchInput.value.trim());
+                }
+                
+                // Fetch data from server
+                fetch(`/api/calls?${queryParams.toString()}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Store the call data for later use
+                            currentCallData = data.calls;
+                            
+                            // Filter calls by type for display in appropriate tables
+                            const inboundCalls = data.calls.filter(call => call.call_type === 'inbound');
+                            const outboundCalls = data.calls.filter(call => call.call_type === 'outbound');
+                            
+                            // Update the tables
+                            updateCallTable('inboundCallsTable', inboundCalls);
+                            updateCallTable('outboundCallsTable', outboundCalls);
+                            
+                            // Update statistics
+                            updateStats(data.stats);
+                        } else {
+                            // Show error message
+                            document.getElementById('toastMessage').textContent = 'Error loading call data: ' + data.error;
+                            toast.show();
+                        }
+                    })
+                    .catch(error => {
+                        // Show error message
+                        document.getElementById('toastMessage').textContent = 'Error loading call data: ' + error.message;
+                        toast.show();
+                    });
+            }
+            
+            function updateCallTable(tableId, calls) {
+                const tableBody = document.getElementById(tableId);
+                
+                if (calls.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="8" class="text-center">No calls found</td></tr>`;
+                    return;
+                }
+                
+                let html = '';
+                
+                calls.forEach(call => {
+                    const statusClass = call.status === 'completed' ? 'status-completed' : 
+                                        call.status === 'pending' ? 'status-pending' : 'status-missed';
+                    
+                    html += `
+                    <tr data-id="${call.id}">
+                        <td>${call.date} ${call.time}</td>
+                        <td>${call.agent}</td>
+                        <td>${call.customer || 'Unknown'}</td>
+                        <td>${call.phone}</td>
+                        <td>${call.duration} min</td>
+                        <td><span class="status-badge ${statusClass}">${call.status}</span></td>
+                        <td>${call.notes || ''}</td>
+                        <td>
+                            <i class="fas fa-edit action-btn edit-btn" title="Edit"></i>
+                            <i class="fas fa-trash-alt action-btn delete-btn" title="Delete"></i>
+                            ${call.status === 'missed' ? 
+                                `<i class="fas fa-phone-alt action-btn callback-btn" title="Schedule Callback"></i>` : ''}
+                        </td>
+                    </tr>
+                    `;
+                });
+                
+                tableBody.innerHTML = html;
+                
+                // Add event listeners for action buttons
+                tableBody.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const callId = this.closest('tr').dataset.id;
+                        editCall(callId);
+                    });
+                });
+                
+                tableBody.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const callId = this.closest('tr').dataset.id;
+                        deleteCall(callId);
+                    });
+                });
+                
+                tableBody.querySelectorAll('.callback-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const callId = this.closest('tr').dataset.id;
+                        scheduleCallback(callId);
+                    });
+                });
+            }
+            
+            function updateStats(stats) {
+                // Update the stats cards with data from the server
+                document.querySelector('.stats-inbound .value').textContent = stats.inbound_count;
+                document.querySelector('.stats-outbound .value').textContent = stats.outbound_count;
+                document.querySelector('.stats-missed .value').textContent = stats.missed_count;
+                document.querySelector('.stats-total .value').textContent = stats.total_count;
+                
+                // Update pagination counts
+                document.getElementById('startCount').textContent = stats.total_count > 0 ? '1' : '0';
+                document.getElementById('endCount').textContent = stats.total_count;
+                document.getElementById('totalCount').textContent = stats.total_count;
+            }
+            
+            function editCall(callId) {
+                // Find the call in the current data
+                const call = currentCallData.find(c => c.id === callId);
+                if (!call) return;
+                
+                // Reset form
+                document.getElementById('callForm').reset();
+                
+                // Set form values
+                document.getElementById('callId').value = call.id;
+                document.getElementById('callModalLabel').textContent = 'Edit Call';
+                
+                // Set call type
+                if (call.call_type === 'inbound') {
+                    document.getElementById('inboundCall').checked = true;
+                } else {
+                    document.getElementById('outboundCall').checked = true;
+                }
+                
+                // Set other field values
+                document.getElementById('callStatus').value = call.status;
+                document.getElementById('callDate').value = call.date;
+                document.getElementById('callTime').value = call.time;
+                document.getElementById('agentName').value = call.agent;
+                document.getElementById('customerName').value = call.customer || '';
+                document.getElementById('phoneNumber').value = call.phone;
+                document.getElementById('callDuration').value = call.duration;
+                document.getElementById('product').value = call.product || '';
+                document.getElementById('vehicleInfo').value = call.vehicle_info || '';
+                document.getElementById('year').value = call.year || '';
+                document.getElementById('notes').value = call.notes || '';
+                
+                // Set followup fields
+                document.getElementById('followupRequired').checked = call.followup_required || false;
+                followupSection.style.display = call.followup_required ? 'block' : 'none';
+                
+                if (call.followup_required && call.followup_date) {
+                    document.getElementById('followupDate').value = call.followup_date;
+                    document.getElementById('followupTime').value = call.followup_time || '';
+                }
+                
+                // Show modal
+                modal.show();
+            }
+            
+            function deleteCall(callId) {
+                if (confirm('Are you sure you want to delete this call?')) {
+                    fetch(`/api/calls/${callId}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Show success message
+                            document.getElementById('toastMessage').textContent = 'Call deleted successfully!';
+                            toast.show();
+                            
+                            // Refresh data
+                            loadCallData();
+                        } else {
+                            throw new Error(data.error || 'Failed to delete call');
+                        }
+                    })
+                    .catch(error => {
+                        // Show error message
+                        document.getElementById('toastMessage').textContent = 'Error deleting call: ' + error.message;
+                        toast.show();
+                    });
+                }
+            }
+            
+            function scheduleCallback(callId) {
+                // Find the call in the current data
+                const call = currentCallData.find(c => c.id === callId);
+                if (!call) return;
+                
+                // Reset the form
+                document.getElementById('callForm').reset();
+                
+                // Set initial values for a callback
+                document.getElementById('callId').value = '';
+                document.getElementById('callModalLabel').textContent = 'Schedule Callback';
+                document.getElementById('outboundCall').checked = true;
+                document.getElementById('callStatus').value = 'pending';
+                
+                // Set tomorrow's date as default
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                document.getElementById('callDate').value = formatDate(tomorrow);
+                document.getElementById('callTime').value = '09:00';
+                
+                // Set customer info from the missed call
+                document.getElementById('customerName').value = call.customer || '';
+                document.getElementById('phoneNumber').value = call.phone;
+                document.getElementById('product').value = call.product || '';
+                document.getElementById('vehicleInfo').value = call.vehicle_info || '';
+                document.getElementById('year').value = call.year || '';
+                document.getElementById('notes').value = `Callback for missed call on ${call.date} at ${call.time}`;
+                
+                // Show modal
+                modal.show();
+            }
+            
+            function applyCustomDateFilter() {
+                if (dateFrom.value && dateTo.value) {
+                    loadCallData();
+                }
+            }
+            
+            // Utility function to debounce search input
+            function debounce(func, delay) {
+                let timeout;
+                return function() {
+                    const context = this;
+                    const args = arguments;
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(context, args), delay);
+                };
+            }
+            
+            // Initialize page
+            loadCallData();
+        });
+    </script>
+</body>
+
+</html>

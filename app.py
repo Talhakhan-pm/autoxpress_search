@@ -8,6 +8,7 @@ import urllib.parse
 import concurrent.futures
 import traceback
 import difflib
+import datetime
 from functools import lru_cache
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
@@ -1757,6 +1758,11 @@ def generate_alternative_numbers(part_number):
 def callbacks():
     return render_template("callbacks.html")
 
+# Dialpad calls tracking route
+@app.route("/dialpad-calls.html", methods=["GET"])
+def dialpad_calls():
+    return render_template("dialpad_calls.html")
+
 # Order form route
 @app.route("/orders.html", methods=["GET"])
 def orders():
@@ -2861,6 +2867,239 @@ def chat_api():
     """Process chat messages and return AI-powered responses"""
     # Delegate processing to the chatbot handler module
     return process_chat_message(request.json)
+
+# Dialpad call tracking API endpoints
+@app.route("/api/calls", methods=["GET"])
+def get_calls():
+    """Get all calls with optional filtering"""
+    try:
+        # In a real implementation, this would fetch from database
+        # For now, return dummy data
+        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        
+        # Sample data
+        inbound_calls = [
+            {
+                "id": "in1",
+                "call_type": "inbound",
+                "date": today,
+                "time": "09:30",
+                "agent": "Ayesha",
+                "customer": "John Smith",
+                "phone": "(555) 123-4567",
+                "duration": 5.2,
+                "status": "completed",
+                "notes": "Customer inquired about brake pads for 2018 Honda Accord",
+                "vehicle_info": "Honda Accord",
+                "year": 2018,
+                "product": "Brake pads",
+                "followup_required": False
+            },
+            {
+                "id": "in2",
+                "call_type": "inbound",
+                "date": today,
+                "time": "10:15",
+                "agent": "Farhan",
+                "customer": "Sarah Johnson",
+                "phone": "(555) 987-6543",
+                "duration": 3.8,
+                "status": "pending",
+                "notes": "Customer needs front bumper for 2020 Toyota Camry. Requested callback with price.",
+                "vehicle_info": "Toyota Camry",
+                "year": 2020,
+                "product": "Front bumper",
+                "followup_required": True,
+                "followup_date": (datetime.datetime.now() + datetime.timedelta(days=1)).strftime("%Y-%m-%d"),
+                "followup_time": "10:00"
+            },
+            {
+                "id": "in3",
+                "call_type": "inbound",
+                "date": today,
+                "time": "11:45",
+                "agent": "Khan",
+                "customer": "Unknown",
+                "phone": "(555) 555-1212",
+                "duration": 0,
+                "status": "missed",
+                "notes": "Missed call, no voicemail",
+                "vehicle_info": "",
+                "year": None,
+                "product": "",
+                "followup_required": False
+            }
+        ]
+        
+        outbound_calls = [
+            {
+                "id": "out1",
+                "call_type": "outbound",
+                "date": today,
+                "time": "13:20",
+                "agent": "Murtaza",
+                "customer": "Mike Wilson",
+                "phone": "(555) 222-3333",
+                "duration": 4.5,
+                "status": "completed",
+                "notes": "Follow-up on order #12345 for alternator. Order will be delivered tomorrow.",
+                "vehicle_info": "Ford F-150",
+                "year": 2017,
+                "product": "Alternator",
+                "followup_required": False
+            },
+            {
+                "id": "out2",
+                "call_type": "outbound",
+                "date": today,
+                "time": "14:05",
+                "agent": "Luis",
+                "customer": "Emily Davis",
+                "phone": "(555) 444-5555",
+                "duration": 2.3,
+                "status": "completed",
+                "notes": "Called to confirm availability of headlight assembly for 2019 Ford F-150.",
+                "vehicle_info": "Ford F-150",
+                "year": 2019,
+                "product": "Headlight assembly",
+                "followup_required": False
+            }
+        ]
+        
+        # Apply filters if provided
+        agent_filter = request.args.get('agent')
+        status_filter = request.args.get('status')
+        date_range = request.args.get('date_range')
+        call_type = request.args.get('call_type', 'all')
+        search_term = request.args.get('search')
+        
+        # Filter by agent
+        if agent_filter:
+            inbound_calls = [call for call in inbound_calls if call['agent'] == agent_filter]
+            outbound_calls = [call for call in outbound_calls if call['agent'] == agent_filter]
+            
+        # Filter by status
+        if status_filter:
+            inbound_calls = [call for call in inbound_calls if call['status'] == status_filter]
+            outbound_calls = [call for call in outbound_calls if call['status'] == status_filter]
+            
+        # Filter by search term
+        if search_term:
+            search_term = search_term.lower()
+            inbound_filtered = []
+            outbound_filtered = []
+            
+            for call in inbound_calls:
+                if (search_term in call['customer'].lower() or
+                    search_term in call['phone'].lower() or
+                    search_term in call['notes'].lower() or
+                    search_term in str(call['product']).lower() or
+                    search_term in str(call['vehicle_info']).lower()):
+                    inbound_filtered.append(call)
+            
+            for call in outbound_calls:
+                if (search_term in call['customer'].lower() or
+                    search_term in call['phone'].lower() or
+                    search_term in call['notes'].lower() or
+                    search_term in str(call['product']).lower() or
+                    search_term in str(call['vehicle_info']).lower()):
+                    outbound_filtered.append(call)
+                    
+            inbound_calls = inbound_filtered
+            outbound_calls = outbound_filtered
+        
+        # Determine which types of calls to return
+        if call_type == 'inbound':
+            all_calls = inbound_calls
+        elif call_type == 'outbound':
+            all_calls = outbound_calls
+        else:
+            all_calls = inbound_calls + outbound_calls
+            
+        # Calculate statistics
+        stats = {
+            "inbound_count": len(inbound_calls),
+            "outbound_count": len(outbound_calls),
+            "missed_count": len([call for call in inbound_calls if call['status'] == 'missed']),
+            "total_count": len(inbound_calls) + len(outbound_calls)
+        }
+        
+        return jsonify({
+            "success": True,
+            "calls": all_calls,
+            "stats": stats
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@app.route("/api/calls", methods=["POST"])
+def add_call():
+    """Add a new call record"""
+    try:
+        data = request.json
+        required_fields = ['call_type', 'call_status', 'call_date', 'call_time', 
+                          'agent_name', 'phone_number', 'call_duration']
+        
+        # Validate required fields
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    "success": False,
+                    "error": f"Missing required field: {field}"
+                }), 400
+        
+        # Generate a unique ID (in a real implementation, the database would do this)
+        call_id = f"{'in' if data['call_type'] == 'inbound' else 'out'}{int(time.time())}"
+        
+        # In a real implementation, save to database
+        # For now, just return success with the generated ID
+        return jsonify({
+            "success": True,
+            "call_id": call_id,
+            "message": "Call record saved successfully"
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@app.route("/api/calls/<call_id>", methods=["PUT"])
+def update_call(call_id):
+    """Update an existing call record"""
+    try:
+        data = request.json
+        
+        # In a real implementation, update database
+        # For now, just return success
+        return jsonify({
+            "success": True,
+            "message": f"Call {call_id} updated successfully"
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@app.route("/api/calls/<call_id>", methods=["DELETE"])
+def delete_call(call_id):
+    """Delete a call record"""
+    try:
+        # In a real implementation, delete from database
+        # For now, just return success
+        return jsonify({
+            "success": True,
+            "message": f"Call {call_id} deleted successfully"
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 @app.route("/api/create-payment-link", methods=["POST"])
 def create_payment_link():
