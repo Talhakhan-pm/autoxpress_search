@@ -307,6 +307,10 @@
             // Initialize variables
             const toast = new bootstrap.Toast(document.getElementById('notificationToast'));
             
+            // Cache settings
+            const CACHE_KEY_PREFIX = 'dialpad_activity_';
+            const CACHE_EXPIRY = 1000 * 60 * 60; // 1 hour cache expiry
+            
             // Handle activity period change
             document.getElementById('activityPeriod').addEventListener('change', function() {
                 loadAgentActivity(parseInt(this.value), false);
@@ -314,11 +318,50 @@
             
             // Setup manual refresh button
             document.getElementById('manualRefreshBtn').addEventListener('click', function() {
+                // Force refresh on button click
                 loadAgentActivity(parseInt(document.getElementById('activityPeriod').value), true);
             });
 
+            // Local storage cache helper functions
+            function getCachedData(days) {
+                const cacheKey = `${CACHE_KEY_PREFIX}${days}`;
+                try {
+                    const cachedItem = localStorage.getItem(cacheKey);
+                    if (!cachedItem) return null;
+                    
+                    const cachedData = JSON.parse(cachedItem);
+                    const now = new Date().getTime();
+                    
+                    // Check if cache is expired
+                    if (now > cachedData.expiry) {
+                        localStorage.removeItem(cacheKey);
+                        return null;
+                    }
+                    
+                    return cachedData.data;
+                } catch (error) {
+                    console.error('Error reading from cache:', error);
+                    return null;
+                }
+            }
+            
+            function setCachedData(days, data) {
+                const cacheKey = `${CACHE_KEY_PREFIX}${days}`;
+                try {
+                    const cacheData = {
+                        data: data,
+                        expiry: new Date().getTime() + CACHE_EXPIRY,
+                        timestamp: new Date().toISOString()
+                    };
+                    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+                    console.log(`Cached data for ${days} days`);
+                } catch (error) {
+                    console.error('Error writing to cache:', error);
+                }
+            }
+
             // Function to load agent activity data
-            function loadAgentActivity(days = 1, refresh = false) {
+            function loadAgentActivity(days = 1, forceRefresh = false) {
                 const activityContainer = document.getElementById('agentActivityCards');
                 
                 // Show loading state
@@ -328,12 +371,28 @@
                             <span class="visually-hidden">Loading...</span>
                         </div>
                         <p class="mt-2">Loading agent activity...</p>
-                        <p class="small text-muted">${refresh ? 'Refreshing data from Dialpad API...' : ''}</p>
+                        <p class="small text-muted">${forceRefresh ? 'Refreshing data from Dialpad API...' : ''}</p>
                     </div>
                 `;
                 
+                // Check cache first if not forcing refresh
+                if (!forceRefresh) {
+                    const cachedData = getCachedData(days);
+                    if (cachedData) {
+                        console.log(`Using cached data for ${days} days`);
+                        renderAgentActivity(cachedData);
+                        updateStats(cachedData);
+                        
+                        // Show toast notification
+                        document.getElementById('toastMessage').textContent = 'Loaded agent activity from cache';
+                        toast.show();
+                        return;
+                    }
+                    console.log(`No cache found for ${days} days, fetching from API...`);
+                }
+                
                 // Fetch agent activity data from API
-                console.log(`Fetching agent activity data for ${days} days${refresh ? ' with refresh' : ''}...`);
+                console.log(`Fetching agent activity data for ${days} days${forceRefresh ? ' with refresh' : ''}...`);
                 
                 // Set a timeout to show a message if it's taking too long
                 const loadingTimeout = setTimeout(() => {
@@ -350,7 +409,7 @@
                 }, 15000); // Show after 15 seconds
                 
                 // Fetch data from API
-                fetch(`/api/agent-activity?days=${days}&refresh=${refresh}&max_timeout=60`)
+                fetch(`/api/agent-activity?days=${days}&refresh=${forceRefresh}&max_timeout=60`)
                     .then(response => {
                         // Clear the timeout when we get a response
                         clearTimeout(loadingTimeout);
@@ -365,8 +424,16 @@
                         console.log('Agent activity API response:', data);
                         if (data.success) {
                             console.log('Agent activity data:', data.activity);
+                            
+                            // Cache the results
+                            setCachedData(days, data.activity);
+                            
                             renderAgentActivity(data.activity);
                             updateStats(data.activity);
+                            
+                            // Show toast notification
+                            document.getElementById('toastMessage').textContent = 'Agent activity data refreshed';
+                            toast.show();
                         } else {
                             console.error('API error:', data.error);
                             throw new Error(data.error || 'Failed to load agent activity');

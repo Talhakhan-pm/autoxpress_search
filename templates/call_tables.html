@@ -464,6 +464,7 @@
             }, 500));
             
             refreshBtn.addEventListener('click', function() {
+                // Force refresh from API when refresh button is clicked
                 loadCallData(true);
             });
             
@@ -532,7 +533,49 @@
                 return (duration === 0 && call.state === "hangup") ? "missed" : "completed";
             }
             
-            function loadCallData(refresh = false) {
+            // Cache settings
+            const CACHE_KEY_PREFIX = 'dialpad_calls_';
+            const CACHE_EXPIRY = 1000 * 60 * 60; // 1 hour cache expiry
+            
+            // Local storage cache helper functions
+            function getCachedData(days) {
+                const cacheKey = `${CACHE_KEY_PREFIX}${days}`;
+                try {
+                    const cachedItem = localStorage.getItem(cacheKey);
+                    if (!cachedItem) return null;
+                    
+                    const cachedData = JSON.parse(cachedItem);
+                    const now = new Date().getTime();
+                    
+                    // Check if cache is expired
+                    if (now > cachedData.expiry) {
+                        localStorage.removeItem(cacheKey);
+                        return null;
+                    }
+                    
+                    return cachedData.data;
+                } catch (error) {
+                    console.error('Error reading from cache:', error);
+                    return null;
+                }
+            }
+            
+            function setCachedData(days, data) {
+                const cacheKey = `${CACHE_KEY_PREFIX}${days}`;
+                try {
+                    const cacheData = {
+                        data: data,
+                        expiry: new Date().getTime() + CACHE_EXPIRY,
+                        timestamp: new Date().toISOString()
+                    };
+                    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+                    console.log(`Cached data for ${days} days`);
+                } catch (error) {
+                    console.error('Error writing to cache:', error);
+                }
+            }
+            
+            function loadCallData(forceRefresh = false) {
                 // Show loading state
                 document.getElementById('inboundCallsTable').innerHTML = `
                     <tr>
@@ -559,8 +602,32 @@
                 // Get date range
                 const days = parseInt(filterDateRange.value) || 1;
                 
+                // Check cache first if not forcing refresh
+                if (!forceRefresh) {
+                    const cachedData = getCachedData(days);
+                    if (cachedData) {
+                        console.log(`Using cached call data for ${days} days`);
+                        
+                        // Process cached data
+                        allCalls = processCalls(cachedData.calls);
+                        
+                        // Extract agents for filter dropdown
+                        updateAgentFilter(allCalls);
+                        
+                        // Filter and render calls
+                        filterCalls();
+                        renderCallTable();
+                        
+                        // Show cache notification
+                        document.getElementById('toastMessage').textContent = 'Loaded call data from cache';
+                        toast.show();
+                        return;
+                    }
+                    console.log(`No cache found for ${days} days, fetching from API...`);
+                }
+                
                 // Fetch call data from API
-                fetch(`/api/dialpad-calls?days=${days}&refresh=${refresh}`)
+                fetch(`/api/dialpad-calls?days=${days}&refresh=${forceRefresh}`)
                     .then(response => {
                         if (!response.ok) {
                             throw new Error('Network response was not ok');
@@ -571,6 +638,9 @@
                         console.log("API Response:", data);
                         
                         if (data.success) {
+                            // Cache the API response
+                            setCachedData(days, data);
+                            
                             // Process call data
                             allCalls = processCalls(data.calls);
                             
@@ -582,7 +652,8 @@
                             renderCallTable();
                             
                             // Show success message
-                            document.getElementById('toastMessage').textContent = 'Call data loaded successfully!';
+                            document.getElementById('toastMessage').textContent = forceRefresh ? 
+                                'Call data refreshed from API!' : 'Call data loaded successfully!';
                             toast.show();
                         } else {
                             throw new Error(data.error || 'Failed to load call data');

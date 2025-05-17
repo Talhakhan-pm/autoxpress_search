@@ -1927,18 +1927,12 @@ def generate_alternative_numbers(part_number):
 def callbacks():
     return render_template("callbacks.html")
 
-# Dialpad calls tracking route
+# Redirect old dialpad calls route to new agent activity page
 @app.route("/dialpad-calls.html", methods=["GET"])
-def dialpad_calls():
-    # Log before rendering template
-    logger.info("Rendering dialpad_calls.html template")
-    
-    # Make sure the template exists
-    try:
-        return render_template("dialpad_calls.html")
-    except Exception as e:
-        logger.error(f"Error rendering template: {e}")
-        return f"Error: {str(e)}", 500
+def dialpad_calls_redirect():
+    # Log redirection
+    logger.info("Redirecting old dialpad-calls.html to agent_activity")
+    return redirect("/agent_activity")
 
 # Dialpad webhook route
 @app.route("/webhook/dialpad", methods=["POST"])
