@@ -228,34 +228,34 @@
             </li>
         </ul>
 
+        <!-- Call Handling Information Alert -->
+        <div class="alert alert-info mb-4">
+            <h5 class="alert-heading"><i class="fas fa-info-circle me-2"></i>About Call Handling</h5>
+            <p>This dashboard shows only <strong>completed calls</strong> handled by each agent. When an inbound call comes to the department, Dialpad rings multiple agents simultaneously, but only the agent who answered is credited with the call.</p>
+            <p class="mb-0"><strong>Note:</strong> Missed calls are not shown in this view to avoid confusion. The metrics focus on actual agent activity rather than missed opportunities.</p>
+        </div>
+
         <!-- Stats Cards -->
         <div class="row mb-4">
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <div class="stats-card stats-inbound">
                     <h4><i class="fas fa-phone-alt me-2"></i>Inbound Calls</h4>
                     <div class="value" id="inboundCount">0</div>
-                    <div class="small">Today</div>
+                    <div class="small">Completed calls</div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <div class="stats-card stats-outbound">
                     <h4><i class="fas fa-phone-volume me-2"></i>Outbound Calls</h4>
                     <div class="value" id="outboundCount">0</div>
-                    <div class="small">Today</div>
+                    <div class="small">Completed calls</div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="stats-card stats-missed">
-                    <h4><i class="fas fa-phone-slash me-2"></i>Missed Calls</h4>
-                    <div class="value" id="missedCount">0</div>
-                    <div class="small">Today</div>
-                </div>
-            </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <div class="stats-card stats-total">
                     <h4><i class="fas fa-chart-line me-2"></i>Total Calls</h4>
                     <div class="value" id="totalCount">0</div>
-                    <div class="small">Today</div>
+                    <div class="small">All completed calls</div>
                 </div>
             </div>
         </div>
@@ -506,10 +506,7 @@
                 let html = '';
                 
                 agents.forEach(agent => {
-                    // Calculate efficiency (completed calls / total calls)
-                    const efficiency = agent.total_calls > 0 
-                        ? Math.round((agent.completed_calls / agent.total_calls) * 100) 
-                        : 0;
+                    // We no longer use efficiency since we're only showing completed calls
                     
                     html += `
                         <div class="col-md-4">
@@ -519,12 +516,8 @@
                                 </div>
                                 <div class="agent-stats">
                                     <div class="stat-item">
-                                        <div class="stat-label">Total Calls</div>
-                                        <div class="stat-value">${agent.total_calls}</div>
-                                    </div>
-                                    <div class="stat-item">
-                                        <div class="stat-label">Efficiency</div>
-                                        <div class="stat-value">${efficiency}%</div>
+                                        <div class="stat-label">Completed Calls</div>
+                                        <div class="stat-value">${agent.completed_calls}</div>
                                     </div>
                                     <div class="stat-item">
                                         <div class="stat-label">Inbound</div>
@@ -537,10 +530,6 @@
                                     <div class="stat-item">
                                         <div class="stat-label">Avg Duration</div>
                                         <div class="stat-value">${agent.avg_duration} min</div>
-                                    </div>
-                                    <div class="stat-item">
-                                        <div class="stat-label">Missed</div>
-                                        <div class="stat-value">${agent.missed_calls}</div>
                                     </div>
                                 </div>
                             </div>
@@ -568,26 +557,24 @@
                 // Calculate stats from agents data
                 let inboundTotal = 0;
                 let outboundTotal = 0;
-                let missedTotal = 0;
-                let totalCalls = 0;
+                let completedTotal = 0;
                 
                 if (activityData.agents && activityData.agents.length > 0) {
                     activityData.agents.forEach(agent => {
-                        inboundTotal += agent.inbound_calls || 0;
-                        outboundTotal += agent.outbound_calls || 0;
-                        missedTotal += agent.missed_calls || 0;
-                        totalCalls += agent.total_calls || 0;
+                        // Only count completed calls (not missed)
+                        inboundTotal += (agent.inbound_calls && agent.call_type == "inbound" && agent.status != "missed") ? agent.inbound_calls : 0;
+                        outboundTotal += (agent.outbound_calls && agent.call_type == "outbound" && agent.status != "missed") ? agent.outbound_calls : 0;
+                        completedTotal += agent.completed_calls || 0;
                     });
                 } else {
                     // Use activity data totals if available
-                    totalCalls = activityData.total_calls || 0;
+                    completedTotal = activityData.total_calls || 0;
                 }
                 
                 // Update the stats cards
                 document.getElementById('inboundCount').textContent = inboundTotal;
                 document.getElementById('outboundCount').textContent = outboundTotal;
-                document.getElementById('missedCount').textContent = missedTotal;
-                document.getElementById('totalCount').textContent = totalCalls;
+                document.getElementById('totalCount').textContent = completedTotal;
             }
             
             // Initialize the page
