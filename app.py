@@ -9,6 +9,7 @@ import concurrent.futures
 import traceback
 import difflib
 import datetime
+import logging
 from functools import lru_cache
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
@@ -17,6 +18,11 @@ from vehicle_validation import has_vehicle_info, get_missing_info_message
 from query_processor import EnhancedQueryProcessor
 from query_templates import get_template_for_message
 from chatbot_handler import process_chat_message
+
+# Configure logging for Dialpad webhook
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -27,6 +33,22 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(24).hex())
 api_key = os.getenv("OPENAI_API_KEY")
 serpapi_key = os.getenv("SERPAPI_KEY")
 client = OpenAI(api_key=api_key)
+
+# Dialpad API Configuration
+DIALPAD_API_TOKEN = os.getenv("DIALPAD_API_TOKEN", "pZcxnhANRfWWwU9G754vaSQp3huh5bmtUmchFQusrpxBjxZJkzYPVuUHJGZGjT3Mrs8Cj58Dph4uLHMBRbW2pxEHpt2u8Tdv5Ny5")
+AUTOXPRESS_DEPT_ID = "4869792674824192"
+
+# Authorized AutoXpress agent IDs
+AUTHORIZED_AGENT_IDS = [
+    "5925466191249408",
+    "6496921529696256", 
+    "5442156569247744",
+    "5182373231869952",
+    "5687535988817920"
+]
+
+# Cache of Dialpad user IDs to names
+dialpad_user_cache = {}
 
 # Validate required API keys with better error messages
 if not api_key:
@@ -50,6 +72,146 @@ if api_key and not api_key.startswith(('sk-', 'org-')):
 
 # Initialize our enhanced query processor
 query_processor = EnhancedQueryProcessor()
+
+# Dialpad integration functions
+def fetch_dialpad_users():
+    """Fetch all users from Dialpad API and cache AutoXpress agents"""
+    headers = {
+        "Authorization": f"Bearer {DIALPAD_API_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    
+    url = "https://dialpad.com/api/v2/users"
+    
+    try:
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code != 200:
+            logger.error(f"Failed to fetch Dialpad users: {response.text}")
+            return False
+        
+        users_data = response.json()
+        
+        # Update the user cache
+        for user in users_data.get("users", []):
+            user_id = str(user.get("id"))
+            user_name = user.get("display_name", "Unknown")
+            
+            # Check if user belongs to AutoXpress department
+            is_autoxpress_agent = False
+            for group in user.get("group_details", []):
+                if str(group.get("group_id")) == AUTOXPRESS_DEPT_ID:
+                    is_autoxpress_agent = True
+                    break
+            
+            if is_autoxpress_agent:
+                dialpad_user_cache[user_id] = user_name
+                logger.info(f"Cached AutoXpress agent: {user_name} (ID: {user_id})")
+        
+        logger.info(f"Updated Dialpad user cache with {len(dialpad_user_cache)} AutoXpress agents")
+        return True
+    
+    except Exception as e:
+        logger.error(f"Error fetching Dialpad users: {e}")
+        return False
+
+def log_dialpad_call(call_data):
+    """
+    Process and store a call record from Dialpad webhook
+    
+    Args:
+        call_data (dict): Call data from Dialpad webhook
+        
+    Returns:
+        bool: Success or failure
+    """
+    try:
+        # Generate a unique call ID for our system
+        dialpad_call_id = str(call_data.get("call_id", ""))
+        call_id = f"dp_{dialpad_call_id}"
+        
+        # Convert epoch seconds to datetime
+        start_time_epoch = call_data.get("start_time", 0)
+        try:
+            call_datetime = datetime.datetime.fromtimestamp(start_time_epoch)
+            call_date = call_datetime.strftime("%Y-%m-%d")
+            call_time = call_datetime.strftime("%H:%M")
+        except:
+            call_datetime = datetime.datetime.now()
+            call_date = call_datetime.strftime("%Y-%m-%d")
+            call_time = call_datetime.strftime("%H:%M")
+            logger.warning(f"Could not parse start_time: {start_time_epoch}, using current time")
+        
+        # Get agent info
+        agent_id = str(call_data.get("answered_by", ""))
+        agent_name = dialpad_user_cache.get(agent_id, "Unknown Agent")
+        
+        # Determine call type (inbound/outbound) based on direction
+        call_direction = call_data.get("direction", "")
+        call_type = "inbound" if call_direction == "inbound" else "outbound"
+        
+        # Get phone numbers
+        from_number = call_data.get("caller_number", "")
+        to_number = call_data.get("target_number", "")
+        
+        # Determine which number belongs to the customer
+        # For inbound calls, the caller is the customer
+        # For outbound calls, the target is the customer
+        phone = from_number if call_type == "inbound" else to_number
+        
+        # Set customer name based on call data or use phone number
+        customer = call_data.get("contact_name", phone)
+        
+        # Calculate duration in minutes
+        duration_seconds = call_data.get("duration", 0)
+        duration_minutes = round(duration_seconds / 60, 1)
+        
+        # Determine call status
+        # In Dialpad, if duration is 0, it's likely a missed call
+        status = "missed" if duration_seconds == 0 else "completed"
+        
+        # Store in our database using the existing CallRecord model
+        from models import CallRecord, db_session
+        
+        # Check if this call is already logged
+        existing_call = db_session.query(CallRecord).filter_by(dialpad_id=dialpad_call_id).first()
+        if existing_call:
+            logger.info(f"Call already logged: {dialpad_call_id}")
+            return True
+        
+        # Create a new call record
+        new_call = CallRecord(
+            id=call_id,
+            dialpad_id=dialpad_call_id,
+            call_type=call_type,
+            date=call_date,
+            time=call_time,
+            timestamp=call_datetime,
+            agent=agent_name,
+            agent_id=agent_id,
+            customer=customer,
+            phone=phone,
+            duration=duration_minutes,
+            status=status,
+            notes=call_data.get("notes", ""),
+            vehicle_info="",  # To be filled later by agents
+            product="",       # To be filled later by agents
+            followup_required=False,
+            raw_data=json.dumps(call_data)
+        )
+        
+        # Add to database
+        db_session.add(new_call)
+        db_session.commit()
+        
+        logger.info(f"Successfully logged Dialpad call: {agent_name} - {call_type} call ({duration_minutes} min)")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error logging Dialpad call to database: {e}")
+        if 'db_session' in locals():
+            db_session.rollback()
+        return False
 
 # Enhanced query cleaner that uses our query processor
 def clean_query(text):
@@ -1761,7 +1923,61 @@ def callbacks():
 # Dialpad calls tracking route
 @app.route("/dialpad-calls.html", methods=["GET"])
 def dialpad_calls():
-    return render_template("dialpad_calls.html")
+    # Log before rendering template
+    logger.info("Rendering dialpad_calls.html template")
+    
+    # Make sure the template exists
+    try:
+        return render_template("dialpad_calls.html")
+    except Exception as e:
+        logger.error(f"Error rendering template: {e}")
+        return f"Error: {str(e)}", 500
+
+# Dialpad webhook route
+@app.route("/webhook/dialpad", methods=["POST"])
+def dialpad_webhook():
+    """Handle incoming webhook from Dialpad for call_summary_available event"""
+    webhook_data = request.json
+    logger.info(f"Received Dialpad webhook: {webhook_data}")
+    
+    # Verify it's a call_summary_available event
+    event_type = webhook_data.get("event_type")
+    if event_type != "call_summary_available":
+        logger.info(f"Ignoring non-call_summary event: {event_type}")
+        return jsonify({"status": "ignored", "reason": f"Not a call_summary_available event: {event_type}"})
+    
+    # Extract the call data
+    call_data = webhook_data.get("data", {})
+    
+    # Check if answered_by matches an authorized agent ID
+    agent_id = str(call_data.get("answered_by", ""))
+    if agent_id not in AUTHORIZED_AGENT_IDS:
+        logger.info(f"Ignoring call: Agent ID {agent_id} not in authorized list")
+        return jsonify({"status": "ignored", "reason": "Agent not in AutoXpress department"})
+    
+    # Log the call to our database
+    success = log_dialpad_call(call_data)
+    
+    if success:
+        return jsonify({"status": "success", "message": "Call logged to database"})
+    else:
+        return jsonify({"status": "error", "message": "Failed to log call to database"}), 500
+
+# Dialpad user refresh endpoint
+@app.route("/api/dialpad/refresh-users", methods=["GET"])
+def refresh_dialpad_users():
+    """Endpoint to manually refresh the Dialpad user cache"""
+    success = fetch_dialpad_users()
+    
+    if success:
+        return jsonify({
+            "status": "success", 
+            "message": "Dialpad user cache refreshed", 
+            "user_count": len(dialpad_user_cache),
+            "users": dialpad_user_cache
+        })
+    else:
+        return jsonify({"status": "error", "message": "Failed to refresh Dialpad user cache"}), 500
 
 # Order form route
 @app.route("/orders.html", methods=["GET"])
@@ -2873,98 +3089,69 @@ def chat_api():
 def get_calls():
     """Get all calls with optional filtering"""
     try:
-        # In a real implementation, this would fetch from database
-        # For now, return dummy data
-        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        # Get calls from the database
+        from models import CallRecord, db_session
+        from sqlalchemy import or_, and_, func
         
-        # Sample data
-        inbound_calls = [
-            {
-                "id": "in1",
-                "call_type": "inbound",
-                "date": today,
-                "time": "09:30",
-                "agent": "Ayesha",
-                "customer": "John Smith",
-                "phone": "(555) 123-4567",
-                "duration": 5.2,
-                "status": "completed",
-                "notes": "Customer inquired about brake pads for 2018 Honda Accord",
-                "vehicle_info": "Honda Accord",
-                "year": 2018,
-                "product": "Brake pads",
-                "followup_required": False
-            },
-            {
-                "id": "in2",
-                "call_type": "inbound",
-                "date": today,
-                "time": "10:15",
-                "agent": "Farhan",
-                "customer": "Sarah Johnson",
-                "phone": "(555) 987-6543",
-                "duration": 3.8,
-                "status": "pending",
-                "notes": "Customer needs front bumper for 2020 Toyota Camry. Requested callback with price.",
-                "vehicle_info": "Toyota Camry",
-                "year": 2020,
-                "product": "Front bumper",
-                "followup_required": True,
-                "followup_date": (datetime.datetime.now() + datetime.timedelta(days=1)).strftime("%Y-%m-%d"),
-                "followup_time": "10:00"
-            },
-            {
-                "id": "in3",
-                "call_type": "inbound",
-                "date": today,
-                "time": "11:45",
-                "agent": "Khan",
-                "customer": "Unknown",
-                "phone": "(555) 555-1212",
-                "duration": 0,
-                "status": "missed",
-                "notes": "Missed call, no voicemail",
-                "vehicle_info": "",
-                "year": None,
-                "product": "",
-                "followup_required": False
-            }
-        ]
+        # Start with a base query
+        query = db_session.query(CallRecord)
         
-        outbound_calls = [
-            {
-                "id": "out1",
-                "call_type": "outbound",
-                "date": today,
-                "time": "13:20",
-                "agent": "Murtaza",
-                "customer": "Mike Wilson",
-                "phone": "(555) 222-3333",
-                "duration": 4.5,
-                "status": "completed",
-                "notes": "Follow-up on order #12345 for alternator. Order will be delivered tomorrow.",
-                "vehicle_info": "Ford F-150",
-                "year": 2017,
-                "product": "Alternator",
-                "followup_required": False
-            },
-            {
-                "id": "out2",
-                "call_type": "outbound",
-                "date": today,
-                "time": "14:05",
-                "agent": "Luis",
-                "customer": "Emily Davis",
-                "phone": "(555) 444-5555",
-                "duration": 2.3,
-                "status": "completed",
-                "notes": "Called to confirm availability of headlight assembly for 2019 Ford F-150.",
-                "vehicle_info": "Ford F-150",
-                "year": 2019,
-                "product": "Headlight assembly",
-                "followup_required": False
-            }
-        ]
+        # For testing purposes, if no records exist or debug mode is enabled, add dummy records
+        count = query.count()
+        logger.info(f"Found {count} call records in database")
+        
+        # Force create test data if 'debug_create' is in query params
+        force_create = request.args.get('debug_create', 'false').lower() == 'true'
+        
+        if count == 0 or force_create:
+            logger.info(f"{'Forcing creation of' if force_create else 'No call records found, adding'} dummy records for testing")
+            
+            # Create today's date
+            today = datetime.datetime.now()
+            formatted_date = today.strftime("%Y-%m-%d")
+            formatted_time = today.strftime("%H:%M")
+            
+            # Create dummy inbound call record
+            inbound_call = CallRecord(
+                id="dummy_inbound",
+                call_type="inbound",
+                date=formatted_date,
+                time=formatted_time,
+                timestamp=today,
+                agent="Test Agent",
+                customer="Test Inbound Customer",
+                phone="555-123-4567",
+                duration=5.0,
+                status="completed",
+                notes="This is a test inbound call record",
+                vehicle_info="Honda Accord",
+                year=2020,
+                product="Brake pads"
+            )
+            
+            # Create dummy outbound call record
+            outbound_call = CallRecord(
+                id="dummy_outbound",
+                call_type="outbound",
+                date=formatted_date,
+                time=formatted_time,
+                timestamp=today,
+                agent="Test Agent",
+                customer="Test Outbound Customer",
+                phone="555-987-6543",
+                duration=3.5,
+                status="completed",
+                notes="This is a test outbound call record",
+                vehicle_info="Toyota Camry",
+                year=2021,
+                product="Oil filter"
+            )
+            
+            # Add to database
+            db_session.add(inbound_call)
+            db_session.add(outbound_call)
+            db_session.commit()
+            logger.info("Added dummy inbound and outbound records")
         
         # Apply filters if provided
         agent_filter = request.args.get('agent')
@@ -2972,64 +3159,109 @@ def get_calls():
         date_range = request.args.get('date_range')
         call_type = request.args.get('call_type', 'all')
         search_term = request.args.get('search')
+        date_from = request.args.get('date_from')
+        date_to = request.args.get('date_to')
         
+        # Filter by call type
+        if call_type != 'all':
+            logger.info(f"Filtering by call_type: {call_type}")
+            query = query.filter(CallRecord.call_type == call_type)
+            # Debug: Check how many records match this filter
+            count_after_filter = query.count()
+            logger.info(f"Found {count_after_filter} records after call_type filter")
+            
+            # If none found, let's disable the filter for debugging
+            if count_after_filter == 0:
+                logger.info(f"Disabling call_type filter for debugging")
+                query = db_session.query(CallRecord)
+            
         # Filter by agent
         if agent_filter:
-            inbound_calls = [call for call in inbound_calls if call['agent'] == agent_filter]
-            outbound_calls = [call for call in outbound_calls if call['agent'] == agent_filter]
+            query = query.filter(CallRecord.agent == agent_filter)
             
         # Filter by status
         if status_filter:
-            inbound_calls = [call for call in inbound_calls if call['status'] == status_filter]
-            outbound_calls = [call for call in outbound_calls if call['status'] == status_filter]
+            query = query.filter(CallRecord.status == status_filter)
+            
+        # Filter by date range
+        if date_range:
+            today = datetime.datetime.now().date()
+            if date_range == 'today':
+                query = query.filter(CallRecord.date == today.strftime("%Y-%m-%d"))
+            elif date_range == 'yesterday':
+                yesterday = today - datetime.timedelta(days=1)
+                query = query.filter(CallRecord.date == yesterday.strftime("%Y-%m-%d"))
+            elif date_range == 'last7':
+                last_week = today - datetime.timedelta(days=7)
+                query = query.filter(CallRecord.timestamp >= last_week)
+            elif date_range == 'last30':
+                last_month = today - datetime.timedelta(days=30)
+                query = query.filter(CallRecord.timestamp >= last_month)
+        elif date_from and date_to:
+            query = query.filter(CallRecord.date >= date_from, CallRecord.date <= date_to)
             
         # Filter by search term
         if search_term:
-            search_term = search_term.lower()
-            inbound_filtered = []
-            outbound_filtered = []
+            search_term = f"%{search_term.lower()}%"
+            query = query.filter(
+                or_(
+                    func.lower(CallRecord.customer).like(search_term),
+                    func.lower(CallRecord.phone).like(search_term),
+                    func.lower(CallRecord.notes).like(search_term),
+                    func.lower(CallRecord.product).like(search_term),
+                    func.lower(CallRecord.vehicle_info).like(search_term)
+                )
+            )
             
-            for call in inbound_calls:
-                if (search_term in call['customer'].lower() or
-                    search_term in call['phone'].lower() or
-                    search_term in call['notes'].lower() or
-                    search_term in str(call['product']).lower() or
-                    search_term in str(call['vehicle_info']).lower()):
-                    inbound_filtered.append(call)
-            
-            for call in outbound_calls:
-                if (search_term in call['customer'].lower() or
-                    search_term in call['phone'].lower() or
-                    search_term in call['notes'].lower() or
-                    search_term in str(call['product']).lower() or
-                    search_term in str(call['vehicle_info']).lower()):
-                    outbound_filtered.append(call)
-                    
-            inbound_calls = inbound_filtered
-            outbound_calls = outbound_filtered
+        # Execute query and order by most recent first
+        calls = query.order_by(CallRecord.timestamp.desc()).all()
         
-        # Determine which types of calls to return
-        if call_type == 'inbound':
-            all_calls = inbound_calls
-        elif call_type == 'outbound':
-            all_calls = outbound_calls
-        else:
-            all_calls = inbound_calls + outbound_calls
+        # Debug: Print number of calls found
+        logger.info(f"Query returned {len(calls)} call records")
+        
+        # Convert to dictionaries for JSON response
+        call_data = []
+        for call in calls:
+            try:
+                call_dict = call.to_dict()
+                call_data.append(call_dict)
+            except Exception as e:
+                logger.error(f"Error converting call {call.id} to dict: {e}")
+        
+        # Debug: Print call data
+        logger.info(f"Converted {len(call_data)} call records to dict")
+        
+        # Debug: Print out call types from data
+        logger.info("Call types in data:")
+        for call in call_data:
+            logger.info(f"Call {call.get('id')}: type={call.get('call_type')}, status={call.get('status')}")
             
+        # Split into inbound and outbound for stats
+        inbound_calls = [call for call in call_data if call.get('call_type') == 'inbound']
+        outbound_calls = [call for call in call_data if call.get('call_type') == 'outbound']
+        
+        # Debug: Count calls by type
+        logger.info(f"Inbound calls count: {len(inbound_calls)}")
+        logger.info(f"Outbound calls count: {len(outbound_calls)}")
+        
         # Calculate statistics
         stats = {
             "inbound_count": len(inbound_calls),
             "outbound_count": len(outbound_calls),
-            "missed_count": len([call for call in inbound_calls if call['status'] == 'missed']),
-            "total_count": len(inbound_calls) + len(outbound_calls)
+            "missed_count": len([call for call in inbound_calls if call.get('status') == 'missed']),
+            "total_count": len(call_data)
         }
+        
+        # Debug: Print stats
+        logger.info(f"Call stats: {stats}")
         
         return jsonify({
             "success": True,
-            "calls": all_calls,
+            "calls": call_data,
             "stats": stats
         })
     except Exception as e:
+        logger.error(f"Error fetching calls: {e}")
         return jsonify({
             "success": False,
             "error": str(e)
@@ -3039,6 +3271,8 @@ def get_calls():
 def add_call():
     """Add a new call record"""
     try:
+        from models import CallRecord, db_session
+        
         data = request.json
         required_fields = ['call_type', 'call_status', 'call_date', 'call_time', 
                           'agent_name', 'phone_number', 'call_duration']
@@ -3051,17 +3285,56 @@ def add_call():
                     "error": f"Missing required field: {field}"
                 }), 400
         
-        # Generate a unique ID (in a real implementation, the database would do this)
-        call_id = f"{'in' if data['call_type'] == 'inbound' else 'out'}{int(time.time())}"
+        # Generate a unique ID
+        prefix = 'in' if data['call_type'] == 'inbound' else 'out'
+        timestamp = int(time.time())
+        call_id = f"{prefix}{timestamp}"
         
-        # In a real implementation, save to database
-        # For now, just return success with the generated ID
+        # Convert date and time strings to a datetime object
+        try:
+            call_datetime = datetime.datetime.strptime(
+                f"{data['call_date']} {data['call_time']}", 
+                "%Y-%m-%d %H:%M"
+            )
+        except ValueError:
+            call_datetime = datetime.datetime.now()
+        
+        # Create a new call record
+        new_call = CallRecord(
+            id=call_id,
+            call_type=data['call_type'],
+            date=data['call_date'],
+            time=data['call_time'],
+            timestamp=call_datetime,
+            agent=data['agent_name'],
+            customer=data.get('customer_name', ''),
+            phone=data['phone_number'],
+            duration=float(data['call_duration']),
+            status=data['call_status'],
+            notes=data.get('notes', ''),
+            vehicle_info=data.get('vehicle_info', ''),
+            year=data.get('year'),
+            product=data.get('product', ''),
+            followup_required=data.get('followup_required', False),
+            followup_date=data.get('followup_date'),
+            followup_time=data.get('followup_time')
+        )
+        
+        # Save to database
+        db_session.add(new_call)
+        db_session.commit()
+        
+        logger.info(f"Manually added call: {call_id} - {data['agent_name']}")
+        
         return jsonify({
             "success": True,
             "call_id": call_id,
             "message": "Call record saved successfully"
         })
     except Exception as e:
+        logger.error(f"Error adding call: {e}")
+        if 'db_session' in locals():
+            db_session.rollback()
         return jsonify({
             "success": False,
             "error": str(e)
@@ -3071,15 +3344,112 @@ def add_call():
 def update_call(call_id):
     """Update an existing call record"""
     try:
+        from models import CallRecord, db_session
+        
         data = request.json
         
-        # In a real implementation, update database
-        # For now, just return success
+        # Find the call record
+        call_record = db_session.query(CallRecord).filter_by(id=call_id).first()
+        
+        if not call_record:
+            return jsonify({
+                "success": False,
+                "error": f"Call record with ID {call_id} not found"
+            }), 404
+        
+        # Update fields that were provided
+        if 'call_status' in data:
+            call_record.status = data['call_status']
+        
+        if 'agent_name' in data:
+            call_record.agent = data['agent_name']
+            
+        if 'customer_name' in data:
+            call_record.customer = data['customer_name']
+            
+        if 'phone_number' in data:
+            call_record.phone = data['phone_number']
+            
+        if 'call_duration' in data:
+            call_record.duration = float(data['call_duration'])
+            
+        if 'notes' in data:
+            call_record.notes = data['notes']
+            
+        if 'vehicle_info' in data:
+            call_record.vehicle_info = data['vehicle_info']
+            
+        if 'year' in data:
+            call_record.year = data['year']
+            
+        if 'product' in data:
+            call_record.product = data['product']
+            
+        if 'followup_required' in data:
+            call_record.followup_required = data['followup_required']
+            
+        if 'followup_date' in data:
+            call_record.followup_date = data['followup_date']
+            
+        if 'followup_time' in data:
+            call_record.followup_time = data['followup_time']
+        
+        # Save changes
+        db_session.commit()
+        
+        logger.info(f"Updated call: {call_id}")
+        
         return jsonify({
             "success": True,
             "message": f"Call {call_id} updated successfully"
         })
     except Exception as e:
+        logger.error(f"Error updating call: {e}")
+        if 'db_session' in locals():
+            db_session.rollback()
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@app.route("/api/debug/calls", methods=["GET"])
+def debug_calls():
+    """Diagnostic endpoint to examine call records directly"""
+    try:
+        from models import CallRecord, db_session
+        
+        # Get all calls from database
+        calls = db_session.query(CallRecord).all()
+        
+        # Convert to dictionaries
+        call_data = []
+        for call in calls:
+            call_dict = {
+                "id": call.id,
+                "call_type": call.call_type,
+                "status": call.status,
+                "date": call.date,
+                "agent": call.agent,
+                "customer": call.customer,
+                "raw_data": call.raw_data
+            }
+            call_data.append(call_dict)
+        
+        # Count by type
+        inbound_count = len([c for c in calls if c.call_type == 'inbound'])
+        outbound_count = len([c for c in calls if c.call_type == 'outbound'])
+        unknown_count = len([c for c in calls if c.call_type not in ['inbound', 'outbound']])
+        
+        return jsonify({
+            "success": True,
+            "total_count": len(calls),
+            "inbound_count": inbound_count,
+            "outbound_count": outbound_count,
+            "unknown_count": unknown_count,
+            "calls": call_data
+        })
+    except Exception as e:
+        logger.error(f"Error in debug endpoint: {e}")
         return jsonify({
             "success": False,
             "error": str(e)
@@ -3089,13 +3459,31 @@ def update_call(call_id):
 def delete_call(call_id):
     """Delete a call record"""
     try:
-        # In a real implementation, delete from database
-        # For now, just return success
+        from models import CallRecord, db_session
+        
+        # Find the call record
+        call_record = db_session.query(CallRecord).filter_by(id=call_id).first()
+        
+        if not call_record:
+            return jsonify({
+                "success": False,
+                "error": f"Call record with ID {call_id} not found"
+            }), 404
+        
+        # Delete from database
+        db_session.delete(call_record)
+        db_session.commit()
+        
+        logger.info(f"Deleted call: {call_id}")
+        
         return jsonify({
             "success": True,
             "message": f"Call {call_id} deleted successfully"
         })
     except Exception as e:
+        logger.error(f"Error deleting call: {e}")
+        if 'db_session' in locals():
+            db_session.rollback()
         return jsonify({
             "success": False,
             "error": str(e)
@@ -3166,7 +3554,22 @@ def create_payment_link():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# Initialize database and fetch Dialpad users
+def initialize_app():
+    """Initialize the app by creating database tables and fetching Dialpad users"""
+    # Initialize database
+    from models import init_db
+    init_db()
+    
+    # Fetch Dialpad users
+    fetch_dialpad_users()
+    logger.info("Application initialized with database and Dialpad users")
+
+# Initialize the app before first run
+with app.app_context():
+    initialize_app()
+
 # Run app
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5040))
-    app.run(host="0.0.0.0", port=port)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port, debug=True)

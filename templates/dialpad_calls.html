@@ -646,10 +646,13 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize variables
-            let activeTab = 'inbound';
+            let activeTab = 'inbound';  // Default to inbound calls
             let currentCallData = {};
             const modal = new bootstrap.Modal(document.getElementById('callModal'));
             const toast = new bootstrap.Toast(document.getElementById('notificationToast'));
+            
+            // Debug current state
+            console.log("Initial activeTab:", activeTab);
             
             // Elements
             const inboundToggle = document.getElementById('inboundToggle');
@@ -789,7 +792,20 @@
             
             // Functions
             function setActiveTab(tab) {
+                console.log(`Setting active tab to: ${tab}`);
                 activeTab = tab;
+                
+                // Check if elements exist
+                if (!inboundToggle || !outboundToggle || !toggleBg || !inboundCallsTab || !outboundCallsTab) {
+                    console.error("Tab elements missing!", {
+                        inboundToggle: !!inboundToggle,
+                        outboundToggle: !!outboundToggle,
+                        toggleBg: !!toggleBg,
+                        inboundCallsTab: !!inboundCallsTab,
+                        outboundCallsTab: !!outboundCallsTab
+                    });
+                    return;
+                }
                 
                 if (tab === 'inbound') {
                     inboundToggle.classList.add('active');
@@ -797,12 +813,14 @@
                     toggleBg.classList.remove('outbound');
                     inboundCallsTab.style.display = 'block';
                     outboundCallsTab.style.display = 'none';
+                    console.log("Inbound tab activated. inboundCallsTab.style.display =", inboundCallsTab.style.display);
                 } else {
                     inboundToggle.classList.remove('active');
                     outboundToggle.classList.add('active');
                     toggleBg.classList.add('outbound');
                     inboundCallsTab.style.display = 'none';
                     outboundCallsTab.style.display = 'block';
+                    console.log("Outbound tab activated. outboundCallsTab.style.display =", outboundCallsTab.style.display);
                 }
             }
             
@@ -952,16 +970,37 @@
                         return response.json();
                     })
                     .then(data => {
+                        console.log("API Response:", data);
+                        
                         if (data.success) {
+                            // Log ALL calls first
+                            console.log("All calls from API:", data.calls);
+                            
                             // Store the call data for later use
                             currentCallData = data.calls;
                             
-                            // Filter calls by type for display in appropriate tables
-                            const inboundCalls = data.calls.filter(call => call.call_type === 'inbound');
-                            const outboundCalls = data.calls.filter(call => call.call_type === 'outbound');
+                            // Sample call object for debugging
+                            console.log("Sample call object:", data.calls.length > 0 ? data.calls[0] : "No calls found");
                             
-                            // Update the tables
+                            // Check the call_type format carefully - add more robust filtering
+                            const inboundCalls = data.calls.filter(call => {
+                                console.log(`Call ${call.id} type: ${call.call_type}`);
+                                return call.call_type === 'inbound';
+                            });
+                            
+                            const outboundCalls = data.calls.filter(call => {
+                                console.log(`Call ${call.id} type: ${call.call_type}`);
+                                return call.call_type === 'outbound';
+                            });
+                            
+                            console.log("Inbound calls:", inboundCalls);
+                            console.log("Outbound calls:", outboundCalls);
+                            
+                            // Update the tables with direct debugging
+                            console.log("Updating inbound table with", inboundCalls.length, "calls");
                             updateCallTable('inboundCallsTable', inboundCalls);
+                            
+                            console.log("Updating outbound table with", outboundCalls.length, "calls");
                             updateCallTable('outboundCallsTable', outboundCalls);
                             
                             // Update statistics
@@ -973,6 +1012,7 @@
                         }
                     })
                     .catch(error => {
+                        console.error("Error fetching call data:", error);
                         // Show error message
                         document.getElementById('toastMessage').textContent = 'Error loading call data: ' + error.message;
                         toast.show();
@@ -980,7 +1020,29 @@
             }
             
             function updateCallTable(tableId, calls) {
+                console.log(`Updating table ${tableId} with ${calls.length} calls`);
+                
+                // Diagnostics: Check all table elements
+                const tables = document.querySelectorAll('table');
+                console.log(`Found ${tables.length} tables on page:`);
+                tables.forEach((table, index) => {
+                    console.log(`Table ${index}:`, table.id || 'no id');
+                });
+                
                 const tableBody = document.getElementById(tableId);
+                if (!tableBody) {
+                    console.error(`Table body with ID ${tableId} not found!`);
+                    
+                    // Try to locate the table differently as a fallback
+                    const closestTable = document.querySelector(`#${tableId}`) || 
+                                           document.querySelector(`[id="${tableId}"]`) || 
+                                           document.querySelector(`tbody#${tableId}`);
+                    console.log("Attempted alternate table body selection:", closestTable);
+                    
+                    return;
+                }
+                
+                console.log("TableBody:", tableBody);
                 
                 if (calls.length === 0) {
                     tableBody.innerHTML = `<tr><td colspan="8" class="text-center">No calls found</td></tr>`;
@@ -990,6 +1052,13 @@
                 let html = '';
                 
                 calls.forEach(call => {
+                    console.log("Processing call:", call);
+                    
+                    // Debug call properties
+                    console.log("Call ID:", call.id);
+                    console.log("Call Type:", call.call_type);
+                    console.log("Call Status:", call.status);
+                    
                     const statusClass = call.status === 'completed' ? 'status-completed' : 
                                         call.status === 'pending' ? 'status-pending' : 'status-missed';
                     
@@ -1011,6 +1080,8 @@
                     </tr>
                     `;
                 });
+                
+                console.log("Generated HTML:", html);
                 
                 tableBody.innerHTML = html;
                 
@@ -1176,6 +1247,14 @@
             }
             
             // Initialize page
+            console.log("Initializing page...");
+            
+            // Check if inbound and outbound tables exist
+            console.log("inboundCallsTable exists:", !!document.getElementById('inboundCallsTable'));
+            console.log("outboundCallsTable exists:", !!document.getElementById('outboundCallsTable'));
+            
+            // Load call data
+            console.log("Loading call data with active tab:", activeTab);
             loadCallData();
         });
     </script>
