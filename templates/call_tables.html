@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoXpress Call Tables</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .main-container {
+            max-width: 95%;
+            margin: 30px auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h3 {
+            color: #2c3e50;
+            font-weight: 600;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        h3::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 3px;
+            background: #3498db;
+            border-radius: 2px;
+        }
+
+        /* Call tables */
+        .table {
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table thead {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .table th, .table td {
+            vertical-align: middle;
+        }
+
+        /* Status indicators */
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-completed {
+            background-color: #2ecc71;
+            color: white;
+        }
+
+        .status-pending {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        .status-missed {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        /* Call Type Toggle */
+        .call-type-toggle {
+            display: flex;
+            background: #ecf0f1;
+            border-radius: 30px;
+            margin: 20px 0;
+            padding: 5px;
+            overflow: hidden;
+            position: relative;
+            max-width: 400px;
+            margin: 0 auto 30px;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            border: none;
+            padding: 10px;
+            background: transparent;
+            color: #7f8c8d;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .toggle-btn.active {
+            color: white;
+        }
+
+        .toggle-bg {
+            position: absolute;
+            height: 40px;
+            width: 50%;
+            border-radius: 25px;
+            background: #3498db;
+            transition: transform 0.3s ease;
+            transform: translateX(0);
+        }
+
+        .toggle-bg.outbound {
+            transform: translateX(100%);
+        }
+
+        /* Filters */
+        .filters-container {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            color: #34495e;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .form-control,
+        .form-select {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 8px rgba(52, 152, 219, 0.3);
+            transform: scale(1.02);
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+            background: linear-gradient(45deg, #2980b9, #3498db);
+        }
+
+        /* Navigation */
+        .nav-item.active {
+            background-color: #3498db;
+            border-radius: 5px;
+        }
+        
+        .nav-item.active a {
+            color: white !important;
+        }
+        
+        .nav-tabs {
+            border-bottom: 2px solid #3498db;
+            margin-bottom: 20px;
+        }
+        
+        .nav-link {
+            color: #2c3e50;
+            font-weight: 500;
+            padding: 10px 15px;
+            border-radius: 5px 5px 0 0;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link:hover {
+            background-color: #ecf0f1;
+        }
+        
+        .btn-custom-red {
+            background-color: #fff !important;
+            color: #e74c3c;
+            border: 2px solid #e74c3c;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-custom-red:hover,
+        .btn-custom-red:focus {
+            background-color: #e74c3c !important;
+            color: #fff;
+            border-color: #e74c3c;
+            box-shadow: 0 0 8px rgba(231, 76, 60, 0.3);
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <a href="/" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-home"></i> Home
+                </a>
+            </div>
+            <h3 class="text-center">AutoXpress Call Tables</h3>
+            <div>
+                <a href="/callbacks.html" class="btn btn-custom-red btn-sm me-2">Callbacks</a>
+                <a href="https://assistant-autoxpress.onrender.com/" class="btn btn-custom-red btn-sm">AI Assistant</a>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs mb-4">
+            <li class="nav-item">
+                <a class="nav-link" href="/agent_activity">
+                    <i class="fas fa-headset me-2"></i>Agent Activity
+                </a>
+            </li>
+            <li class="nav-item active">
+                <a class="nav-link active" href="/call_tables">
+                    <i class="fas fa-phone-alt me-2"></i>Call Tables
+                </a>
+            </li>
+        </ul>
+
+        <!-- Call Type Toggle -->
+        <div class="position-relative call-type-toggle mb-4 mx-auto">
+            <div class="toggle-bg" id="toggleBg"></div>
+            <button class="toggle-btn active" id="inboundToggle">
+                <i class="fas fa-phone-alt me-2"></i>Inbound Calls
+            </button>
+            <button class="toggle-btn" id="outboundToggle">
+                <i class="fas fa-phone-volume me-2"></i>Outbound Calls
+            </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-container mb-4">
+            <div class="row">
+                <div class="col-md-3">
+                    <label class="form-label">Agent</label>
+                    <select class="form-select" id="filterAgent">
+                        <option value="">All Agents</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" id="filterStatus">
+                        <option value="">All Statuses</option>
+                        <option value="completed">Completed</option>
+                        <option value="missed">Missed</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Date Range</label>
+                    <select class="form-select" id="filterDateRange">
+                        <option value="1">Today</option>
+                        <option value="3">Last 3 days</option>
+                        <option value="7">Last 7 days</option>
+                        <option value="14">Last 14 days</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Search</label>
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search...">
+                </div>
+            </div>
+        </div>
+
+        <!-- Refresh Button -->
+        <div class="text-center mb-4">
+            <button id="refreshBtn" class="btn btn-primary">
+                <i class="fas fa-sync-alt me-2"></i>Refresh Data
+            </button>
+        </div>
+
+        <!-- Call Tables -->
+        <div class="tab-content">
+            <!-- Inbound Calls Table -->
+            <div class="tab-pane active" id="inboundCallsTab">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date/Time</th>
+                                <th>Agent</th>
+                                <th>Customer</th>
+                                <th>Phone</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                                <th>Recording</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inboundCallsTable">
+                            <!-- Inbound calls will be loaded here -->
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Loading inbound calls...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Outbound Calls Table -->
+            <div class="tab-pane" id="outboundCallsTab" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date/Time</th>
+                                <th>Agent</th>
+                                <th>Customer</th>
+                                <th>Phone</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                                <th>Recording</th>
+                            </tr>
+                        </thead>
+                        <tbody id="outboundCallsTable">
+                            <!-- Outbound calls will be loaded here -->
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Loading outbound calls...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <div>
+                <span>Showing <span id="startCount">0</span> to <span id="endCount">0</span> of <span id="totalCount">0</span> calls</span>
+            </div>
+            <div>
+                <button class="btn btn-outline-secondary btn-sm me-2" id="prevPageBtn" disabled>
+                    <i class="fas fa-chevron-left"></i> Previous
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" id="nextPageBtn" disabled>
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div id="notificationToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto">Notification</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="toastMessage">
+                Data loaded successfully!
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize variables
+            let activeTab = 'inbound';  // Default to inbound calls
+            let currentPage = 1;
+            let totalPages = 1;
+            let callsPerPage = 10;
+            let allCalls = [];
+            let filteredCalls = [];
+            let agentList = new Set();
+            
+            const toast = new bootstrap.Toast(document.getElementById('notificationToast'));
+            
+            // Elements
+            const inboundToggle = document.getElementById('inboundToggle');
+            const outboundToggle = document.getElementById('outboundToggle');
+            const toggleBg = document.getElementById('toggleBg');
+            const inboundCallsTab = document.getElementById('inboundCallsTab');
+            const outboundCallsTab = document.getElementById('outboundCallsTab');
+            const refreshBtn = document.getElementById('refreshBtn');
+            
+            // Filter elements
+            const filterAgent = document.getElementById('filterAgent');
+            const filterStatus = document.getElementById('filterStatus');
+            const filterDateRange = document.getElementById('filterDateRange');
+            const searchInput = document.getElementById('searchInput');
+            
+            // Pagination elements
+            const prevPageBtn = document.getElementById('prevPageBtn');
+            const nextPageBtn = document.getElementById('nextPageBtn');
+            
+            // Event Listeners
+            inboundToggle.addEventListener('click', function() {
+                setActiveTab('inbound');
+                filterCalls();
+                renderCallTable();
+            });
+            
+            outboundToggle.addEventListener('click', function() {
+                setActiveTab('outbound');
+                filterCalls();
+                renderCallTable();
+            });
+            
+            filterAgent.addEventListener('change', function() {
+                filterCalls();
+                renderCallTable();
+            });
+            
+            filterStatus.addEventListener('change', function() {
+                filterCalls();
+                renderCallTable();
+            });
+            
+            filterDateRange.addEventListener('change', function() {
+                loadCallData(true);
+            });
+            
+            searchInput.addEventListener('input', debounce(function() {
+                filterCalls();
+                renderCallTable();
+            }, 500));
+            
+            refreshBtn.addEventListener('click', function() {
+                loadCallData(true);
+            });
+            
+            prevPageBtn.addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderCallTable();
+                }
+            });
+            
+            nextPageBtn.addEventListener('click', function() {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderCallTable();
+                }
+            });
+            
+            // Functions
+            function setActiveTab(tab) {
+                activeTab = tab;
+                
+                if (tab === 'inbound') {
+                    inboundToggle.classList.add('active');
+                    outboundToggle.classList.remove('active');
+                    toggleBg.classList.remove('outbound');
+                    inboundCallsTab.style.display = 'block';
+                    outboundCallsTab.style.display = 'none';
+                } else {
+                    inboundToggle.classList.remove('active');
+                    outboundToggle.classList.add('active');
+                    toggleBg.classList.add('outbound');
+                    inboundCallsTab.style.display = 'none';
+                    outboundCallsTab.style.display = 'block';
+                }
+            }
+            
+            function formatDateTime(timestamp) {
+                // Convert milliseconds since epoch to date
+                const date = new Date(parseInt(timestamp));
+                
+                // Format date as YYYY-MM-DD
+                const formattedDate = date.toISOString().split('T')[0];
+                
+                // Format time as HH:MM
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                const formattedTime = `${hours}:${minutes}`;
+                
+                return { date: formattedDate, time: formattedTime };
+            }
+            
+            function calculateDuration(startTime, endTime) {
+                if (!startTime || !endTime) return 0;
+                
+                // Convert to milliseconds
+                const start = parseInt(startTime);
+                const end = parseInt(endTime);
+                
+                // Calculate duration in minutes
+                return Math.round((end - start) / 60000 * 10) / 10; // Round to 1 decimal place
+            }
+            
+            function getCallStatus(call) {
+                // In Dialpad, if duration is 0 and state is hangup, it's likely a missed call
+                const duration = calculateDuration(call.date_started, call.date_ended);
+                return (duration === 0 && call.state === "hangup") ? "missed" : "completed";
+            }
+            
+            function loadCallData(refresh = false) {
+                // Show loading state
+                document.getElementById('inboundCallsTable').innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading inbound calls...</p>
+                        </td>
+                    </tr>
+                `;
+                
+                document.getElementById('outboundCallsTable').innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading outbound calls...</p>
+                        </td>
+                    </tr>
+                `;
+                
+                // Get date range
+                const days = parseInt(filterDateRange.value) || 1;
+                
+                // Fetch call data from API
+                fetch(`/api/dialpad-calls?days=${days}&refresh=${refresh}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log("API Response:", data);
+                        
+                        if (data.success) {
+                            // Process call data
+                            allCalls = processCalls(data.calls);
+                            
+                            // Extract agents for filter dropdown
+                            updateAgentFilter(allCalls);
+                            
+                            // Filter and render calls
+                            filterCalls();
+                            renderCallTable();
+                            
+                            // Show success message
+                            document.getElementById('toastMessage').textContent = 'Call data loaded successfully!';
+                            toast.show();
+                        } else {
+                            throw new Error(data.error || 'Failed to load call data');
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error loading call data:", error);
+                        
+                        // Show error message in both tables
+                        const errorHtml = `
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <div class="alert alert-danger">
+                                        <i class="fas fa-exclamation-circle me-2"></i>
+                                        Error loading calls: ${error.message}
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                        
+                        document.getElementById('inboundCallsTable').innerHTML = errorHtml;
+                        document.getElementById('outboundCallsTable').innerHTML = errorHtml;
+                        
+                        // Show error toast
+                        document.getElementById('toastMessage').textContent = 'Error loading call data: ' + error.message;
+                        toast.show();
+                    });
+            }
+            
+            function processCalls(calls) {
+                return calls.map(call => {
+                    // Format date and time
+                    const dateTime = formatDateTime(call.date_started);
+                    
+                    // Calculate duration
+                    const duration = calculateDuration(call.date_started, call.date_ended);
+                    
+                    // Determine status
+                    const status = getCallStatus(call);
+                    
+                    // Extract agent info from target if it's a user
+                    let agentName = "Unknown";
+                    let agentId = "";
+                    
+                    if (call.target && call.target.type === "user") {
+                        agentName = call.target.name || "Unknown";
+                        agentId = call.target.id || "";
+                    }
+                    
+                    // Extract contact info
+                    const contactName = call.contact ? (call.contact.name || "Unknown") : "Unknown";
+                    const contactPhone = call.contact ? (call.contact.phone || "") : "";
+                    
+                    // Extract recording URL if available
+                    let recordingUrl = "";
+                    if (call.recording_details && call.recording_details.length > 0) {
+                        recordingUrl = call.recording_details[0].url || "";
+                    } else if (call.recording_url && call.recording_url.length > 0) {
+                        recordingUrl = call.recording_url[0] || "";
+                    } else if (call.admin_recording_urls && call.admin_recording_urls.length > 0) {
+                        recordingUrl = call.admin_recording_urls[0] || "";
+                    }
+                    
+                    return {
+                        id: call.call_id,
+                        direction: call.direction,
+                        date: dateTime.date,
+                        time: dateTime.time,
+                        agent: agentName,
+                        agent_id: agentId,
+                        customer: contactName,
+                        phone: contactPhone,
+                        duration: duration,
+                        status: status,
+                        recording_url: recordingUrl,
+                        raw_data: call // Keep reference to original data
+                    };
+                });
+            }
+            
+            function updateAgentFilter(calls) {
+                // Extract unique agents
+                agentList = new Set();
+                calls.forEach(call => {
+                    if (call.agent && call.agent !== "Unknown") {
+                        agentList.add(call.agent);
+                    }
+                });
+                
+                // Update filter dropdown
+                let options = '<option value="">All Agents</option>';
+                agentList.forEach(agent => {
+                    options += `<option value="${agent}">${agent}</option>`;
+                });
+                
+                filterAgent.innerHTML = options;
+            }
+            
+            function filterCalls() {
+                // Reset to page 1 when filtering
+                currentPage = 1;
+                
+                // Start with all calls
+                filteredCalls = [...allCalls];
+                
+                // Filter by direction (inbound/outbound)
+                filteredCalls = filteredCalls.filter(call => call.direction === activeTab);
+                
+                // Filter by agent
+                if (filterAgent.value) {
+                    filteredCalls = filteredCalls.filter(call => call.agent === filterAgent.value);
+                }
+                
+                // Filter by status
+                if (filterStatus.value) {
+                    filteredCalls = filteredCalls.filter(call => call.status === filterStatus.value);
+                }
+                
+                // Filter by search term
+                if (searchInput.value.trim()) {
+                    const searchTerm = searchInput.value.trim().toLowerCase();
+                    filteredCalls = filteredCalls.filter(call => 
+                        call.customer.toLowerCase().includes(searchTerm) ||
+                        call.phone.toLowerCase().includes(searchTerm) ||
+                        call.agent.toLowerCase().includes(searchTerm)
+                    );
+                }
+                
+                // Sort by date and time (newest first)
+                filteredCalls.sort((a, b) => {
+                    const dateA = new Date(`${a.date}T${a.time}`);
+                    const dateB = new Date(`${b.date}T${b.time}`);
+                    return dateB - dateA;
+                });
+                
+                // Update pagination
+                totalPages = Math.ceil(filteredCalls.length / callsPerPage);
+                
+                // Update pagination buttons
+                updatePaginationButtons();
+            }
+            
+            function updatePaginationButtons() {
+                // Disable/enable previous button
+                prevPageBtn.disabled = currentPage <= 1;
+                
+                // Disable/enable next button
+                nextPageBtn.disabled = currentPage >= totalPages;
+                
+                // Update pagination counts
+                const startIndex = (currentPage - 1) * callsPerPage + 1;
+                const endIndex = Math.min(startIndex + callsPerPage - 1, filteredCalls.length);
+                
+                document.getElementById('startCount').textContent = filteredCalls.length > 0 ? startIndex : 0;
+                document.getElementById('endCount').textContent = endIndex;
+                document.getElementById('totalCount').textContent = filteredCalls.length;
+            }
+            
+            function renderCallTable() {
+                // Get calls for current page
+                const startIndex = (currentPage - 1) * callsPerPage;
+                const endIndex = startIndex + callsPerPage;
+                const currentCalls = filteredCalls.slice(startIndex, endIndex);
+                
+                // Get the appropriate table based on active tab
+                const tableId = activeTab === 'inbound' ? 'inboundCallsTable' : 'outboundCallsTable';
+                const tableBody = document.getElementById(tableId);
+                
+                // Check if we have calls to display
+                if (currentCalls.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="7" class="text-center">No ${activeTab} calls found</td></tr>`;
+                    return;
+                }
+                
+                // Generate HTML for call rows
+                let html = '';
+                
+                currentCalls.forEach(call => {
+                    const statusClass = call.status === 'completed' ? 'status-completed' : 'status-missed';
+                    
+                    html += `
+                    <tr data-id="${call.id}">
+                        <td>${call.date} ${call.time}</td>
+                        <td>${call.agent}</td>
+                        <td>${call.customer || 'Unknown'}</td>
+                        <td><a href="tel:${call.phone}">${call.phone}</a></td>
+                        <td>${call.duration} min</td>
+                        <td><span class="status-badge ${statusClass}">${call.status}</span></td>
+                        <td>
+                            ${call.recording_url ? 
+                                `<a href="${call.recording_url}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-play-circle me-1"></i>Listen
+                                </a>` : 
+                                'No recording'}
+                        </td>
+                    </tr>
+                    `;
+                });
+                
+                // Update table
+                tableBody.innerHTML = html;
+                
+                // Update pagination buttons
+                updatePaginationButtons();
+            }
+            
+            // Utility function to debounce search input
+            function debounce(func, delay) {
+                let timeout;
+                return function() {
+                    const context = this;
+                    const args = arguments;
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(context, args), delay);
+                };
+            }
+            
+            // Initialize the page
+            loadCallData();
+        });
+    </script>
+</body>
+
+</html>

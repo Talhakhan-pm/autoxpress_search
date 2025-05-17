@@ -11,6 +11,7 @@ Vehicle Information Extraction: Identify make, model, year, and engine specifica
 Part Terminology Mapping: Map common part names to standard terminology
 Search Term Generation: Create optimized search terms for finding parts
 Multi-field Autocomplete: Provide suggestions for vehicle makes, models, and years
+Dialpad Integration: Track and analyze agent call activity for better customer service
 
 Components
 1. Query Processor (query_processor.py)
@@ -29,6 +30,15 @@ Make, model, year, and part field suggestions
 Dependency handling between fields (model depends on make)
 Category-based suggestion display
 Fuzzy matching for typo tolerance
+
+3. Dialpad Integration (dialpad_api.py, dialpad_routes.py)
+Integrates with the Dialpad API to track and analyze agent call activity:
+
+Fetches call data from Dialpad's API for the company department
+Processes call records to extract key metrics (duration, type, status)
+Calculates agent performance metrics (efficiency, call volume, etc.)
+Displays agent activity in a user-friendly dashboard
+Provides filtering by date range for historical analysis
 
 Recent Enhancements
 Vehicle Data Expansion
@@ -49,6 +59,13 @@ Lighting components
 Trim/appearance items
 Belt/pulley systems
 
+Dialpad Integration
+
+Implemented real-time call tracking via Dialpad's API
+Added agent activity dashboard for call performance monitoring
+Included metrics for call efficiency, volume, and type distribution
+Developed date range filtering for historical data analysis
+Optimized API usage with pagination and caching
 
 
 Query Processing Improvements
@@ -68,6 +85,12 @@ Setup
 Include query_processor.py in your backend code
 Include field-autocomplete.js and field-based-search.js in your frontend code
 Create the necessary HTML elements for the search interface
+Set up your Dialpad API token in the environment or .env file:
+```
+DIALPAD_API_TOKEN=your_api_token
+```
+
+For detailed documentation on the Dialpad integration, see [DIALPAD_INTEGRATION.md](DIALPAD_INTEGRATION.md)
 
 ## Field-Based Search
 

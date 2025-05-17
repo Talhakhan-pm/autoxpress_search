@@ -307,6 +307,69 @@
         .stats-total {
             background: linear-gradient(45deg, #9b59b6, #8e44ad);
         }
+        
+        /* Agent Activity Cards */
+        .agent-card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            padding: 15px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .agent-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+        
+        .agent-card .agent-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+        }
+        
+        .agent-card .agent-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .agent-card .stat-item {
+            flex: 1 0 45%;
+            background-color: #f8f9fa;
+            padding: 8px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .agent-card .stat-label {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            margin-bottom: 3px;
+        }
+        
+        .agent-card .stat-value {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 1.2rem;
+        }
+        
+        .agent-card .trend-up {
+            color: #2ecc71;
+        }
+        
+        .agent-card .trend-down {
+            color: #e74c3c;
+        }
+        
+        .agent-card .agent-chart {
+            height: 100px;
+            margin-top: 15px;
+        }
     </style>
 </head>
 
@@ -353,6 +416,33 @@
                     <h4><i class="fas fa-chart-line me-2"></i>Total Calls</h4>
                     <div class="value">0</div>
                     <div class="small">Today</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Agent Activity Section -->
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 agent-activity-header">
+                <h4 class="text-dark"><i class="fas fa-headset me-2"></i>Agent Activity</h4>
+                <div class="d-flex align-items-center">
+                    <button id="manualRefreshBtn" class="btn btn-sm btn-outline-primary me-2">
+                        <i class="fas fa-sync-alt me-1"></i> Refresh
+                    </button>
+                    <select class="form-select form-select-sm" id="activityPeriod">
+                        <option value="1">Today</option>
+                        <option value="3">Last 3 days</option>
+                        <option value="7">Last 7 days</option>
+                        <option value="14">Last 14 days</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row" id="agentActivityCards">
+                <!-- Agent cards will be loaded here dynamically -->
+                <div class="col-12 text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading agent activity...</p>
                 </div>
             </div>
         </div>
@@ -1246,6 +1336,196 @@
                 };
             }
             
+            // Function to load agent activity data
+            function loadAgentActivity(days = 7, refresh = false) {
+                const activityContainer = document.getElementById('agentActivityCards');
+                
+                // Show loading state
+                activityContainer.innerHTML = `
+                    <div class="col-12 text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading agent activity...</p>
+                        <p class="small text-muted">${refresh ? 'Refreshing data from Dialpad API...' : ''}</p>
+                    </div>
+                `;
+                
+                // Fetch agent activity data from API
+                console.log(`Fetching agent activity data for ${days} days${refresh ? ' with refresh' : ''}...`);
+                
+                // Set a timeout to show a message if it's taking too long
+                const loadingTimeout = setTimeout(() => {
+                    activityContainer.innerHTML = `
+                        <div class="col-12 text-center py-4">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Taking longer than expected...</strong>
+                                <p class="mb-0 mt-2">Retrieving call data from Dialpad API. This might take a minute for large datasets.</p>
+                                <p class="mt-2">You can continue using the UI while we load this data.</p>
+                            </div>
+                        </div>
+                    `;
+                }, 15000); // Show after 15 seconds (increased from 8 seconds)
+                
+                // Add a max_timeout parameter to the request
+                fetch(`/api/agent-activity?days=${days}&refresh=${refresh}&max_timeout=60`)
+                    .then(response => {
+                        // Clear the timeout when we get a response
+                        clearTimeout(loadingTimeout);
+                        
+                        if (!response.ok) {
+                            console.error('API response not OK:', response.status, response.statusText);
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Agent activity API response:', data);
+                        if (data.success) {
+                            console.log('Agent activity data:', data.activity);
+                            console.log('Agents:', data.activity.agents);
+                            console.log('Total agents:', data.activity.agents ? data.activity.agents.length : 0);
+                            renderAgentActivity(data.activity);
+                        } else {
+                            console.error('API error:', data.error);
+                            throw new Error(data.error || 'Failed to load agent activity');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading agent activity:', error);
+                        activityContainer.innerHTML = `
+                            <div class="col-12 text-center py-4">
+                                <div class="alert alert-danger">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Error loading agent activity: ${error.message}
+                                </div>
+                            </div>
+                        `;
+                    });
+            }
+            
+            // Function to render agent activity cards
+            function renderAgentActivity(activityData) {
+                const container = document.getElementById('agentActivityCards');
+                console.log('Rendering agent activity with data:', activityData);
+                
+                if (!activityData) {
+                    console.error('No activity data provided to renderAgentActivity');
+                    container.innerHTML = `
+                        <div class="col-12 text-center py-4">
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                Error: No activity data received from server.
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const agents = activityData.agents;
+                console.log('Agents array:', agents);
+                
+                if (!agents || agents.length === 0) {
+                    console.log('No agents found in activity data');
+                    container.innerHTML = `
+                        <div class="col-12 text-center py-4">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                No agent activity data available for the selected period.
+                            </div>
+                            <p class="mt-3">
+                                <button id="refreshActivityBtn" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-sync-alt me-2"></i>Refresh Data
+                                </button>
+                            </p>
+                        </div>
+                    `;
+                    
+                    // Add event listener to refresh button
+                    setTimeout(() => {
+                        const refreshBtn = document.getElementById('refreshActivityBtn');
+                        if (refreshBtn) {
+                            refreshBtn.addEventListener('click', function() {
+                                loadAgentActivity(parseInt(document.getElementById('activityPeriod').value), true);
+                            });
+                        }
+                    }, 100);
+                    
+                    return;
+                }
+                
+                // Generate HTML for agent cards
+                let html = '';
+                
+                agents.forEach(agent => {
+                    // Calculate efficiency (completed calls / total calls)
+                    const efficiency = agent.total_calls > 0 
+                        ? Math.round((agent.completed_calls / agent.total_calls) * 100) 
+                        : 0;
+                    
+                    html += `
+                        <div class="col-md-4">
+                            <div class="agent-card">
+                                <div class="agent-name">
+                                    <i class="fas fa-headset me-2"></i>${agent.agent_name}
+                                </div>
+                                <div class="agent-stats">
+                                    <div class="stat-item">
+                                        <div class="stat-label">Total Calls</div>
+                                        <div class="stat-value">${agent.total_calls}</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">Efficiency</div>
+                                        <div class="stat-value">${efficiency}%</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">Inbound</div>
+                                        <div class="stat-value">${agent.inbound_calls}</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">Outbound</div>
+                                        <div class="stat-value">${agent.outbound_calls}</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">Avg Duration</div>
+                                        <div class="stat-value">${agent.avg_duration} min</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">Missed</div>
+                                        <div class="stat-value">${agent.missed_calls}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                // Update the container
+                container.innerHTML = html;
+                
+                // Add period info
+                const periodInfo = document.createElement('div');
+                periodInfo.className = 'col-12 text-center mb-3';
+                periodInfo.innerHTML = `
+                    <small class="text-muted">
+                        Showing data from ${activityData.from_date} to ${activityData.to_date} 
+                        (${activityData.period_days} days) · Total calls: ${activityData.total_calls}
+                    </small>
+                `;
+                container.insertAdjacentElement('afterbegin', periodInfo);
+            }
+            
+            // Handle activity period change
+            document.getElementById('activityPeriod').addEventListener('change', function() {
+                loadAgentActivity(parseInt(this.value), false);
+            });
+            
+            // Setup manual refresh button
+            document.getElementById('manualRefreshBtn').addEventListener('click', function() {
+                loadAgentActivity(parseInt(document.getElementById('activityPeriod').value), true);
+            });
+            
             // Initialize page
             console.log("Initializing page...");
             
@@ -1256,6 +1536,9 @@
             // Load call data
             console.log("Loading call data with active tab:", activeTab);
             loadCallData();
+            
+            // Load agent activity data (just for today by default for faster results)
+            loadAgentActivity(1);
         });
     </script>
 </body>

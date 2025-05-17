@@ -36,13 +36,6 @@ client = OpenAI(api_key=api_key)
 
 # Dialpad API Configuration
 DIALPAD_API_TOKEN = os.getenv("DIALPAD_API_TOKEN", "pZcxnhANRfWWwU9G754vaSQp3huh5bmtUmchFQusrpxBjxZJkzYPVuUHJGZGjT3Mrs8Cj58Dph4uLHMBRbW2pxEHpt2u8Tdv5Ny5")
-
-# Import and register Dialpad routes blueprint
-from dialpad_routes import dialpad_routes, init_api
-app.register_blueprint(dialpad_routes)
-
-# Initialize Dialpad API
-dialpad_api = init_api()
 AUTOXPRESS_DEPT_ID = "4869792674824192"
 
 # Authorized AutoXpress agent IDs
