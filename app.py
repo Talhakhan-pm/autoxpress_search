@@ -11,7 +11,7 @@ import difflib
 import datetime
 import logging
 from functools import lru_cache
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect
 from dotenv import load_dotenv
 from openai import OpenAI
 from vehicle_validation import has_vehicle_info, get_missing_info_message

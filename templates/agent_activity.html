@@ -231,31 +231,38 @@
         <!-- Call Handling Information Alert -->
         <div class="alert alert-info mb-4">
             <h5 class="alert-heading"><i class="fas fa-info-circle me-2"></i>About Call Handling</h5>
-            <p>This dashboard shows only <strong>completed calls</strong> handled by each agent. When an inbound call comes to the department, Dialpad rings multiple agents simultaneously, but only the agent who answered is credited with the call.</p>
-            <p class="mb-0"><strong>Note:</strong> Missed calls are not shown in this view to avoid confusion. The metrics focus on actual agent activity rather than missed opportunities.</p>
+            <p>This dashboard shows all call activity in the AutoXpress department. When an inbound call comes to the department, Dialpad rings multiple agents simultaneously, but only the agent who answered is credited with the call.</p>
+            <p class="mb-0"><strong>Note:</strong> Missed calls are deduplicated to show each customer call only once, regardless of how many agents were initially called.</p>
         </div>
 
         <!-- Stats Cards -->
         <div class="row mb-4">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="stats-card stats-inbound">
                     <h4><i class="fas fa-phone-alt me-2"></i>Inbound Calls</h4>
                     <div class="value" id="inboundCount">0</div>
                     <div class="small">Completed calls</div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="stats-card stats-outbound">
                     <h4><i class="fas fa-phone-volume me-2"></i>Outbound Calls</h4>
                     <div class="value" id="outboundCount">0</div>
                     <div class="small">Completed calls</div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
+                <div class="stats-card stats-missed">
+                    <h4><i class="fas fa-phone-slash me-2"></i>Missed Calls</h4>
+                    <div class="value" id="missedCount">0</div>
+                    <div class="small">Not answered</div>
+                </div>
+            </div>
+            <div class="col-md-3">
                 <div class="stats-card stats-total">
                     <h4><i class="fas fa-chart-line me-2"></i>Total Calls</h4>
                     <div class="value" id="totalCount">0</div>
-                    <div class="small">All completed calls</div>
+                    <div class="small">All call interactions</div>
                 </div>
             </div>
         </div>
@@ -557,24 +564,37 @@
                 // Calculate stats from agents data
                 let inboundTotal = 0;
                 let outboundTotal = 0;
-                let completedTotal = 0;
+                let missedTotal = 0;
+                let totalCalls = 0;
+                
+                // Check if we have the new missed_calls field in the data
+                if (activityData.missed_calls !== undefined) {
+                    missedTotal = activityData.missed_calls || 0;
+                }
                 
                 if (activityData.agents && activityData.agents.length > 0) {
                     activityData.agents.forEach(agent => {
-                        // Only count completed calls (not missed)
-                        inboundTotal += (agent.inbound_calls && agent.call_type == "inbound" && agent.status != "missed") ? agent.inbound_calls : 0;
-                        outboundTotal += (agent.outbound_calls && agent.call_type == "outbound" && agent.status != "missed") ? agent.outbound_calls : 0;
-                        completedTotal += agent.completed_calls || 0;
+                        // Count completed calls
+                        inboundTotal += (agent.inbound_calls) ? agent.inbound_calls : 0;
+                        outboundTotal += (agent.outbound_calls) ? agent.outbound_calls : 0;
                     });
+                }
+                
+                // For backward compatibility
+                if (activityData.total_completed_calls !== undefined) {
+                    let completedTotal = activityData.total_completed_calls || 0;
+                    totalCalls = completedTotal + missedTotal;
+                } else if (activityData.total_calls !== undefined) {
+                    totalCalls = activityData.total_calls || 0;
                 } else {
-                    // Use activity data totals if available
-                    completedTotal = activityData.total_calls || 0;
+                    totalCalls = inboundTotal + outboundTotal + missedTotal;
                 }
                 
                 // Update the stats cards
                 document.getElementById('inboundCount').textContent = inboundTotal;
                 document.getElementById('outboundCount').textContent = outboundTotal;
-                document.getElementById('totalCount').textContent = completedTotal;
+                document.getElementById('missedCount').textContent = missedTotal;
+                document.getElementById('totalCount').textContent = totalCalls;
             }
             
             // Initialize the page

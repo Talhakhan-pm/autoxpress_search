@@ -58,14 +58,17 @@ class DialpadAPI:
         
         # Cache for user information (agent names)
         self.user_cache = {}
+        
+        # Track missed calls count from deduplication
+        self.missed_calls_count = 0
     
     def deduplicate_calls(self, calls: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Deduplicate call records that refer to the same actual call
         
         When an inbound call rings multiple agents, Dialpad API returns a separate 
-        call record for each agent. This function groups these records by call_id 
-        and keeps only the most relevant record.
+        call record for each agent. This function groups these records by entry_point_call_id
+        and keeps only the most relevant call record from each group.
         
         Args:
             calls: List of call records from Dialpad API
@@ -78,86 +81,215 @@ class DialpadAPI:
             
         logger.info(f"Starting deduplication of {len(calls)} call records")
         
-        # First, identify the key we'll use for grouping calls
-        # Some calls may have call_id, others may use id field
-        call_id_key = "call_id"
-        if not any(call.get("call_id") for call in calls[:min(10, len(calls))]):
-            # If the first few calls don't have call_id, try using 'id' instead
-            call_id_key = "id"
-            logger.info(f"Using '{call_id_key}' as the call identifier field")
-        
-        # Group calls by call_id/id and call direction
-        # We group by direction too because the same call_id might be used 
-        # for both incoming and outgoing legs of a call
-        call_groups = defaultdict(list)
+        # Step 1: Filter out non-user targets
+        user_calls = []
         for call in calls:
-            call_id = str(call.get(call_id_key, ""))
-            direction = call.get("direction", "unknown")
+            target = call.get("target", {})
+            if target.get("type") == "user":
+                user_calls.append(call)
             
-            # Skip calls without an ID
-            if not call_id:
-                continue
-                
-            # Create a composite key with ID and direction
-            group_key = f"{call_id}_{direction}"
-            call_groups[group_key].append(call)
+        if len(user_calls) < len(calls):
+            logger.info(f"Filtered out {len(calls) - len(user_calls)} non-user-targeted calls")
         
-        logger.info(f"Grouped {len(calls)} call records into {len(call_groups)} unique calls")
+        # Step 2: Group calls by entry_point_call_id
+        call_groups = defaultdict(list)
         
-        # Process each group of calls with the same ID and direction
-        unique_calls = []
-        for group_key, call_group in call_groups.items():
-            if len(call_group) == 1:
-                # Only one record, no need to process
-                unique_calls.append(call_group[0])
-                continue
+        # Track calls with known entry_point_call_id
+        calls_with_entry_point = []
+        calls_without_entry_point = []
+        
+        for call in user_calls:
+            # Try to use entry_point_call_id as the primary group key
+            entry_point_id = call.get("entry_point_call_id")
             
-            # If we have multiple records for the same call, check if any were answered
-            # (have a non-zero duration)
-            answered_calls = []
-            for call in call_group:
-                duration = call.get("duration", 0)
-                # Handle different duration formats
-                try:
-                    if isinstance(duration, str) and duration.strip():
-                        duration = float(duration.replace(',', ''))
-                    elif isinstance(duration, (int, float)):
-                        duration = float(duration)
-                    else:
-                        duration = 0
-                except (ValueError, TypeError):
-                    duration = 0
-                
-                if duration > 0:
-                    answered_calls.append(call)
-            
-            if answered_calls:
-                # If any instance was answered, keep only that one
-                # Sort by duration in case multiple agents handled parts of the same call
-                answered_calls.sort(key=lambda c: float(c.get("duration", 0))
-                                  if isinstance(c.get("duration"), (int, float, str)) else 0, 
-                                  reverse=True)
-                unique_calls.append(answered_calls[0])
-                logger.debug(f"Keeping answered call with duration {answered_calls[0].get('duration', 0)}")
+            if entry_point_id:
+                # Add to proper group and track
+                call_groups[str(entry_point_id)].append(call)
+                calls_with_entry_point.append(call)
             else:
-                # If all instances have duration = 0 (no one answered), keep just one
-                # Preferably one with a valid agent
-                valid_agent_calls = [c for c in call_group if c.get("agent_id") or 
-                                   (c.get("target", {}).get("type") == "user" and c.get("target", {}).get("id"))]
-                
-                if valid_agent_calls:
-                    unique_calls.append(valid_agent_calls[0])
-                    logger.debug(f"Keeping missed call with agent {valid_agent_calls[0].get('agent_id')}")
-                else:
-                    # If no valid agent, just keep the first one
-                    unique_calls.append(call_group[0])
-                    logger.debug(f"Keeping first missed call in group (no valid agent)")
+                # Keep track of calls missing entry_point_id for secondary grouping
+                calls_without_entry_point.append(call)
         
-        reduction = len(calls) - len(unique_calls)
+        logger.info(f"Found {len(calls_with_entry_point)} calls with entry_point_call_id and {len(calls_without_entry_point)} without")
+        
+        # Secondary grouping by customer contact and timestamp for calls without entry_point_id
+        if calls_without_entry_point:
+            # Group by customer phone number and timestamp window (within 3 minutes)
+            customer_groups = defaultdict(list)
+            
+            for call in calls_without_entry_point:
+                # Get direction and timestamp
+                direction = call.get("direction", "unknown")
+                timestamp_ms = call.get("date_started", 0)
+                
+                # Get customer phone number
+                phone = None
+                if call.get("contact") and call["contact"].get("phone"):
+                    phone = call["contact"]["phone"]
+                
+                # Create group key if we have phone and timestamp
+                if phone and timestamp_ms:
+                    # Round timestamp to 3-minute window (180000 ms)
+                    rounded_ts = int(int(timestamp_ms) / 180000) * 180000
+                    group_key = f"{phone}_{direction}_{rounded_ts}"
+                    
+                    # Add to customer group
+                    customer_groups[group_key].append(call)
+            
+            # Process each customer group and add to main call_groups dictionary
+            for group_key, group_calls in customer_groups.items():
+                if len(group_calls) > 1:
+                    # If we have multiple calls in the same 3-minute window to the same customer
+                    # treat them as part of the same interaction
+                    fallback_group_id = f"fallback_{group_key}"
+                    call_groups[fallback_group_id] = group_calls
+                    logger.debug(f"Created fallback group {fallback_group_id} with {len(group_calls)} calls")
+                else:
+                    # For single calls, just add them directly using their call_id
+                    call = group_calls[0]
+                    call_id = call.get("call_id", call.get("id", ""))
+                    if call_id:
+                        call_groups[f"single_{call_id}"].append(call)
+                    
+        # Add any remaining calls (those without entry_point_id, phone, or timestamp)
+        for call in calls_without_entry_point:
+            if not any(call in group for group in call_groups.values()):
+                call_id = call.get("call_id", call.get("id", "")) 
+                if call_id:
+                    call_groups[f"orphan_{call_id}"].append(call)
+        
+        logger.info(f"Grouped {len(user_calls)} call records into {len(call_groups)} unique call groups")
+        
+        # Function to normalize call duration
+        def normalize_duration(duration_raw):
+            try:
+                if isinstance(duration_raw, str) and duration_raw.strip():
+                    if duration_raw.replace('.', '', 1).isdigit():
+                        return float(duration_raw)
+                    else:
+                        return 0
+                elif isinstance(duration_raw, (int, float)):
+                    return float(duration_raw)
+                else:
+                    return 0
+            except (ValueError, TypeError):
+                return 0
+                
+        # Step 3: For each group, find the best call to keep
+        unique_calls = []
+        missed_calls_count = 0
+        
+        for group_id, group_calls in call_groups.items():
+            # If there's only one call in the group, just keep it
+            if len(group_calls) == 1:
+                unique_calls.append(group_calls[0])
+                # Check if it's a missed call
+                duration = normalize_duration(group_calls[0].get("duration", 0))
+                date_connected = group_calls[0].get("date_connected", None)
+                
+                if duration == 0 and not date_connected:
+                    missed_calls_count += 1
+                continue
+            
+            # For multiple calls in a group, find the best one to keep
+            # First, extract and normalize call attributes
+            processed_calls = []
+            for call in group_calls:
+                duration = normalize_duration(call.get("duration", 0))
+                date_connected = call.get("date_connected", None)
+                date_started = call.get("date_started", 0)
+                
+                # Get agent information
+                agent_name = "Unknown"
+                target = call.get("target", {})
+                if target.get("name"):
+                    agent_name = target.get("name")
+                if call.get("agent_name"):
+                    agent_name = call.get("agent_name")
+                
+                # Store all processed data
+                processed_calls.append({
+                    "call": call,
+                    "duration": duration,
+                    "date_connected": date_connected,
+                    "date_started": date_started,
+                    "agent_name": agent_name,
+                    "has_known_agent": agent_name != "Unknown"
+                })
+                
+            # Check for calls with date_connected (definitively answered)
+            # In Dialpad API, date_connected is the most reliable indicator that a call was answered
+            connected_calls = [c for c in processed_calls if c["date_connected"]]
+            
+            if connected_calls:
+                # 1. Primary sort: Prefer calls with named agents
+                known_agent_answers = [c for c in connected_calls if c["has_known_agent"]]
+                
+                if known_agent_answers:
+                    # 2. Secondary sort: Sort by duration (longest first)
+                    known_agent_answers.sort(key=lambda c: c["duration"], reverse=True)
+                    unique_calls.append(known_agent_answers[0]["call"])
+                    logger.debug(f"Keeping answered call with known agent '{known_agent_answers[0]['agent_name']}' and duration {known_agent_answers[0]['duration']}")
+                else:
+                    # If no known agent answered, use longest duration call
+                    connected_calls.sort(key=lambda c: c["duration"], reverse=True)
+                    unique_calls.append(connected_calls[0]["call"])
+                    logger.debug(f"Keeping answered call with unknown agent and duration {connected_calls[0]['duration']}")
+            
+            # Handle ambiguous case: duration > 0 but no date_connected
+            # This is unusual in Dialpad API and might represent a call that was
+            # picked up by the system but not properly connected to an agent
+            elif any(c["duration"] > 0 for c in processed_calls):
+                duration_calls = [c for c in processed_calls if c["duration"] > 0]
+                
+                # These calls have duration but no date_connected (ambiguous)
+                # Still prefer calls with known agents for better display
+                known_agent_duration = [c for c in duration_calls if c["has_known_agent"]]
+                
+                if known_agent_duration:
+                    # Sort by duration (longest first)
+                    known_agent_duration.sort(key=lambda c: c["duration"], reverse=True)
+                    unique_calls.append(known_agent_duration[0]["call"])
+                    logger.warning(f"Ambiguous call state: duration={known_agent_duration[0]['duration']} but no date_connected. Keeping best record with agent '{known_agent_duration[0]['agent_name']}'")
+                else:
+                    # No known agent, sort by duration
+                    duration_calls.sort(key=lambda c: c["duration"], reverse=True)
+                    unique_calls.append(duration_calls[0]["call"])
+                    logger.warning(f"Ambiguous call state: duration={duration_calls[0]['duration']} but no date_connected. Keeping record with longest duration.")
+                
+                # Count this as a missed call since there's no date_connected
+                missed_calls_count += 1
+            
+            else:
+                # This is a missed call - keep one representative call
+                # Prefer calls with known agent information
+                known_agent_calls = [c for c in processed_calls if c["has_known_agent"]]
+                
+                if known_agent_calls:
+                    # For missed calls, prefer the most recent one
+                    known_agent_calls.sort(key=lambda c: c["date_started"], reverse=True)
+                    unique_calls.append(known_agent_calls[0]["call"])
+                    logger.debug(f"Keeping missed call with known agent '{known_agent_calls[0]['agent_name']}'")
+                else:
+                    # Sort by timestamp (newest first)
+                    processed_calls.sort(key=lambda c: c["date_started"], reverse=True)
+                    unique_calls.append(processed_calls[0]["call"])
+                    logger.debug(f"Keeping missed call with no agent info, timestamp {processed_calls[0]['date_started']}")
+                
+                # Count this as a missed call
+                missed_calls_count += 1
+        
+        reduction = len(user_calls) - len(unique_calls)
+        
         if reduction > 0:
-            logger.info(f"Deduplicated {len(calls)} call records to {len(unique_calls)} unique calls (removed {reduction} duplicates)")
+            logger.info(f"Deduplicated {len(user_calls)} call records to {len(unique_calls)} unique calls (removed {reduction} duplicates)")
+            logger.info(f"Identified {missed_calls_count} unique missed calls")
         else:
-            logger.info(f"No duplicates found among {len(calls)} call records")
+            logger.info(f"No duplicates found among {len(user_calls)} call records")
+            logger.info(f"Identified {missed_calls_count} unique missed calls")
+        
+        # Store the missed calls count for use in the response
+        self.missed_calls_count = missed_calls_count
         
         return unique_calls
 
@@ -600,11 +732,17 @@ class DialpadAPI:
             duration_minutes = 0
             logger.warning(f"Could not parse duration: {duration_seconds}, using 0")
         
-        # Determine call status based on duration and state
+        # Determine call status based on duration and date_connected
         call_state = call_data.get("state", "")
+        date_connected = call_data.get("date_connected")
         
-        # In Dialpad, if duration is 0 and state is hangup, it's likely a missed call
-        status = "missed" if duration_minutes == 0 and call_state == "hangup" else "completed"
+        # A call is definitively completed only if it has date_connected
+        # This is the most reliable indicator in Dialpad API
+        # 
+        # Note: duration > 0 without date_connected is ambiguous and might
+        # represent a call that was picked up by the system but not by an agent
+        is_completed = (date_connected is not None)
+        status = "completed" if is_completed else "missed"
         
         # Create processed call record
         processed_call = {
@@ -705,7 +843,9 @@ class DialpadAPI:
         
         return {
             "agents": activity_list,
-            "total_calls": total_completed_calls,
+            "total_completed_calls": total_completed_calls,
+            "missed_calls": self.missed_calls_count,
+            "total_calls": total_completed_calls + self.missed_calls_count,
             "period_days": days_back,
             "from_date": (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d"),
             "to_date": datetime.now().strftime("%Y-%m-%d")

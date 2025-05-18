@@ -131,14 +131,34 @@ def get_dialpad_calls():
         inbound_count = len([c for c in calls if c.get('direction') == 'inbound'])
         outbound_count = len([c for c in calls if c.get('direction') == 'outbound'])
         
-        # Calculate missed calls - in Dialpad, missed calls typically have duration of 0
-        # and state is 'hangup'
+        # Calculate missed calls
         def is_missed(call):
-            return (call.get('duration', 0) == 0 and 
-                   call.get('state') == 'hangup')
+            try:
+                duration = call.get('duration', 0)
+                # Handle different duration formats
+                if isinstance(duration, str) and duration.strip():
+                    duration = float(duration.replace(',', ''))
+                elif isinstance(duration, (int, float)):
+                    duration = float(duration)
+                else:
+                    duration = 0
+                
+                # A call is definitively completed only if it has date_connected
+                # This is the most reliable indicator in Dialpad API
+                #
+                # Note: duration > 0 without date_connected is ambiguous and will
+                # be considered missed to be conservative
+                return not (call.get('date_connected') is not None)
+            except:
+                # If any error in parsing, assume not missed
+                return False
         
-        missed_count = len([c for c in calls if is_missed(c)])
-        completed_count = len(calls) - missed_count
+        # Count calls as completed or missed
+        missed_calls = [c for c in calls if is_missed(c)]
+        completed_calls = [c for c in calls if not is_missed(c)]
+        
+        missed_count = len(missed_calls)
+        completed_count = len(completed_calls)
         
         stats = {
             'total_count': len(calls),
