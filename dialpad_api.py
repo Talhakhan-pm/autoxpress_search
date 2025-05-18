@@ -293,6 +293,43 @@ class DialpadAPI:
         
         return unique_calls
 
+    def fetch_agent_calls_by_id_and_date_range(self, agent_id: str, start_date: datetime, end_date: datetime, max_pages: int = 2) -> List[Dict[str, Any]]:
+        """
+        Fetch call records for a specific agent by ID for the specified date range
+        
+        Args:
+            agent_id: Dialpad ID of the agent
+            start_date: Start date for fetching calls
+            end_date: End date for fetching calls
+            max_pages: Maximum number of pages to fetch (to avoid long loading times)
+            
+        Returns:
+            List of call records
+        """
+        # Ensure dates are not in the future
+        current_time = datetime.now()
+        
+        if end_date > current_time:
+            end_date = current_time
+            logger.warning(f"End date was in the future for agent {agent_id}, using current time instead")
+            
+        if start_date > current_time:
+            start_date = current_time - timedelta(days=1)
+            logger.warning(f"Start date was in the future for agent {agent_id}, using yesterday instead")
+            
+        # Ensure start_date is before end_date
+        if start_date > end_date:
+            start_date = end_date - timedelta(days=1)
+            logger.warning(f"Start date was after end date for agent {agent_id}, using day before end date instead")
+        
+        # Calculate start/end times as milliseconds since epoch (which is what Dialpad API expects)
+        end_time_ms = int(end_date.timestamp() * 1000)
+        start_time_ms = int(start_date.timestamp() * 1000)
+        
+        logger.info(f"Fetching calls for agent {agent_id} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        
+        return self._fetch_agent_calls_by_timeframe(agent_id, start_time_ms, end_time_ms, max_pages)
+    
     def fetch_agent_calls_by_id(self, agent_id: str, days_back: int = 7, max_pages: int = 2) -> List[Dict[str, Any]]:
         """
         Fetch call records for a specific agent by ID for the specified time period
@@ -306,9 +343,25 @@ class DialpadAPI:
             List of call records
         """
         # Calculate start/end times as milliseconds since epoch (which is what Dialpad API expects)
-        end_time_ms = int(datetime.now().timestamp() * 1000)  # Current time
-        start_time_ms = int((datetime.now() - timedelta(days=days_back)).timestamp() * 1000)  # days_back days ago
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days_back)
         
+        return self.fetch_agent_calls_by_id_and_date_range(agent_id, start_date, end_date, max_pages)
+    
+    def _fetch_agent_calls_by_timeframe(self, agent_id: str, start_time_ms: int, end_time_ms: int, max_pages: int = 2) -> List[Dict[str, Any]]:
+        """
+        Fetch call records for a specific agent by ID for the specified time frame
+        
+        Args:
+            agent_id: Dialpad ID of the agent
+            start_time_ms: Start time in milliseconds since epoch
+            end_time_ms: End time in milliseconds since epoch
+            max_pages: Maximum number of pages to fetch (to avoid long loading times)
+            
+        Returns:
+            List of call records
+        """
+        # Calculate start/end times as milliseconds since epoch (which is what Dialpad API expects)
         url = f"{self.base_url}/call"
         params = {
             "target_id": agent_id,
@@ -319,14 +372,14 @@ class DialpadAPI:
             "limit": 50  # Increase page size to get more records per request
         }
         
-        logger.info(f"Fetching calls for agent {agent_id} from {datetime.fromtimestamp(start_time_ms/1000)} to {datetime.fromtimestamp(end_time_ms/1000)}")
+        logger.info(f"Fetching calls for agent {agent_id} using timeframe")
         
         all_calls = []
         page_count = 0
         
         try:
             # Get first page of results
-            response = requests.get(url, params=params, timeout=30)
+            response = requests.get(url, params=params, timeout=600)
             page_count += 1
             
             if response.status_code != 200:
@@ -345,7 +398,7 @@ class DialpadAPI:
                 
                 # Get next page
                 logger.info(f"Fetching page {page_count+1} for agent {agent_id} with cursor: {cursor}")
-                response = requests.get(url, params=params, timeout=30)
+                response = requests.get(url, params=params, timeout=600)
                 page_count += 1
                 
                 if response.status_code != 200:
@@ -368,29 +421,47 @@ class DialpadAPI:
             logger.error(f"Error fetching agent calls: {e}")
             return []
 
-    def fetch_department_calls(self, days_back: int = 7, max_pages: int = 3) -> List[Dict[str, Any]]:
+    def fetch_department_calls_by_date_range(self, start_date: datetime, end_date: datetime, max_pages: int = 3) -> List[Dict[str, Any]]:
         """
-        Fetch call records for the department for the specified time period
+        Fetch call records for the department for the specified date range
         
         This implementation attempts both methods:
         1. Getting calls for the entire department (with deduplication)
         2. Getting calls for each individual agent separately (as a backup)
         
         Args:
-            days_back: Number of days to look back for call records
+            start_date: Start date for fetching calls
+            end_date: End date for fetching calls
             max_pages: Maximum number of pages to fetch (to avoid long loading times)
             
         Returns:
             List of call records
         """
-        logger.info(f"Fetching calls for the past {days_back} days using optimized method")
+        # Ensure dates are not in the future
+        current_time = datetime.now()
+        
+        if end_date > current_time:
+            end_date = current_time
+            logger.warning("End date was in the future, using current time instead")
+            
+        if start_date > current_time:
+            start_date = current_time - timedelta(days=1)
+            logger.warning("Start date was in the future, using yesterday instead")
+            
+        # Ensure start_date is before end_date
+        if start_date > end_date:
+            start_date = end_date - timedelta(days=1)
+            logger.warning("Start date was after end date, using day before end date instead")
+        
+        days_between = (end_date - start_date).days + 1
+        logger.info(f"Fetching calls from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} ({days_between} days) using optimized method")
         
         # Update user cache first
         self.fetch_department_operators()
         
         # Calculate start/end times as milliseconds since epoch
-        end_time_ms = int(datetime.now().timestamp() * 1000)  # Current time
-        start_time_ms = int((datetime.now() - timedelta(days=days_back)).timestamp() * 1000)  # days_back days ago
+        end_time_ms = int(end_date.timestamp() * 1000)
+        start_time_ms = int(start_date.timestamp() * 1000)
         
         # APPROACH 1: Get calls for the entire department
         logger.info(f"APPROACH 1: Fetching calls for department {self.department_id}")
@@ -410,7 +481,7 @@ class DialpadAPI:
         
         try:
             # Get first page of results
-            response = requests.get(url, params=params, timeout=60)
+            response = requests.get(url, params=params, timeout=600)
             page_count += 1
             
             if response.status_code == 200:
@@ -422,7 +493,7 @@ class DialpadAPI:
                 cursor = data.get("cursor")
                 while cursor and page_count < max_pages:
                     params["cursor"] = cursor
-                    response = requests.get(url, params=params, timeout=60)
+                    response = requests.get(url, params=params, timeout=600)
                     page_count += 1
                     
                     if response.status_code != 200:
@@ -450,7 +521,7 @@ class DialpadAPI:
         for agent_name, agent_id in self.agent_ids.items():
             try:
                 logger.info(f"Fetching calls for agent {agent_name} ({agent_id})")
-                this_agent_calls = self.fetch_agent_calls_by_id(agent_id, days_back, max_pages)
+                this_agent_calls = self.fetch_agent_calls_by_id_and_date_range(agent_id, start_date, end_date, max_pages)
                 
                 # Add agent info to each call
                 for call in this_agent_calls:
@@ -479,6 +550,29 @@ class DialpadAPI:
         else:
             logger.info(f"Using APPROACH 2 (agent calls) which found more unique calls")
             return deduplicated_agent_calls
+    
+    def fetch_department_calls(self, days_back: int = 7, max_pages: int = 3) -> List[Dict[str, Any]]:
+        """
+        Fetch call records for the department for the specified time period
+        
+        This implementation attempts both methods:
+        1. Getting calls for the entire department (with deduplication)
+        2. Getting calls for each individual agent separately (as a backup)
+        
+        Args:
+            days_back: Number of days to look back for call records
+            max_pages: Maximum number of pages to fetch (to avoid long loading times)
+            
+        Returns:
+            List of call records
+        """
+        logger.info(f"Fetching calls for the past {days_back} days using optimized method")
+        
+        # Calculate date range
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days_back)
+        
+        return self.fetch_department_calls_by_date_range(start_date, end_date, max_pages)
             
     def fetch_department_operators(self) -> List[Dict[str, Any]]:
         """
@@ -585,45 +679,6 @@ class DialpadAPI:
         
         logger.info(f"Generated {len(calls)} synthetic calls for {operator_name}")
         return calls
-    
-    def fetch_agent_calls(self, agent_id: str, days_back: int = 7) -> List[Dict[str, Any]]:
-        """
-        Fetch call records for a specific agent for the specified time period
-        
-        Args:
-            agent_id: Dialpad ID of the agent
-            days_back: Number of days to look back for call records
-            
-        Returns:
-            List of call records
-        """
-        # Calculate start time (days_back days ago)
-        start_time = int((datetime.now() - timedelta(days=days_back)).timestamp())
-        
-        url = f"{self.base_url}/call"
-        params = {
-            "target_id": agent_id,
-            "target_type": "user",
-            "start_time": start_time,
-            "apikey": self.api_key
-        }
-        
-        try:
-            logger.info(f"Fetching calls for agent {agent_id}")
-            response = requests.get(url, params=params)
-            
-            if response.status_code != 200:
-                logger.error(f"Failed to fetch agent calls: {response.status_code} - {response.text}")
-                return []
-            
-            data = response.json()
-            calls = data.get("calls", [])
-            logger.info(f"Retrieved {len(calls)} call records for agent {agent_id}")
-            return calls
-            
-        except Exception as e:
-            logger.error(f"Error fetching agent calls: {e}")
-            return []
     
     def fetch_users(self) -> List[Dict[str, Any]]:
         """
@@ -766,19 +821,20 @@ class DialpadAPI:
         
         return processed_call
     
-    def get_agent_activity(self, days_back: int = 1, max_pages: int = 2) -> Dict[str, Any]:
+    def get_agent_activity_by_date_range(self, start_date: datetime, end_date: datetime, max_pages: int = 2) -> Dict[str, Any]:
         """
-        Get aggregated agent activity data
+        Get aggregated agent activity data for a specific date range
         
         Args:
-            days_back: Number of days to look back for call records
+            start_date: Start date for fetching calls
+            end_date: End date for fetching calls
             max_pages: Maximum number of pages to fetch (to avoid long loading times)
             
         Returns:
             Dictionary with agent activity metrics
         """
         # Fetch all department calls with page limit (deduplication happens in fetch_department_calls)
-        calls = self.fetch_department_calls(days_back, max_pages)
+        calls = self.fetch_department_calls_by_date_range(start_date, end_date, max_pages)
         
         # Process and format calls
         processed_calls = [self.process_call_data(call) for call in calls]
@@ -841,12 +897,31 @@ class DialpadAPI:
         # Calculate the total number of completed calls
         total_completed_calls = len(completed_calls)
         
+        days_between = (end_date - start_date).days + 1
+        
         return {
             "agents": activity_list,
             "total_completed_calls": total_completed_calls,
             "missed_calls": self.missed_calls_count,
             "total_calls": total_completed_calls + self.missed_calls_count,
-            "period_days": days_back,
-            "from_date": (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d"),
-            "to_date": datetime.now().strftime("%Y-%m-%d")
+            "period_days": days_between,
+            "from_date": start_date.strftime("%Y-%m-%d"),
+            "to_date": end_date.strftime("%Y-%m-%d")
         }
+    
+    def get_agent_activity(self, days_back: int = 1, max_pages: int = 2) -> Dict[str, Any]:
+        """
+        Get aggregated agent activity data
+        
+        Args:
+            days_back: Number of days to look back for call records
+            max_pages: Maximum number of pages to fetch (to avoid long loading times)
+            
+        Returns:
+            Dictionary with agent activity metrics
+        """
+        # Calculate date range
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days_back)
+        
+        return self.get_agent_activity_by_date_range(start_date, end_date, max_pages)

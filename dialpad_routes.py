@@ -43,26 +43,71 @@ def get_agent_activity():
     Get agent activity metrics
     
     Query parameters:
-    - days: Number of days to look back (default: 7)
+    - start_date: Start date in YYYY-MM-DD format
+    - end_date: End date in YYYY-MM-DD format
+    - days: Number of days to look back (default: 1) - used if start_date/end_date not provided
     - refresh: Whether to refresh data from Dialpad API (default: false)
     - max_pages: Maximum number of pages to fetch from API (default: 3)
     """
     # Initialize API client
     api = init_api()
     try:
-        # Get query parameters
-        days = int(request.args.get('days', 1))  # Default to 1 day for quicker results
+        # Get query parameters for date range
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
         refresh = request.args.get('refresh', 'false').lower() == 'true'
         
-        # Limit days to reasonable values
-        if days < 1:
-            days = 1
-        elif days > 90:
-            days = 90
-            
-        # Calculate date range
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=days)
+        # Get days parameter upfront so it's available in all code paths
+        days = int(request.args.get('days', 1))  # Default to 1 day for quicker results
+        
+        # Current date and time (to avoid future dates)
+        current_date = datetime.now()
+        
+        # If date range is provided, use that instead of days parameter
+        if start_date_str and end_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+                end_date_parsed = datetime.strptime(end_date_str, '%Y-%m-%d')
+                
+                # Ensure end_date is not in the future
+                if end_date_parsed.date() > current_date.date():
+                    end_date_parsed = current_date
+                    logger.warning("End date was in the future, using current date instead")
+                
+                # Set end_date to end of day (23:59:59) but don't exceed current time
+                end_date = min(
+                    datetime.combine(end_date_parsed.date(), datetime.max.time()),
+                    current_date
+                )
+                
+                # Ensure start_date is not in the future
+                if start_date.date() > current_date.date():
+                    # Default to yesterday if start date is in the future
+                    start_date = current_date - timedelta(days=1)
+                    logger.warning("Start date was in the future, using yesterday instead")
+                
+                # Ensure start_date is before end_date
+                if start_date > end_date:
+                    start_date = end_date - timedelta(days=1)
+                    logger.warning("Start date was after end date, using day before end date instead")
+                
+            except ValueError as e:
+                logger.error(f"Invalid date format: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': f"Invalid date format: {e}"
+                }), 400
+        else:
+            # Fall back to days parameter if no date range provided
+            # Limit days to reasonable values
+            if days < 1:
+                days = 1
+            elif days > 90:
+                days = 90
+                
+            # Calculate date range based on days
+            end_date = current_date
+            start_date = end_date - timedelta(days=days)
         
         # Format dates for logging
         start_date_str = start_date.strftime('%Y-%m-%d')
@@ -73,11 +118,14 @@ def get_agent_activity():
         # Get max_pages (default to 2 for quick results)
         max_pages = int(request.args.get('max_pages', 2))
         
-        # Get max_timeout (default to 60 seconds)
-        max_timeout = int(request.args.get('max_timeout', 60))
+        # Get max_timeout (default to 600 seconds, 10 minutes)
+        max_timeout = int(request.args.get('max_timeout', 600))
         
-        # Get activity data directly from Dialpad API
-        activity_data = api.get_agent_activity(days, max_pages)
+        # Calculate days between dates for the API call
+        days_between = (end_date - start_date).days + 1
+        
+        # Get activity data directly from Dialpad API using date range
+        activity_data = api.get_agent_activity_by_date_range(start_date, end_date, max_pages)
             
         # Create response data
         response_data = {
@@ -105,27 +153,83 @@ def get_dialpad_calls():
     Get call records directly from Dialpad API
     
     Query parameters:
-    - days: Number of days to look back (default: 1)
+    - start_date: Start date in YYYY-MM-DD format
+    - end_date: End date in YYYY-MM-DD format
+    - days: Number of days to look back (default: 1) - used if start_date/end_date not provided
     - refresh: Whether to bypass cache (default: false)
     - max_pages: Maximum number of pages to fetch (default: 3)
     """
     # Initialize API client
     api = init_api()
     try:
-        # Get query parameters
-        days = int(request.args.get('days', 1))
+        # Get query parameters for date range
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
         refresh = request.args.get('refresh', 'false').lower() == 'true'
         max_pages = int(request.args.get('max_pages', 3))
         
-        # Limit days to reasonable values
-        if days < 1:
-            days = 1
-        elif days > 90:
-            days = 90
-            
-        # Fetch call data from Dialpad API
-        logger.info(f"Fetching Dialpad calls for the past {days} days (max_pages: {max_pages}, refresh: {refresh})")
-        calls = api.fetch_department_calls(days, max_pages)
+        # Calculate date range based on provided parameters
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=1)  # Default to 1 day ago
+        
+        # Get days parameter upfront so it's available in all code paths
+        days = int(request.args.get('days', 1))
+        
+        # Current date and time (to avoid future dates)
+        current_date = datetime.now()
+        
+        # If date range is provided, use that instead of days parameter
+        if start_date_str and end_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+                end_date_parsed = datetime.strptime(end_date_str, '%Y-%m-%d')
+                
+                # Ensure end_date is not in the future
+                if end_date_parsed.date() > current_date.date():
+                    end_date_parsed = current_date
+                    logger.warning("End date was in the future, using current date instead")
+                
+                # Set end_date to end of day (23:59:59) but don't exceed current time
+                end_date = min(
+                    datetime.combine(end_date_parsed.date(), datetime.max.time()),
+                    current_date
+                )
+                
+                # Ensure start_date is not in the future
+                if start_date.date() > current_date.date():
+                    # Default to yesterday if start date is in the future
+                    start_date = current_date - timedelta(days=1)
+                    logger.warning("Start date was in the future, using yesterday instead")
+                
+                # Ensure start_date is before end_date
+                if start_date > end_date:
+                    start_date = end_date - timedelta(days=1)
+                    logger.warning("Start date was after end date, using day before end date instead")
+                
+            except ValueError as e:
+                logger.error(f"Invalid date format: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': f"Invalid date format: {e}"
+                }), 400
+        else:
+            # Fall back to days parameter if no date range provided
+            # Limit days to reasonable values
+            if days < 1:
+                days = 1
+            elif days > 90:
+                days = 90
+                
+            # Calculate date range based on days
+            end_date = current_date
+            start_date = end_date - timedelta(days=days)
+        
+        # Calculate days between dates for logging
+        days_between = (end_date - start_date).days + 1
+        
+        # Fetch call data from Dialpad API using date range
+        logger.info(f"Fetching Dialpad calls from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} ({days_between} days, max_pages: {max_pages}, refresh: {refresh})")
+        calls = api.fetch_department_calls_by_date_range(start_date, end_date, max_pages)
         
         # Calculate basic stats
         inbound_count = len([c for c in calls if c.get('direction') == 'inbound'])
@@ -173,7 +277,11 @@ def get_dialpad_calls():
             'success': True,
             'calls': calls,
             'stats': stats,
-            'days': days
+            'days': days_between,
+            'date_range': {
+                'start_date': start_date.strftime('%Y-%m-%d'),
+                'end_date': end_date.strftime('%Y-%m-%d')
+            }
         })
         
     except Exception as e:

@@ -292,16 +292,15 @@
                         <option value="missed">Missed</option>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label class="form-label">Date Range</label>
-                    <select class="form-select" id="filterDateRange">
-                        <option value="1">Today</option>
-                        <option value="3">Last 3 days</option>
-                        <option value="7">Last 7 days</option>
-                        <option value="14">Last 14 days</option>
-                    </select>
+                    <div class="d-flex align-items-center">
+                        <input type="date" class="form-control form-control-sm me-2" id="startDate" aria-label="Start date">
+                        <span class="text-muted small">to</span>
+                        <input type="date" class="form-control form-control-sm ms-2" id="endDate" aria-label="End date">
+                    </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">Search</label>
                     <input type="text" class="form-control" id="searchInput" placeholder="Search...">
                 </div>
@@ -462,9 +461,23 @@
                 renderCallTable();
             });
             
-            filterDateRange.addEventListener('change', function() {
-                loadCallData(true);
-            });
+            // Initialize date pickers with default values
+            const today = new Date();
+            
+            // Format current date in YYYY-MM-DD format
+            const formatDate = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+            
+            const oneWeekAgo = new Date(today);
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            
+            // Set date values - ensure no future dates
+            document.getElementById('endDate').value = formatDate(today);
+            document.getElementById('startDate').value = formatDate(oneWeekAgo);
             
             searchInput.addEventListener('input', debounce(function() {
                 filterCalls();
@@ -473,7 +486,21 @@
             
             refreshBtn.addEventListener('click', function() {
                 // Force refresh from API when refresh button is clicked
-                loadCallData(true);
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                
+                if (!startDate || !endDate) {
+                    alert('Please select both start and end dates');
+                    return;
+                }
+                
+                // Validate date range
+                if (new Date(startDate) > new Date(endDate)) {
+                    alert('Start date cannot be after end date');
+                    return;
+                }
+                
+                loadCallDataByDateRange(startDate, endDate, true);
             });
             
             prevPageBtn.addEventListener('click', function() {
@@ -546,8 +573,7 @@
             const CACHE_EXPIRY = 1000 * 60 * 60; // 1 hour cache expiry
             
             // Local storage cache helper functions
-            function getCachedData(days) {
-                const cacheKey = `${CACHE_KEY_PREFIX}${days}`;
+            function getCachedData(cacheKey) {
                 try {
                     const cachedItem = localStorage.getItem(cacheKey);
                     if (!cachedItem) return null;
@@ -568,8 +594,7 @@
                 }
             }
             
-            function setCachedData(days, data) {
-                const cacheKey = `${CACHE_KEY_PREFIX}${days}`;
+            function setCachedData(cacheKey, data) {
                 try {
                     const cacheData = {
                         data: data,
@@ -577,13 +602,13 @@
                         timestamp: new Date().toISOString()
                     };
                     localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-                    console.log(`Cached data for ${days} days`);
+                    console.log(`Cached data for key: ${cacheKey}`);
                 } catch (error) {
                     console.error('Error writing to cache:', error);
                 }
             }
             
-            function loadCallData(forceRefresh = false) {
+            function loadCallDataByDateRange(startDate, endDate, forceRefresh = false) {
                 // Show loading state
                 document.getElementById('inboundCallsTable').innerHTML = `
                     <tr>
@@ -607,14 +632,14 @@
                     </tr>
                 `;
                 
-                // Get date range
-                const days = parseInt(filterDateRange.value) || 1;
+                // Create cache key based on date range
+                const cacheKey = `${CACHE_KEY_PREFIX}${startDate}_${endDate}`;
                 
                 // Check cache first if not forcing refresh
                 if (!forceRefresh) {
-                    const cachedData = getCachedData(days);
+                    const cachedData = getCachedData(cacheKey);
                     if (cachedData) {
-                        console.log(`Using cached call data for ${days} days`);
+                        console.log(`Using cached call data for ${startDate} to ${endDate}`);
                         
                         // Process cached data
                         allCalls = processCalls(cachedData.calls);
@@ -631,11 +656,11 @@
                         toast.show();
                         return;
                     }
-                    console.log(`No cache found for ${days} days, fetching from API...`);
+                    console.log(`No cache found for ${startDate} to ${endDate}, fetching from API...`);
                 }
                 
                 // Fetch call data from API
-                fetch(`/api/dialpad-calls?days=${days}&refresh=${forceRefresh}`)
+                fetch(`/api/dialpad-calls?start_date=${startDate}&end_date=${endDate}&refresh=${forceRefresh}`)
                     .then(response => {
                         if (!response.ok) {
                             throw new Error('Network response was not ok');
@@ -647,7 +672,7 @@
                         
                         if (data.success) {
                             // Cache the API response
-                            setCachedData(days, data);
+                            setCachedData(cacheKey, data);
                             
                             // Process call data
                             allCalls = processCalls(data.calls);
@@ -880,7 +905,29 @@
             }
             
             // Initialize the page
-            loadCallData();
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            // Add click handler to refresh button
+            document.getElementById('refreshBtn').addEventListener('click', function() {
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                
+                if (!startDate || !endDate) {
+                    alert('Please select both start and end dates');
+                    return;
+                }
+                
+                if (new Date(startDate) > new Date(endDate)) {
+                    alert('Start date cannot be after end date');
+                    return;
+                }
+                
+                loadCallDataByDateRange(startDate, endDate, true);
+            });
+            
+            // Load initial data
+            loadCallDataByDateRange(startDate, endDate, false);
         });
     </script>
 </body>
