@@ -178,11 +178,21 @@ search_terms = result["search_terms"]
 
 ## Documentation
 
-For more detailed information, see these documentation files:
+The project documentation is organized into the following sections:
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) - Detailed system architecture
-- [FIELD_BASED_SEARCH.md](FIELD_BASED_SEARCH.md) - Field-based search implementation
-- [IMPROVEMENT_GUIDE.md](IMPROVEMENT_GUIDE.md) - Guidelines for safe improvements
-- [REFACTORING.md](REFACTORING.md) - Product rendering refactoring details
-- [PART_NUMBER_AI_ENHANCEMENT.md](part_number_ai_enhancement.md) - Part number search AI enhancement
-- [DIALPAD_DASHBOARD.md](DIALPAD_DASHBOARD.md) - Dialpad call dashboard documentation
+### Features Documentation
+- [Dialpad Dashboard](docs/features/DIALPAD_DASHBOARD.md)
+- [Payment Link Generation](docs/features/PAYMENT_LINK.md)
+- [Location Lookup](docs/features/LOCATION_LOOKUP.md)
+- [Field-Based Search](docs/features/FIELD_BASED_SEARCH.md)
+- [Part Number AI Enhancement](docs/features/PART_NUMBER_AI_ENHANCEMENT.md)
+
+### Architecture Documentation
+- [System Architecture](docs/architecture/ARCHITECTURE.md)
+- [Refactoring Guide](docs/architecture/REFACTORING.md)
+- [Improvement Guide](docs/architecture/IMPROVEMENT_GUIDE.md)
+
+### API Documentation
+- [API Reference](docs/api/API_REFERENCE.md)
+
+For a complete overview of all documentation, see the [Documentation Index](docs/README.md).
