@@ -57,11 +57,9 @@ class DialpadClient:
                 params["cursor"] = cursor
                 
             # Construct URL with params
-            url_parts = []
-            for key, value in params.items():
-                url_parts.append(f"{key}={value}")
-                
-            url = f"https://dialpad.com/api/v2/call?{'&'.join(url_parts)}"
+            # Use urllib.parse.urlencode to properly encode URL parameters
+            from urllib.parse import urlencode
+            url = f"https://dialpad.com/api/v2/call?{urlencode(params)}"
                 
             try:
                 response = requests.get(url, headers=self.headers)

@@ -273,9 +273,22 @@ The dashboard integrates with the Dialpad API v2, specifically the `/v2/call` en
 
 - `target_type=user` - To specify we're looking for calls for a specific user
 - `target_id` - The Dialpad user ID of the agent
-- `started_after` - Unix timestamp in milliseconds for the start date
-- `started_before` - Unix timestamp in milliseconds for the end date
+- `started_after` - UTC milliseconds-since-epoch timestamp for filtering calls that started after this time
+- `started_before` - UTC milliseconds-since-epoch timestamp for filtering calls that started before this time
 - `limit` - Maximum number of results per page (default: 50)
 - `cursor` - For pagination (provided by the Dialpad API response)
 
-For more details on the Dialpad API, refer to the [official Dialpad API documentation](https://developers.dialpad.com/reference/call_read).
+#### Date Handling
+
+The dashboard frontend sends ISO date strings (YYYY-MM-DD) to the backend, which converts them to the required UTC milliseconds-since-epoch format:
+
+1. For `date_from` → `started_after`: Converted to midnight (00:00:00) of the selected date in UTC
+2. For `date_to` → `started_before`: Converted to end of day (23:59:59) of the selected date in UTC
+
+**Important Notes:**
+- The Dialpad API does not accept timestamps that are in the future
+- If a future date is provided, the system automatically adjusts it to use the current time instead
+- If no date is specified, the system defaults to the last 7 days
+- All API parameters are properly URL-encoded for reliable API communication
+
+For more details on the Dialpad API, refer to the [official Dialpad API documentation](https://developers.dialpad.com/reference/calllist)

@@ -2970,24 +2970,60 @@ def get_dialpad_calls():
         
         print(f"Received request with params: agent_id={agent_id}, call_type={call_type}, call_status={call_status}")
         
-        # Convert date strings to timestamps if provided
+        # Convert date strings to UTC timestamps in milliseconds as required by Dialpad API
+        # Dialpad API requires 'started_after' and 'started_before' as UTC milliseconds-since-epoch
         started_after = None
         started_before = None
         
         date_from = data.get("date_from")
         date_to = data.get("date_to")
         
-        if date_from:
-            # Set time to 00:00:00 and convert to milliseconds
-            dt_from = datetime.fromisoformat(f"{date_from}T00:00:00")
-            started_after = int(dt_from.timestamp() * 1000)
-            print(f"Using date from: {date_from}, timestamp: {started_after}")
+        # Get current time to prevent future timestamps
+        current_time = datetime.now()
+        current_timestamp_ms = int(current_time.timestamp() * 1000)
         
-        if date_to:
-            # Set time to 23:59:59 and convert to milliseconds
-            dt_to = datetime.fromisoformat(f"{date_to}T23:59:59")
-            started_before = int(dt_to.timestamp() * 1000)
-            print(f"Using date to: {date_to}, timestamp: {started_before}")
+        try:
+            if date_from:
+                # Convert start date to midnight (00:00:00) in UTC and convert to milliseconds
+                dt_from = datetime.fromisoformat(f"{date_from}T00:00:00")
+                timestamp_ms = int(dt_from.timestamp() * 1000)  # Convert to ms for Dialpad API
+                
+                # Ensure timestamp is not in the future
+                if timestamp_ms > current_timestamp_ms:
+                    print(f"Warning: start date {date_from} is in the future, using current time instead")
+                    # Use 7 days ago as default
+                    dt_from = current_time - timedelta(days=7)
+                    timestamp_ms = int(dt_from.timestamp() * 1000)
+                
+                started_after = timestamp_ms
+                print(f"Using date from: {date_from} (adjusted if needed), UTC timestamp (ms): {started_after}")
+            
+            if date_to:
+                # Convert end date to end of day (23:59:59) in UTC and convert to milliseconds
+                dt_to = datetime.fromisoformat(f"{date_to}T23:59:59")
+                timestamp_ms = int(dt_to.timestamp() * 1000)  # Convert to ms for Dialpad API
+                
+                # Ensure timestamp is not in the future
+                if timestamp_ms > current_timestamp_ms:
+                    print(f"Warning: end date {date_to} is in the future, using current time instead")
+                    timestamp_ms = current_timestamp_ms
+                
+                started_before = timestamp_ms
+                print(f"Using date to: {date_to} (adjusted if needed), UTC timestamp (ms): {started_before}")
+                
+            # If no dates provided, use last 7 days by default
+            if not started_after and not started_before:
+                dt_from = current_time - timedelta(days=7)
+                started_after = int(dt_from.timestamp() * 1000)
+                started_before = current_timestamp_ms
+                print(f"No dates specified, using last 7 days by default: {started_after} to {started_before}")
+                
+        except ValueError as e:
+            print(f"Error parsing date format: {str(e)}")
+            return jsonify({
+                "success": False,
+                "error": f"Invalid date format. Please use YYYY-MM-DD format. Error: {str(e)}"
+            }), 400
             
         # Fetch call data from Dialpad API
         if agent_id and agent_id != "all":
