@@ -159,12 +159,59 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function renderCallData(calls) {
         let tableHtml = '';
+        // Track phone numbers for handled_elsewhere and missed status to avoid duplicates
+        const handledElsewherePhones = new Map();
+        const missedCallPhones = new Map();
         
+        // First, consolidate handled_elsewhere and missed calls by phone number
         calls.forEach(call => {
+            // For consolidating handled_elsewhere calls
+            if (call.status === 'handled_elsewhere') {
+                if (!handledElsewherePhones.has(call.customer_phone)) {
+                    handledElsewherePhones.set(call.customer_phone, call);
+                }
+            } 
+            // For consolidating missed calls
+            else if (call.status === 'missed') {
+                if (!missedCallPhones.has(call.customer_phone)) {
+                    missedCallPhones.set(call.customer_phone, call);
+                } else {
+                    // If we already have a missed call for this phone, update status details
+                    const existingCall = missedCallPhones.get(call.customer_phone);
+                    if (call.status_details && !existingCall.status_details.includes(call.status_details)) {
+                        existingCall.status_details += `, ${call.status_details}`;
+                    }
+                }
+            }
+        });
+        
+        // Render calls, skipping duplicates for handled_elsewhere and missed
+        calls.forEach(call => {
+            // Skip if this is a duplicate handled_elsewhere call
+            if (call.status === 'handled_elsewhere' && 
+                handledElsewherePhones.get(call.customer_phone) !== call) {
+                return;
+            }
+            
+            // Skip if this is a duplicate missed call
+            if (call.status === 'missed' && 
+                missedCallPhones.get(call.customer_phone) !== call) {
+                return;
+            }
+            
+            // Modify agent name display for consolidated entries
+            let agentDisplay = call.agent_name;
+            if (call.status === 'handled_elsewhere') {
+                agentDisplay = 'Multiple Agents';
+            } else if (call.status === 'missed' && call.status_details && 
+                      call.status_details.includes('Also missed by:')) {
+                agentDisplay = 'Multiple Agents';
+            }
+                
             tableHtml += `
                 <tr class="call-type-${call.call_type}">
                     <td>${call.datetime}</td>
-                    <td>${call.agent_name}</td>
+                    <td>${agentDisplay}</td>
                     <td>${call.customer_name || 'Unknown'}</td>
                     <td>${call.customer_phone}</td>
                     <td>${call.call_type}</td>
@@ -187,9 +234,20 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateSummaryStats(calls) {
         // Calculate summary statistics
         const totalCalls = calls.length;
-        const inboundCalls = calls.filter(call => call.call_type === 'inbound').length;
+        
+        // Only count inbound calls that were completed or missed with "Also missed by:" text
+        const inboundCalls = calls.filter(call => 
+            call.call_type === 'inbound' && 
+            (call.status === 'completed' || 
+             (call.status === 'missed' && call.status_details && call.status_details.includes('Also missed by:')))
+        ).length;
+        
         const outboundCalls = calls.filter(call => call.call_type === 'outbound').length;
-        const missedCalls = calls.filter(call => call.status === 'missed').length;
+        // Count missed calls that include "Also missed by:" details
+        const missedCalls = calls.filter(call => 
+            call.status === 'missed' && 
+            (call.status_details && call.status_details.includes('Also missed by:'))
+        ).length;
         
         // Calculate average duration for completed calls
         const completedCalls = calls.filter(call => call.status === 'completed');
@@ -198,6 +256,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const totalDuration = completedCalls.reduce((sum, call) => sum + parseFloat(call.duration), 0);
             avgDuration = (totalDuration / completedCalls.length).toFixed(1);
         }
+        
         
         // Update UI
         document.getElementById('total-calls').textContent = totalCalls;
