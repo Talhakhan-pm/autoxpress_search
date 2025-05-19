@@ -202,6 +202,19 @@ class DialpadClient:
                     # Someone else answered this call
                     call["status"] = "handled_elsewhere"
                     call["answering_agent"] = call_mapping[entry_point_id]["answered_by_name"]
+                    call["routed_to_agent"] = agent_name  # Track which agent this call was routed to
+                    
+                    # Create or update a list of agents this call was routed to
+                    if "routed_to_agents" not in call_mapping[entry_point_id]:
+                        call_mapping[entry_point_id]["routed_to_agents"] = []
+                    
+                    # Add this agent to the list of agents who received this call
+                    if agent_name not in call_mapping[entry_point_id]["routed_to_agents"]:
+                        call_mapping[entry_point_id]["routed_to_agents"].append(agent_name)
+                    
+                    # Copy the list to this call instance
+                    call["routed_to_agents"] = call_mapping[entry_point_id]["routed_to_agents"]
+                    
                     all_calls.append(call)
                     
                 elif entry_point_id and entry_point_id in missed_call_entries:
@@ -307,7 +320,23 @@ class DialpadClient:
         
         # Add detailed status information
         if call.get("status") == "handled_elsewhere" and call.get("answering_agent"):
-            display_data["status_details"] = f"Answered by {call.get('answering_agent')}"
+            # Basic info about who answered
+            answering_msg = f"Answered by {call.get('answering_agent')}"
+            
+            # Add info about which other agents it was routed to
+            if call.get("routed_to_agents") and len(call.get("routed_to_agents", [])) > 1:
+                # Get all agents except the current one and the one who answered
+                others = [agent for agent in call.get("routed_to_agents", []) 
+                         if agent != call.get("routed_to_agent") and agent != call.get("answering_agent")]
+                
+                # If there are other agents it was routed to
+                if others:
+                    also_routed = ", ".join(others)
+                    display_data["status_details"] = f"{answering_msg}. Also routed to: {also_routed}"
+                else:
+                    display_data["status_details"] = answering_msg
+            else:
+                display_data["status_details"] = answering_msg
         elif call.get("status") == "missed":
             if call.get("is_consolidated_miss") and call.get("affected_agents"):
                 # This is a consolidated miss that affected multiple agents
