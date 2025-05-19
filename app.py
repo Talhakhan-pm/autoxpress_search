@@ -16,6 +16,8 @@ from vehicle_validation import has_vehicle_info, get_missing_info_message
 from query_processor import EnhancedQueryProcessor
 from query_templates import get_template_for_message
 from chatbot_handler import process_chat_message
+from direct_dialpad import DialpadClient  # Using our final implementation
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -2926,6 +2928,125 @@ def create_payment_link():
         return jsonify({"error": "Stripe library not installed. Run 'pip install stripe'"}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# Dialpad Dashboard Routes
+@app.route("/dialpad-dashboard", methods=["GET"])
+def dialpad_dashboard():
+    """Render the Dialpad call dashboard."""
+    dialpad_client = DialpadClient()
+    
+    # Set default date range to just today (1 day)
+    today = datetime.now()
+    
+    # Use the same date for both from and to
+    default_to_date = today.strftime("%Y-%m-%d")
+    default_from_date = today.strftime("%Y-%m-%d")
+    
+    # Render the dashboard template with empty initial data
+    return render_template(
+        "dialpad_dashboard.html",
+        calls=[],
+        agents=dialpad_client.AGENTS,
+        default_from_date=default_from_date,
+        default_to_date=default_to_date
+    )
+
+
+@app.route("/api/dialpad-calls", methods=["POST"])
+def get_dialpad_calls():
+    """API endpoint to fetch Dialpad call data with filtering."""
+    try:
+        # Initialize the Dialpad client
+        dialpad_client = DialpadClient()
+        
+        # Get request data
+        data = request.json
+        agent_id = data.get("agent_id")
+        call_type = data.get("call_type")
+        call_status = data.get("call_status")
+        
+        print(f"Dialpad dashboard request with filters: agent={agent_id}, type={call_type}, status={call_status}")
+        
+        print(f"Received request with params: agent_id={agent_id}, call_type={call_type}, call_status={call_status}")
+        
+        # Convert date strings to timestamps if provided
+        started_after = None
+        started_before = None
+        
+        date_from = data.get("date_from")
+        date_to = data.get("date_to")
+        
+        if date_from:
+            # Set time to 00:00:00 and convert to milliseconds
+            dt_from = datetime.fromisoformat(f"{date_from}T00:00:00")
+            started_after = int(dt_from.timestamp() * 1000)
+            print(f"Using date from: {date_from}, timestamp: {started_after}")
+        
+        if date_to:
+            # Set time to 23:59:59 and convert to milliseconds
+            dt_to = datetime.fromisoformat(f"{date_to}T23:59:59")
+            started_before = int(dt_to.timestamp() * 1000)
+            print(f"Using date to: {date_to}, timestamp: {started_before}")
+            
+        # Fetch call data from Dialpad API
+        if agent_id and agent_id != "all":
+            # Get calls for a specific agent with date filtering
+            raw_calls = dialpad_client.get_calls(
+                agent_id=agent_id,
+                started_after=started_after,
+                started_before=started_before
+            )
+            
+            # Agent name should be added by get_calls
+        else:
+            # Get calls for all agents with date filtering
+            raw_calls = dialpad_client.get_all_agent_calls(
+                started_after=started_after,
+                started_before=started_before
+            )
+        
+        print(f"Retrieved {len(raw_calls)} total raw calls")
+        
+        # Format calls for display
+        formatted_calls = [dialpad_client.format_call_for_display(call) for call in raw_calls]
+        
+        # Apply additional filters if provided
+        if call_type and call_type != "all":
+            formatted_calls = [call for call in formatted_calls if call["call_type"] == call_type]
+        
+        if call_status and call_status != "all":
+            # Special case for "missed": include both truly missed and undetermined
+            if call_status == "missed":
+                formatted_calls = [call for call in formatted_calls if call["status"] == "missed"]
+            # Special case for just "completed": only include completed
+            elif call_status == "completed":
+                formatted_calls = [call for call in formatted_calls if call["status"] == "completed"]
+            # New status: "handled_elsewhere"  
+            elif call_status == "handled_elsewhere":
+                formatted_calls = [call for call in formatted_calls if call["status"] == "handled_elsewhere"]
+            # Default case: exact match
+            else:
+                formatted_calls = [call for call in formatted_calls if call["status"] == call_status]
+        
+        # Sort calls by datetime (most recent first)
+        formatted_calls.sort(key=lambda x: x["datetime"], reverse=True)
+        
+        print(f"Returning {len(formatted_calls)} formatted calls after filtering")
+        
+        return jsonify({
+            "success": True,
+            "calls": formatted_calls,
+            "total_calls": len(formatted_calls)
+        })
+        
+    except Exception as e:
+        print(f"Error fetching Dialpad calls: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
 
 # Run app
 if __name__ == "__main__":

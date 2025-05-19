@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoXpress Call Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dialpad-dashboard.css') }}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">AutoXpress Call Dashboard</h1>
+        </div>
+        
+        <div class="filters">
+            <div class="filter-group">
+                <label for="date-from">From Date:</label>
+                <input type="date" id="date-from" name="date-from" value="{{ default_from_date }}">
+            </div>
+            
+            <div class="filter-group">
+                <label for="date-to">To Date:</label>
+                <input type="date" id="date-to" name="date-to" value="{{ default_to_date }}">
+            </div>
+            
+            <div class="filter-group">
+                <label for="agent-select">Agent:</label>
+                <select id="agent-select" name="agent">
+                    <option value="all">All Agents</option>
+                    {% for agent_name, agent_id in agents.items() %}
+                    <option value="{{ agent_id }}">{{ agent_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="call-type">Call Type:</label>
+                <select id="call-type" name="call-type">
+                    <option value="all">All Calls</option>
+                    <option value="inbound">Inbound</option>
+                    <option value="outbound">Outbound</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="call-status">Status:</label>
+                <select id="call-status" name="call-status">
+                    <option value="all">All Status</option>
+                    <option value="completed">Completed</option>
+                    <option value="missed">Missed</option>
+                    <option value="handled_elsewhere">Handled Elsewhere</option>
+                </select>
+            </div>
+            
+            <button id="apply-filters" class="action-button">Apply Filters</button>
+        </div>
+        
+        <div class="summary-stats" id="summary-stats" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-value" id="total-calls">0</div>
+                <div class="stat-label">Total Calls</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="inbound-calls">0</div>
+                <div class="stat-label">Inbound Calls</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="outbound-calls">0</div>
+                <div class="stat-label">Outbound Calls</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="missed-calls">0</div>
+                <div class="stat-label">Missed Calls</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avg-duration">0</div>
+                <div class="stat-label">Avg. Duration (min)</div>
+            </div>
+        </div>
+        
+        <div id="loading" class="loading" style="display: none;">
+            Loading call data...
+        </div>
+        
+        <table class="calls-table">
+            <thead>
+                <tr>
+                    <th>Date/Time</th>
+                    <th>Agent</th>
+                    <th>Customer</th>
+                    <th>Phone</th>
+                    <th>Type</th>
+                    <th>Duration (min)</th>
+                    <th>Status</th>
+                    <th>Recording</th>
+                </tr>
+            </thead>
+            <tbody id="calls-table-body">
+                {% if calls %}
+                    {% for call in calls %}
+                    <tr class="call-type-{{ call.call_type }}">
+                        <td>{{ call.datetime }}</td>
+                        <td>{{ call.agent_name }}</td>
+                        <td>{{ call.customer_name }}</td>
+                        <td>{{ call.customer_phone }}</td>
+                        <td>{{ call.call_type }}</td>
+                        <td>{{ call.duration }}</td>
+                        <td class="status-{{ call.status }}">{{ call.status }}</td>
+                        <td>
+                            {% if call.recording_url %}
+                            <a href="{{ call.recording_url }}" target="_blank">Listen</a>
+                            {% else %}
+                            N/A
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="8" style="text-align: center;">No call data available. Use the filters above to load data.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+        
+        <div class="pagination">
+            <!-- Pagination controls will be dynamically added here -->
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const applyFiltersBtn = document.getElementById('apply-filters');
+            const loadingDiv = document.getElementById('loading');
+            const callsTableBody = document.getElementById('calls-table-body');
+            const summaryStatsDiv = document.getElementById('summary-stats');
+            
+            applyFiltersBtn.addEventListener('click', function() {
+                loadCallData();
+            });
+            
+            function loadCallData() {
+                const dateFrom = document.getElementById('date-from').value;
+                const dateTo = document.getElementById('date-to').value;
+                const agentId = document.getElementById('agent-select').value;
+                const callType = document.getElementById('call-type').value;
+                const callStatus = document.getElementById('call-status').value;
+                
+                // Show loading indicator
+                loadingDiv.style.display = 'block';
+                summaryStatsDiv.style.display = 'none';
+                callsTableBody.innerHTML = '';
+                
+                // Fetch call data from API
+                fetch('/api/dialpad-calls', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        date_from: dateFrom,
+                        date_to: dateTo,
+                        agent_id: agentId,
+                        call_type: callType,
+                        call_status: callStatus
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Hide loading indicator
+                    loadingDiv.style.display = 'none';
+                    
+                    if (data.calls && data.calls.length > 0) {
+                        // Render call data
+                        renderCallData(data.calls);
+                        updateSummaryStats(data.calls);
+                        summaryStatsDiv.style.display = 'flex';
+                    } else {
+                        callsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No call data found for the selected filters.</td></tr>';
+                        summaryStatsDiv.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching call data:', error);
+                    loadingDiv.style.display = 'none';
+                    summaryStatsDiv.style.display = 'none';
+                    callsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Error loading call data. Please try again later.</td></tr>';
+                });
+            }
+            
+            function renderCallData(calls) {
+                let tableHtml = '';
+                
+                calls.forEach(call => {
+                    tableHtml += `
+                        <tr class="call-type-${call.call_type}">
+                            <td>${call.datetime}</td>
+                            <td>${call.agent_name}</td>
+                            <td>${call.customer_name || 'Unknown'}</td>
+                            <td>${call.customer_phone}</td>
+                            <td>${call.call_type}</td>
+                            <td>${call.duration}</td>
+                            <td class="status-${call.status}">${call.status}
+                            ${call.status_details ? `<div class="status-details">${call.status_details}</div>` : ''}
+                        </td>
+                            <td>
+                                ${call.recording_url 
+                                  ? `<a href="${call.recording_url}" target="_blank" class="recording-link">Listen</a>` 
+                                  : 'N/A'}
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                callsTableBody.innerHTML = tableHtml;
+            }
+            
+            function updateSummaryStats(calls) {
+                // Calculate summary statistics
+                const totalCalls = calls.length;
+                const inboundCalls = calls.filter(call => call.call_type === 'inbound').length;
+                const outboundCalls = calls.filter(call => call.call_type === 'outbound').length;
+                const missedCalls = calls.filter(call => call.status === 'missed').length;
+                
+                // Calculate average duration for completed calls
+                const completedCalls = calls.filter(call => call.status === 'completed');
+                let avgDuration = 0;
+                if (completedCalls.length > 0) {
+                    const totalDuration = completedCalls.reduce((sum, call) => sum + parseFloat(call.duration), 0);
+                    avgDuration = (totalDuration / completedCalls.length).toFixed(1);
+                }
+                
+                // Update UI
+                document.getElementById('total-calls').textContent = totalCalls;
+                document.getElementById('inbound-calls').textContent = inboundCalls;
+                document.getElementById('outbound-calls').textContent = outboundCalls;
+                document.getElementById('missed-calls').textContent = missedCalls;
+                document.getElementById('avg-duration').textContent = avgDuration;
+            }
+            
+            // Set default date range to last 7 days if not already set
+            const dateFromInput = document.getElementById('date-from');
+            const dateToInput = document.getElementById('date-to');
+            
+            if (!dateFromInput.value) {
+                const lastWeek = new Date();
+                lastWeek.setDate(lastWeek.getDate() - 7);
+                dateFromInput.value = formatDate(lastWeek);
+            }
+            
+            if (!dateToInput.value) {
+                const today = new Date();
+                dateToInput.value = formatDate(today);
+            }
+            
+            function formatDate(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+        });
+    </script>
+</body>
+</html>
