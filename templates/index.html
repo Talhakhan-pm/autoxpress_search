@@ -740,6 +740,13 @@
                                         <span id="products-count" class="badge bg-primary ms-2">0</span>
                                     </button>
                                 </li>
+                                <li class="nav-item d-none" role="presentation" id="vin-results-tab-item">
+                                    <button class="nav-link" id="vin-results-tab" data-bs-toggle="tab"
+                                        data-bs-target="#vin-results-content" type="button" role="tab"
+                                        aria-controls="vin-results-content" aria-selected="false">
+                                        <i class="fas fa-car me-2"></i>Vehicle
+                                    </button>
+                                </li>
                             </ul>
                         </div>
                         <div class="card-body">
@@ -911,34 +918,33 @@
                                         </button>
                                     </div>
                                 </div>
+                                
+                                <!-- VIN Results Tab Content -->
+                                <div class="tab-pane fade" id="vin-results-content" role="tabpanel"
+                                    aria-labelledby="vin-results-tab">
+                                    <div id="vin-loading" class="text-center my-4 d-none">
+                                        <div class="spinner-border text-primary" style="width:1rem;height:1rem;"
+                                            role="status">
+                                            <span class="visually-hidden">Loading VIN data...</span>
+                                        </div>
+                                        <p class="mt-2">Decoding your VIN<span class="loader-dots">
+                                                <div></div>
+                                                <div></div>
+                                                <div></div>
+                                            </span></p>
+                                    </div>
+                                    <div id="vin-error" class="alert alert-danger d-none"></div>
+                                    <div id="vin-data" class="row">
+                                        <!-- VIN data will be inserted here -->
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- VIN Results Container -->
-            <div id="vin-result-container" class="d-none">
-                <div class="card">
-                    <div class="card-header">Vehicle Information</div>
-                    <div class="card-body">
-                        <div id="vin-loading" class="text-center my-4 d-none">
-                            <div class="spinner-border text-primary" style="width:1rem;height:1rem;" role="status">
-                                <span class="visually-hidden">Loading VIN data...</span>
-                            </div>
-                            <p class="mt-2">Decoding your VIN<span class="loader-dots">
-                                    <div></div>
-                                    <div></div>
-                                    <div></div>
-                                </span></p>
-                        </div>
-                        <div id="vin-error" class="alert alert-danger d-none"></div>
-                        <div id="vin-data" class="row">
-                            <!-- VIN data will be inserted here -->
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- VIN Results Container moved into the results tab structure -->
         </div>
     </div>
 

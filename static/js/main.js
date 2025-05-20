@@ -888,10 +888,18 @@ document.addEventListener('DOMContentLoaded', function () {
             // Don't hide results, they should persist between tab switches
             // However, make sure the appropriate container is shown based on the active tab
             if (this.id === 'vin-tab') {
-                if (!vinResultContainer.classList.contains('d-none') &&
-                    vinData.querySelector('.card')) {
-                    // Show VIN results if they exist
-                    vinResultContainer.classList.remove('d-none');
+                // If we have VIN results in the new integrated system, show result container and activate the VIN results tab
+                const vinResultsTab = document.getElementById('vin-results-tab');
+                const vinResultsTabItem = document.getElementById('vin-results-tab-item');
+                
+                if (!vinResultsTabItem.classList.contains('d-none') &&
+                    document.getElementById('vin-data').querySelector('.card')) {
+                    // Ensure result container is visible
+                    resultContainer.style.display = 'flex';
+                    // Switch to the vin results tab in the results container
+                    if (vinResultsTab) {
+                        vinResultsTab.click();
+                    }
                 }
             } else if (this.id === 'search-tab') {
                 if (resultContainer.style.display === 'flex') {

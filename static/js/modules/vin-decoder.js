@@ -6,15 +6,20 @@
 const VinDecoder = (function() {
   // Private variables
   let vinResultContainer, vinError, vinData, vinLoading;
+  let vinResultsTab, vinResultsTabItem;
   let yearField, makeField, modelField, engineField, partField;
   
   // Initialize the module
   function init() {
     // Get DOM elements for VIN decoder
-    vinResultContainer = document.getElementById('vin-result-container');
+    vinResultContainer = document.getElementById('result-container'); // Now using the main result container
     vinError = document.getElementById('vin-error');
     vinData = document.getElementById('vin-data');
     vinLoading = document.getElementById('vin-loading');
+    
+    // Get tab elements
+    vinResultsTab = document.getElementById('vin-results-tab');
+    vinResultsTabItem = document.getElementById('vin-results-tab-item');
     
     // Get form field references
     yearField = document.getElementById('year-field');
@@ -53,7 +58,10 @@ const VinDecoder = (function() {
     // Reset UI for VIN results
     vinError.classList.add('d-none');
     vinData.innerHTML = '';
-    vinResultContainer.classList.remove('d-none');
+    
+    // Show the main results container and ensure VIN tab is visible
+    vinResultContainer.style.display = 'flex';
+    vinResultsTabItem.classList.remove('d-none');
 
     // Show loading
     vinLoading.classList.remove('d-none');
@@ -76,6 +84,9 @@ const VinDecoder = (function() {
 
       // Display VIN data
       displayVinData(vinInfo);
+      
+      // Switch to the VIN results tab
+      vinResultsTab.click();
 
     } catch (error) {
       console.error('Error:', error);
@@ -230,8 +241,11 @@ const VinDecoder = (function() {
       partField.value = '';
       partField.focus();
 
-      // Switch to search tab
+      // First, switch to the search tab in the main UI
       document.getElementById('search-tab').click();
+      
+      // We're keeping the result container visible (with the VIN tab)
+      // so the user can quickly switch back to the VIN info without resubmitting
     });
   }
 
