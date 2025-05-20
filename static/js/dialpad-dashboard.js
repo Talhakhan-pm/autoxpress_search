@@ -10,19 +10,61 @@ document.addEventListener('DOMContentLoaded', function() {
     const callsTableBody = document.getElementById('calls-table-body');
     const summaryStatsDiv = document.getElementById('summary-stats');
     
-    // Cache for storing filtered results
-    const callDataCache = {
-        lastQuery: null,
-        data: null,
-        timestamp: null
-    };
+    // Functions to manage cache in localStorage
+    function saveCache(cache) {
+        try {
+            localStorage.setItem('dialpadCache', JSON.stringify({
+                lastQuery: cache.lastQuery,
+                data: cache.data,
+                timestamp: cache.timestamp
+            }));
+        } catch (e) {
+            console.error('Failed to save cache to localStorage:', e);
+        }
+    }
+    
+    function loadCache() {
+        try {
+            const cachedData = localStorage.getItem('dialpadCache');
+            if (cachedData) {
+                return JSON.parse(cachedData);
+            }
+        } catch (e) {
+            console.error('Failed to load cache from localStorage:', e);
+        }
+        return {
+            lastQuery: null,
+            data: null,
+            timestamp: Date.now()
+        };
+    }
+    
+    // Initialize cache from localStorage or with default values
+    const callDataCache = loadCache();
+    
+    function clearCache() {
+        // Clear cache from localStorage
+        localStorage.removeItem('dialpadCache');
+        
+        // Reset in-memory cache
+        callDataCache.lastQuery = null;
+        callDataCache.data = null;
+        callDataCache.timestamp = Date.now();
+        
+        console.log('Cache cleared');
+    }
     
     applyFiltersBtn.addEventListener('click', function() {
         loadCallData(false); // false = use cache if possible
     });
     
     refreshDataBtn.addEventListener('click', function() {
-        loadCallData(true); // true = force reload from server
+        // Reset call type and call status filters to 'All' options
+        filterInputs.callType.value = 'all';  // 'all' is the value for "All Calls"
+        filterInputs.callStatus.value = 'all'; // 'all' is the value for "All Status"
+        
+        // Force reload from server
+        loadCallData(true);
     });
     
     // Filter inputs - add change event listeners for real-time filtering of cached data
@@ -80,6 +122,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     callDataCache.data = data.calls;
                     callDataCache.timestamp = Date.now();
                     
+                    // Save cache to localStorage
+                    saveCache(callDataCache);
+                    
                     // Render call data
                     renderCallData(data.calls);
                     updateSummaryStats(data.calls);
@@ -88,9 +133,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     callsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No call data found for the selected filters.</td></tr>';
                     summaryStatsDiv.style.display = 'none';
                     
-                    // Clear cache for this query
-                    callDataCache.lastQuery = null;
-                    callDataCache.data = null;
+                    // Clear cache
+                    clearCache();
                 }
             })
             .catch(error => {
@@ -117,6 +161,15 @@ document.addEventListener('DOMContentLoaded', function() {
     function shouldReload(currentQuery) {
         // If no cache exists, always reload
         if (!callDataCache.lastQuery || !callDataCache.data) {
+            return true;
+        }
+        
+        // Check if cache is older than 60 minutes (3,600,000 milliseconds)
+        const cacheAge = Date.now() - callDataCache.timestamp;
+        const cacheExpiryTime = 60 * 60 * 1000; // 60 minutes in milliseconds
+        
+        if (cacheAge > cacheExpiryTime) {
+            console.log("Cache expired (older than 60 minutes). Reloading data.");
             return true;
         }
         
