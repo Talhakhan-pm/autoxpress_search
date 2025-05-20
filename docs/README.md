@@ -21,6 +21,7 @@ Documentation for specific features of the application:
 Documentation related to the application's architecture and development:
 
 - [System Architecture](architecture/ARCHITECTURE.md) - Comprehensive architecture overview
+- [UI Structure](architecture/UI_STRUCTURE.md) - Tab organization and user interface layout
 - [Refactoring Guide](architecture/REFACTORING.md) - Product rendering & filtering refactoring details
 - [Improvement Guide](architecture/IMPROVEMENT_GUIDE.md) - Guidelines for safe application improvements
 
