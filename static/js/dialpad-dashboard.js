@@ -5,6 +5,7 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     const applyFiltersBtn = document.getElementById('apply-filters');
+    const refreshDataBtn = document.getElementById('refresh-data');
     const loadingDiv = document.getElementById('loading');
     const callsTableBody = document.getElementById('calls-table-body');
     const summaryStatsDiv = document.getElementById('summary-stats');
@@ -17,7 +18,11 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     applyFiltersBtn.addEventListener('click', function() {
-        loadCallData();
+        loadCallData(false); // false = use cache if possible
+    });
+    
+    refreshDataBtn.addEventListener('click', function() {
+        loadCallData(true); // true = force reload from server
     });
     
     // Filter inputs - add change event listeners for real-time filtering of cached data
@@ -29,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
         callStatus: document.getElementById('call-status')
     };
     
-    function loadCallData() {
+    function loadCallData(forceReload = false) {
         const dateFrom = filterInputs.dateFrom.value;
         const dateTo = filterInputs.dateTo.value;
         const agentId = filterInputs.agentId.value;
@@ -46,7 +51,8 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         
         // Check if we need to reload data from server
-        const shouldReloadData = shouldReload(currentQuery);
+        // Either when forceReload is true or when the cache doesn't support our query
+        const shouldReloadData = forceReload || shouldReload(currentQuery);
         
         if (shouldReloadData) {
             // Show loading indicator only for specific elements being reloaded
@@ -114,20 +120,20 @@ document.addEventListener('DOMContentLoaded', function() {
             return true;
         }
         
-        // If date range changed, we need fresh data
+        // Only reload if date range changed
         if (currentQuery.date_from !== callDataCache.lastQuery.date_from || 
             currentQuery.date_to !== callDataCache.lastQuery.date_to) {
             return true;
         }
         
-        // If agent selection changed, we need fresh data
-        if (currentQuery.agent_id !== callDataCache.lastQuery.agent_id) {
-            return true;
-        }
+        // For all other filters (including agent selection), use client-side filtering
+        // For this to work properly, we need to ensure the initial query uses 'all' for agent_id,
+        // call_type, and call_status to have the complete dataset in the cache
         
-        // For other filters, we can use client-side filtering on existing data
-        // Check if cached query is a superset of current query for these filters
+        // Check if cached query is a superset of current query for filters
         const cacheSupportsQuery = (
+            (callDataCache.lastQuery.agent_id === 'all' || 
+             currentQuery.agent_id === callDataCache.lastQuery.agent_id) &&
             (callDataCache.lastQuery.call_type === 'all' || 
              currentQuery.call_type === callDataCache.lastQuery.call_type) &&
             (callDataCache.lastQuery.call_status === 'all' || 
@@ -143,6 +149,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!cachedData) return [];
         
         return cachedData.filter(call => {
+            // Apply agent filter if changed from 'all'
+            if (query.agent_id !== 'all' && call.agent_id !== query.agent_id) {
+                return false;
+            }
+            
             // Apply call_type filter if changed from 'all'
             if (query.call_type !== 'all' && call.call_type !== query.call_type) {
                 return false;
