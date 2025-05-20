@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td>${call.customer_name || 'Unknown'}</td>
                     <td>${call.customer_phone}</td>
                     <td>${call.call_type}</td>
-                    <td>${call.duration}</td>
+                    <td>${call.duration} min</td>
                     <td class="status-${call.status}">${call.status}
                     ${call.status_details ? `<div class="status-details">${call.status_details}</div>` : ''}
                 </td>
@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('inbound-calls').textContent = inboundCalls;
         document.getElementById('outbound-calls').textContent = outboundCalls;
         document.getElementById('missed-calls').textContent = missedCalls;
-        document.getElementById('avg-duration').textContent = avgDuration;
+        document.getElementById('avg-duration').textContent = avgDuration + ' min';
     }
     
     // Set default date range to last 7 days if not already set

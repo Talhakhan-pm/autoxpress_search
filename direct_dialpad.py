@@ -261,9 +261,9 @@ class DialpadClient:
         # Get customer name from contact
         customer_name = call.get("contact", {}).get("name", "")
         
-        # Calculate duration in minutes
-        duration_seconds = call.get("duration", 0)
-        duration_minutes = round(duration_seconds / 60, 1) if duration_seconds else 0
+        # Calculate duration in minutes from milliseconds
+        duration_ms = call.get("duration", 0)
+        duration_minutes = round(duration_ms / 60000, 1) if duration_ms else 0
         
         # Format date/time
         date_started = call.get("date_started", "")
