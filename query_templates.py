@@ -120,47 +120,38 @@ Create 2-3 DIFFERENT script variations so the agent can choose. Each should be 1
 
 # Template for missed call responses
 MISSED_CALL_TEMPLATE = """
-The message indicates AutoXpress missed a call from the customer. In your response:
+Choose from one of these casual, agent-style responses when a customer call is missed. Keep it under 25 words plus the signature line.
 
-1. Keep your message EXTREMELY SHORT (1-2 sentences max)
-2. Express that AutoXpress missed their call and ask them to call back
-3. End with a signature line including phone number (252-275-3786) and website (https://autoxpress.us)
+1. Apologies for missing your call—😏 we're back now and ready to get you the part you need. Text or call here and we'll get moving fast 🔧
+2. Just missed your call — let's get you squared away. Call or text us now and we'll take care of it. 🛠️
+3. Sorry we missed you! Let's pick up where we left off. 📞 Call us at your convenience — we're here and ready to go.
 
-Example format:
-[Very brief message about missing their call]
+Signature (add after any message):
 Contact us: (252-275-3786) or https://autoxpress.us
-
-Keep the entire response under 25 words plus signature.
 """
 
 # Template for callback requests
 CALLBACK_TEMPLATE = """
-The message indicates AutoXpress needs the customer to call back about their order. In your response:
+Use one of these when requesting a callback about an order. Keep it short, confident, and under 25 words plus signature.
 
-1. Keep your message EXTREMELY SHORT (1-2 sentences max)
-2. Mention there's an update about their order and ask them to call
-3. End with a signature line including phone number (252-275-3786) and website (https://autoxpress.us)
+1. We've got an update on your order 🔧 — call or text us when you're free and we'll get things moving.
+2. ✅ Your part is ready for the next step — reach out and we'll confirm details quickly.
+3. Quick update on your request — call us and we'll wrap it up fast 💨
 
-Example format:
-[Very brief message about their order]
+Signature (always include):
 Contact us: (252-275-3786) or https://autoxpress.us
-
-Keep the entire response under 25 words plus signature.
 """
 
 # Template for follow-up requests
 FOLLOWUP_TEMPLATE = """
-The message indicates AutoXpress needs the customer to call back about their auto part. In your response:
+Use for part-related follow-up. Should be short, friendly, and lightly persuasive. Add urgency without pressure.
 
-1. Keep your message EXTREMELY SHORT (1-2 sentences max)
-2. Mention AutoXpress needs to discuss their auto part and ask them to call
-3. End with a signature line including phone number (252-275-3786) and website (https://autoxpress.us)
+1. Just checking in 👋 — need anything else for that [part]? We can wrap things up today if you're ready.
+2. Any update on the [part] you were looking for? We've got options ready now 🔧
+3. Still need help with that [part]? Let's finalize it — text or call and we'll get you squared away.
 
-Example format:
-[Very brief message about their auto part]
+Signature:
 Contact us: (252-275-3786) or https://autoxpress.us
-
-Keep the entire response under 25 words plus signature.
 """
 
 # Template for customer transcript analysis
