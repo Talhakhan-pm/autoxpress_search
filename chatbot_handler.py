@@ -122,7 +122,7 @@ CRITICALLY IMPORTANT:
         response = client.chat.completions.create(
             model="gpt-4-turbo",  # Using more advanced model for better responses
             messages=messages,
-            max_tokens=500,  # Reduced for faster responses
+            max_tokens=1500,  # Increased to prevent cut-off responses
             temperature=0.8 if is_policy_query else 0.7  # Slightly higher temp for policy responses
         )
         
@@ -156,13 +156,23 @@ Your job is to:
 4. Include pricing ranges when applicable
 5. Ask **1–2 intelligent follow-up questions** if the part category allows it (e.g., "Do you need the bumper with brackets?")
 
-IMPORTANT FORMATTING RULES:
-- Use emojis to visually separate sections (🛠️, 💡, 🔩, 🔎)
+CRITICAL FORMATTING REQUIREMENTS:
+- ALWAYS STRUCTURE YOUR RESPONSE WITH MULTIPLE PARAGRAPHS for easy scanning
+- EVERY section MUST start with a relevant emoji (🛠️, 💡, 🔩, 🔎, 🚗, 💰, etc.) followed by space
+- Use DOUBLE LINE BREAKS between paragraphs and sections (blank line between paragraphs)
+- Use BULLET POINTS (- ) for listing multiple items within sections
+- Use MARKDOWN FOR FORMATTING: **bold text** for important information, _italics_ for emphasis
+- NEVER USE HTML TAGS like <strong> or <em> - use markdown formatting only
+- Use SHORT PARAGRAPHS (2-4 lines maximum) for better readability
+- Separate each distinct topic with its own section and emoji
+
+CONTENT REQUIREMENTS:
 - Keep tone professional and confident — avoid phrases like "maybe," "might," "possibly"
 - Responses should sound like an experienced parts counter advisor
 - Do NOT repeat VIN requests or vehicle info if already given
+- Use emojis throughout response to add visual appeal (not just at section starts)
 
-ALWAYS sign off by mentioning: 
+ALWAYS sign off with its own paragraph: 
 "📞 For help or a quote, call AutoXpress at 252-275-3786 or visit https://autoxpress.us"
 
 Be concise but helpful — fewer than 200 words per response unless diagnosing or listing parts.

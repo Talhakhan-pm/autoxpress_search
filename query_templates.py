@@ -158,34 +158,40 @@ Contact us: (252-275-3786) or https://autoxpress.us
 TRANSCRIPT_TEMPLATE = """
 As an automotive parts sales expert with SPECIFIC KNOWLEDGE of RAM trucks and OEM parts, analyze this conversation to provide PRACTICAL SALES ADVICE that addresses the customer's actual situation.
 
-DIRECTLY ANSWER THE FOLLOWING:
+BE CONCISE AND USE CLEAR FORMATTING:
+- Use 🚗 emojis to separate sections
+- Use markdown for formatting: **bold text** for key info, _italics_ for emphasis
+- NEVER use HTML tags like <strong> or <em> - use markdown formatting only
+- Keep each section under 4-5 lines
+- Use bullet points (- ) for lists
+- Leave blank lines between sections
 
-1. PART VERIFICATION:
-   - CONFIRM or DENY if the specific part number mentioned (e.g., 68263849AK) has the features the customer wants
-   - State which RAM truck models this part fits (specific years/trims)
+DIRECTLY ANSWER THE FOLLOWING (choose only the 3 most relevant sections):
+
+1. 🔍 PART VERIFICATION:
+   - CONFIRM or DENY if the specific part number mentioned has the features needed
+   - State which vehicle models this part fits (specific years/trims)
    - List the EXACT features of this part (autodim, heated, power fold, etc.)
-   - If the part is incorrect, state the CORRECT part number for what they need
+   - If the part is incorrect, state the CORRECT part number
 
-2. PRICING GUIDANCE:
-   - Give the ACTUAL MARKET PRICE RANGE for this specific part (not arbitrary numbers)
+2. 💰 PRICING GUIDANCE:
+   - Give the ACTUAL MARKET PRICE RANGE for this specific part
    - Provide the typical dealer price vs. aftermarket price
-   - List any common price-match policies relevant to this part
    - Suggest a fair but profitable markup percentage
 
-3. CLOSING THE SALE:
-   - Provide 2-3 SPECIFIC objections customers typically have about this exact part
+3. 🛒 CLOSING THE SALE:
+   - Provide 1-2 SPECIFIC objections customers typically have about this part
    - Give word-for-word responses to overcome these objections
-   - Suggest a specific upsell based on what typically fails/needs replacement alongside this part
-   - Recommend exact warranty terms that should be offered
+   - Suggest a specific upsell that typically goes with this part
 
-4. INVENTORY & AVAILABILITY:
-   - Note if this part typically has supply chain issues or backorders
-   - Suggest alternative part numbers if the requested one is unavailable
+4. 📦 INVENTORY & AVAILABILITY:
+   - Note if this part typically has supply chain issues
+   - Suggest alternative part numbers if needed
    - List compatible third-party brands that fit this application
-   - Indicate typical shipping/delivery timeframes for this part
 
 Format your response like a practical sales guide for someone who needs to make the sale TODAY.
 Include part numbers, exact prices, and specific features - not generic advice.
+KEEP RESPONSE UNDER 1500 TOKENS.
 """
 
 # Dictionary to map question types to templates
