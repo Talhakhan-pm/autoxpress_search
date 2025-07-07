@@ -1224,7 +1224,7 @@ IMPORTANT:
     try:
         # Call OpenAI API
         response = client.chat.completions.create(
-            model="gpt-4-1106-preview",  # Or your preferred model
+            model="gpt-4o",  # Using GPT-4o for faster responses and better capabilities
             messages=[{"role": "user", "content": prompt}],
             response_format={"type": "json_object"},
             temperature=0.3

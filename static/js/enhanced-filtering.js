@@ -216,10 +216,22 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                     
-                    // For 'used' filter
+                    // For 'used' filter - handle all variations
                     if (activeValues.includes('used')) {
                         const condition = card.textContent.toLowerCase();
-                        if (!condition.includes('used') && !condition.includes('pre-owned')) {
+                        // Check for various used condition terms
+                        const usedTerms = [
+                            'used', 
+                            'pre-owned', 
+                            'pre owned',  // Space instead of hyphen
+                            'preowned',   // No space/hyphen
+                            'refurbished', 
+                            'certified pre-owned',
+                            'certified pre owned'
+                        ];
+                        
+                        const hasUsedCondition = usedTerms.some(term => condition.includes(term));
+                        if (!hasUsedCondition) {
                             isVisible = false;
                             break;
                         }
